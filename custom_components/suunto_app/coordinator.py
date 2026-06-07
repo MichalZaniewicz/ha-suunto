@@ -18,6 +18,7 @@ from . import metrics
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
+    FOOT_ACTIVITY_IDS,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     WORKOUTS_LOOKBACK_DAYS,
@@ -313,9 +314,12 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "ascent_rate_m_h": (
             round(ascent / (total_time / 3600)) if ascent and total_time else None
         ),
-        # meters travelled per cadence cycle (≈ stride length for running)
+        # Stride length (distance per cadence cycle) — only meaningful for
+        # foot-based activities; for cycling etc. cadence is pedal RPM, not steps.
         "stride_length_m": (
-            round(avg_speed / (cad_avg / 60), 2) if avg_speed and cad_avg else None
+            round(avg_speed / (cad_avg / 60), 2)
+            if avg_speed and cad_avg and activity_id in FOOT_ACTIVITY_IDS
+            else None
         ),
     }
 

@@ -62,3 +62,11 @@ def activity_name(activity_id: int | None) -> str | None:
     if activity_id is None:
         return None
     return ACTIVITY_NAMES.get(activity_id, f"Activity {activity_id}")
+
+
+# Foot-based activities where "stride length" (distance per cadence cycle) is
+# meaningful. For others (e.g. cycling, where cadence is pedal RPM) it is not a
+# stride, so the sensor is left empty rather than mislabeled.
+FOOT_ACTIVITY_IDS: frozenset[int] = frozenset(
+    {1, 11, 22, 24, 53, 59, 60, 65, 70, 77}
+)
