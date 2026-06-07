@@ -30,6 +30,27 @@ UNIT_STEPS = "steps"
 UNIT_MS = "ms"
 UNIT_WORKOUTS = "workouts"
 
+# Decimal places to display per sensor (HA rounds state, history and tooltips).
+# Without this, rounded floats show artifacts like -11.199999999999998.
+_DISPLAY_PRECISION: dict[str, int] = {
+    # whole numbers
+    "current_hr": 0, "daily_steps": 0, "daily_energy": 0, "sleep_deep": 0,
+    "sleep_avg_hr": 0, "sleep_min_hr": 0, "last_avg_hr": 0, "last_max_hr": 0,
+    "last_distance": 0, "last_duration": 0, "last_pct_hrmax": 0, "last_cadence": 0,
+    "last_ascent": 0, "last_ascent_rate": 0, "last_cal_per_km": 0, "resting_hr": 0,
+    "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
+    "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0,
+    # one decimal
+    "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
+    "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
+    "resting_hr_baseline": 1, "fitness_ctl": 1, "fatigue_atl": 1, "form_tsb": 1,
+    "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone1": 1,
+    "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
+    "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
+    # two decimals
+    "acwr": 2, "last_avg_pace": 2,
+}
+
 # Which coordinator feeds a sensor: "fast" (live activity) or "daily" (history).
 SOURCE_FAST = "fast"
 SOURCE_DAILY = "daily"
@@ -526,6 +547,8 @@ class SuuntoAppSensor(
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
+        if (precision := _DISPLAY_PRECISION.get(description.key)) is not None:
+            self._attr_suggested_display_precision = precision
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
