@@ -1,20 +1,17 @@
 # Suunto → Home Assistant (`suunto_app`)
 
-A custom HACS integration that pulls **Suunto** data into Home Assistant through
-the Suunto app's private backend (**Sports Tracker**) — signing in with **just an
-email and password**, no Docker and no partner keys.
+A custom HACS integration that pulls your **Suunto** data into Home Assistant from
+the Suunto app (Sports Tracker) — signing in with just your email and password,
+no Docker and no partner keys.
 
 ```
-Suunto watch ──▶ Suunto app / Sports Tracker ──(private API)──▶ Home Assistant
+Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 ```
 
-> ⚠️ **This is an unofficial, reverse-engineered API.** Login requires signing
-> requests with keys extracted from the Suunto Android app (`auth.py`). It **may
-> violate Suunto's Terms of Service** — use only with your own account, at your
-> own risk. The API can stop working after any app update (then the keys in
-> `auth.py` must be refreshed). The login pipeline is a port of
-> [`tajchert/suuntool`](https://github.com/tajchert/suuntool) and is **validated
-> 1:1** against its golden vectors.
+> ⚠️ **Unofficial integration** — not affiliated with or endorsed by Suunto. It
+> signs in with your own Suunto account and may stop working after a Suunto app
+> update. Use your own account, at your own risk. Login pipeline ported from
+> [`tajchert/suuntool`](https://github.com/tajchert/suuntool).
 
 ## Installation & configuration
 
