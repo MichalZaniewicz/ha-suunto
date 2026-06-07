@@ -1,0 +1,105 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (unofficial)",
+        "description": "Log in with your Suunto app (Sports Tracker) account. This uses Suunto's private app API and may violate Suunto's Terms of Service — use your own account at your own risk. Your password is used only to obtain a session token and is NOT stored; only the revocable session token is saved.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Suunto",
+        "description": "The session for {email} expired. Enter your password again to get a new session token (the password is not stored).",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login was rejected. Check your email/password (2FA on the account can also block this).",
+      "cannot_connect": "Could not reach the Suunto/Sports Tracker servers."
+    },
+    "abort": {
+      "already_configured": "This Suunto account is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Suunto App options",
+        "data": {
+          "fast_scan_interval": "Live data interval (minutes)",
+          "scan_interval": "History interval (minutes)"
+        },
+        "data_description": {
+          "fast_scan_interval": "How often to refresh live data (current heart rate, daily steps/energy).",
+          "scan_interval": "How often to refresh history-based data (sleep, workouts, training load, baselines). Keep this modest — it is an unofficial API."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Sleep duration" },
+      "sleep_deep": { "name": "Deep sleep" },
+      "sleep_light": { "name": "Light sleep" },
+      "sleep_rem": { "name": "REM sleep" },
+      "sleep_avg_hr": { "name": "Sleep average heart rate" },
+      "sleep_min_hr": { "name": "Sleep minimum heart rate" },
+      "sleep_quality": { "name": "Sleep quality" },
+      "sleep_spo2": { "name": "Sleep blood oxygen" },
+      "sleep_hrv": { "name": "Sleep HRV" },
+      "sleep_time": { "name": "Sleep start" },
+      "recovery_balance": { "name": "Recovery balance" },
+      "stress_state": { "name": "Stress state" },
+      "daily_steps": { "name": "Daily steps" },
+      "daily_energy": { "name": "Daily energy" },
+      "current_hr": { "name": "Current heart rate" },
+      "last_activity": { "name": "Last activity" },
+      "last_workout_start": { "name": "Last workout start" },
+      "last_distance": { "name": "Last workout distance" },
+      "last_duration": { "name": "Last workout duration" },
+      "last_ascent": { "name": "Last workout ascent" },
+      "recovery_time": { "name": "Workout recovery time" },
+      "last_avg_hr": { "name": "Last workout average heart rate" },
+      "last_max_hr": { "name": "Last workout max heart rate" },
+      "last_avg_speed": { "name": "Last workout average speed" },
+      "last_avg_pace": { "name": "Last workout average pace" },
+      "last_cadence": { "name": "Last workout cadence" },
+      "last_tss": { "name": "Last workout training stress (TSS)" },
+      "last_zone1": { "name": "Last workout time in HR zone 1" },
+      "last_zone2": { "name": "Last workout time in HR zone 2" },
+      "last_zone3": { "name": "Last workout time in HR zone 3" },
+      "last_zone4": { "name": "Last workout time in HR zone 4" },
+      "last_zone5": { "name": "Last workout time in HR zone 5" },
+      "lifetime_distance": { "name": "Lifetime distance" },
+      "lifetime_time": { "name": "Lifetime training time" },
+      "lifetime_energy": { "name": "Lifetime energy" },
+      "lifetime_workouts": { "name": "Lifetime workouts" },
+      "lifetime_days": { "name": "Lifetime active days" },
+      "last_pct_hrmax": { "name": "Last workout % of max HR" },
+      "last_cal_per_km": { "name": "Last workout calories per km" },
+      "last_ascent_rate": { "name": "Last workout ascent rate" },
+      "last_stride": { "name": "Last workout stride length" },
+      "fitness_ctl": { "name": "Fitness (CTL)" },
+      "fatigue_atl": { "name": "Fatigue (ATL)" },
+      "form_tsb": { "name": "Form (TSB)" },
+      "acwr": { "name": "Acute:chronic load ratio" },
+      "readiness": { "name": "Readiness" },
+      "hrv_baseline": { "name": "HRV baseline" },
+      "hrv_status": {
+        "name": "HRV status",
+        "state": { "low": "Low", "balanced": "Balanced", "high": "High" }
+      },
+      "resting_hr": { "name": "Resting heart rate" },
+      "resting_hr_baseline": { "name": "Resting heart rate baseline" },
+      "weekly_distance": { "name": "Distance (7 days)" },
+      "weekly_time": { "name": "Training time (7 days)" },
+      "workouts_7d": { "name": "Workouts (7 days)" },
+      "workouts_30d": { "name": "Workouts (30 days)" }
+    }
+  }
+}
