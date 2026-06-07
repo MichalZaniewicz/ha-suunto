@@ -22,7 +22,8 @@ Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 3. Options ("Configure" button): two refresh cadences —
    - **Live data interval** (default 15 min): current heart rate, daily steps/energy.
    - **History interval** (default 60 min): sleep, recovery, workouts, training
-     load, baselines and other derived metrics.
+     load, baselines and other derived metrics — and the hourly long-term
+     statistics (see [below](#long-term-statistics-intraday-curves--backfill)).
 
    Splitting the cadences keeps live values fresh without re-fetching ~90 days of
    history every few minutes.
@@ -68,6 +69,28 @@ on first setup or when the server invalidates the session. During normal operati
 > are a heuristic, not an official Suunto metric. All the math (CTL/ATL/TSB, ACWR,
 > baseline, readiness) is covered by deterministic tests in `metrics.py`.
 
+## Long-term statistics (intraday curves + backfill)
+
+Beyond the 54 live sensors, the integration imports **hourly long-term
+statistics** for the fast-changing and daily metrics. They are backfilled over a
+rolling window, so if your watch syncs to the app late (e.g. hours later), the
+missed hours are filled in **retroactively** — something a normal sensor can't do,
+since it only records the latest value at poll time.
+
+These are external statistics (`suunto_app:…`), **not entities** — view them in a
+**Statistics Graph** card (or ApexCharts); they don't add to the sensor count.
+
+- **Hourly:** heart rate (mean/min/max — the 10-min 24/7 stream **plus** the dense
+  ~25 s heart-rate samples from workouts, so workout peaks show up), steps, energy,
+  recovery balance, stress.
+- **Daily:** sleep duration, HRV, resting heart rate, quality, SpO₂; Readiness;
+  and the Fitness / Fatigue / Form (CTL/ATL/TSB) trend.
+
+The backfill window is ~5 days — a sync delayed beyond that won't fill the part
+older than the window. The hourly **heart-rate** statistic is the way to see a
+gap-free daily HR curve (with workout peaks); the live `current_hr` sensor only
+steps to the newest synced value and can't be filled backwards.
+
 ## Verification status
 
 - **Login, data fetching and field mapping verified against a live account** —
@@ -77,8 +100,10 @@ on first setup or when the server invalidates the session. During normal operati
 - `energyConsumption` is in calories (÷1000 → kcal); `timeInZone` is in centiseconds.
 - `lightSleepDuration`/`remSleepDuration` may be absent depending on the watch
   model (then light/REM sleep is `unknown`).
-- **Not exercised inside a live Home Assistant** (config flow / coordinator at
-  runtime) — checked statically and against real data via the API.
+- **Not exercised inside a live Home Assistant** (config flow / coordinator /
+  statistics import at runtime) — checked statically and against real data via the
+  API. Data cadences confirmed live: 24/7 HR/steps/energy every ~10 min, recovery
+  every ~30 min, workout heart-rate samples every ~25 s.
 
 ## Troubleshooting
 

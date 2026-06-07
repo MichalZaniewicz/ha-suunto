@@ -22,6 +22,7 @@ from .const import (
     FOOT_ACTIVITY_IDS,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
+    STATS_LOOKBACK_DAYS,
     WORKOUT_CACHE_GRACE_HOURS,
     WORKOUTS_LOOKBACK_DAYS,
     activity_name,
@@ -400,6 +401,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # key -> (workout, last_seen): smooths the API's eventually-consistent
         # workouts list so a transiently-missing workout doesn't drop sensors.
         self._workout_cache: dict[str, tuple[dict[str, Any], datetime]] = {}
+        # key -> dense HR samples [(ts, bpm)]: a workout's heartrates are
+        # immutable once uploaded, so cache them and only fetch /data for new
+        # workouts instead of re-downloading the whole window every cycle.
+        self._workout_hr_cache: dict[str, list[tuple[datetime, float]]] = {}
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -514,7 +519,15 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # an import hiccup must never blank the normal data update (but a real
         # auth failure still surfaces for the reauth flow).
         try:
-            await self._async_update_statistics(workouts, recovery)
+            await self._async_update_statistics(
+                workouts=workouts,
+                recovery=recovery,
+                sleep=sleep,
+                daily_tss=daily_tss,
+                today=today,
+                baseline_hrv=hrv_mean,
+                baseline_rhr=rhr_mean,
+            )
         except SuuntoAppAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except Exception:  # noqa: BLE001 - statistics are best-effort
@@ -567,17 +580,31 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return merged
 
     async def _async_update_statistics(
-        self, workouts: list[dict[str, Any]], recovery: list[dict[str, Any]]
+        self,
+        *,
+        workouts: list[dict[str, Any]],
+        recovery: list[dict[str, Any]],
+        sleep: list[dict[str, Any]],
+        daily_tss: dict[Any, float],
+        today: Any,
+        baseline_hrv: float | None,
+        baseline_rhr: float | None,
     ) -> None:
-        """Build hourly statistic samples from activity/recovery/workouts.
+        """Build statistic samples from activity/recovery/workouts/sleep.
 
-        HR merges the 10-min 24/7 stream with the ~25 s workout heartrates (more
-        samples just sharpen the hourly mean/min/max). Steps/energy come from the
-        24/7 stream ONLY — the workout totals are already counted there, so
-        adding them would double-count the sum.
+        Sub-daily (hourly buckets): HR merges the 10-min 24/7 stream with the
+        ~25 s workout heartrates (more samples just sharpen the hourly
+        mean/min/max); steps/energy come from the 24/7 stream ONLY — the workout
+        totals already live there, so adding them would double-count the sum;
+        recovery balance/stress from the 30-min stream.
+
+        Daily (one point per night/day, for a gap-free backfilled trend): sleep
+        duration/HRV/resting-HR/quality/SpO2, the readiness score, and the
+        CTL/ATL/TSB training-load series. These are derived from data we already
+        fetch, so a late-synced night/day fills its point retroactively.
         """
         now = dt_util.utcnow()
-        since_ms = _since_ms(now, ACTIVITY_LOOKBACK_DAYS)
+        since_ms = _since_ms(now, STATS_LOOKBACK_DAYS)
         activity = await self._client.async_get_wellness("activity", since_ms)
 
         hr: list[tuple[datetime, float]] = []
@@ -612,37 +639,116 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if stress_state is not None:
                 stress.append((ts, stress_state))
 
-        # Dense workout HR samples for workouts overlapping the activity window.
+        # Dense workout HR for workouts in the window. Heartrates are immutable
+        # once uploaded, so only fetch /data for keys we haven't cached yet.
         recent_keys = [
             key
             for w in workouts
             if (w.get("startTime") or 0) >= since_ms and (key := w.get("key"))
         ]
-        if recent_keys:
+        to_fetch = [k for k in recent_keys if k not in self._workout_hr_cache]
+        if to_fetch:
             results = await asyncio.gather(
-                *(self._client.async_get_workout_data(k) for k in recent_keys),
+                *(self._client.async_get_workout_data(k) for k in to_fetch),
                 return_exceptions=True,
             )
-            for result in results:
+            for key, result in zip(to_fetch, results):
                 if isinstance(result, SuuntoAppAuthError):
                     raise result
                 if isinstance(result, BaseException):
                     _LOGGER.debug("Workout data fetch failed (skipped): %s", result)
                     continue
+                samples: list[tuple[datetime, float]] = []
                 for point in result.get("heartrates") or []:
                     epoch_ms = point.get("d")
                     bpm = _as_float(point.get("hr"))
                     if epoch_ms and bpm and bpm > 0:
-                        when = datetime.fromtimestamp(
-                            int(epoch_ms) / 1000, tz=timezone.utc
+                        samples.append(
+                            (
+                                datetime.fromtimestamp(
+                                    int(epoch_ms) / 1000, tz=timezone.utc
+                                ),
+                                bpm,
+                            )
                         )
-                        hr.append((when, bpm))
+                self._workout_hr_cache[key] = samples
+        # Drop cached workouts that have aged out of the window (bound memory).
+        self._workout_hr_cache = {
+            k: v for k, v in self._workout_hr_cache.items() if k in recent_keys
+        }
+        for key in recent_keys:
+            hr.extend(self._workout_hr_cache.get(key, []))
+
+        # --- Daily series (one point per night/day) ---
+        # Mean recovery balance per night-key (noon-to-noon), reusing the balance
+        # samples already built above, to feed readiness for past nights the same
+        # way the live sensor does for "today".
+        bal_acc: dict[Any, list[float]] = defaultdict(list)
+        for ts, pct in balance:
+            bal_acc[(dt_util.as_local(ts) - timedelta(hours=12)).date()].append(pct)
+        balance_by_night = {
+            night_key: sum(vals) / len(vals) for night_key, vals in bal_acc.items()
+        }
+
+        sleep_dur: list[tuple[datetime, float]] = []
+        sleep_hrv: list[tuple[datetime, float]] = []
+        sleep_rhr: list[tuple[datetime, float]] = []
+        sleep_quality: list[tuple[datetime, float]] = []
+        sleep_spo2: list[tuple[datetime, float]] = []
+        readiness: list[tuple[datetime, float]] = []
+        for night_key, night in _group_sleep_nights(sleep).items():
+            agg = _aggregate_night(night)
+            ts = agg["timestamp"]
+            if ts is None:
+                continue
+            for series, value in (
+                (sleep_dur, agg["duration_hours"]),
+                (sleep_hrv, agg["avg_hrv_ms"]),
+                (sleep_rhr, agg["min_hr_bpm"]),
+                (sleep_quality, agg["quality_pct"]),
+                (sleep_spo2, agg["spo2_pct"]),
+            ):
+                if value is not None:
+                    series.append((ts, value))
+            score = metrics.readiness(
+                latest_hrv=agg["avg_hrv_ms"],
+                baseline_hrv=baseline_hrv,
+                latest_rhr=agg["min_hr_bpm"],
+                baseline_rhr=baseline_rhr,
+                sleep_hours=agg["duration_hours"],
+                balance_pct=balance_by_night.get(night_key),
+            )
+            if score is not None:
+                readiness.append((ts, score))
+
+        # CTL/ATL/TSB trend (one point per day), placed at noon UTC.
+        ctl: list[tuple[datetime, float]] = []
+        atl: list[tuple[datetime, float]] = []
+        tsb: list[tuple[datetime, float]] = []
+        for day, ctl_v, atl_v, tsb_v in metrics.training_load_series(daily_tss, today):
+            when = datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc)
+            ctl.append((when, ctl_v))
+            atl.append((when, atl_v))
+            tsb.append((when, tsb_v))
 
         await suunto_stats.async_update_statistics(
             self.hass,
-            hr=hr,
-            steps=steps,
-            energy=energy,
-            balance=balance,
-            stress=stress,
+            means=[
+                ("hr", "Suunto HR (hourly)", "bpm", hr),
+                ("recovery_balance", "Suunto recovery balance (hourly)", "%", balance),
+                ("stress", "Suunto stress state (hourly)", None, stress),
+                ("sleep_duration", "Suunto sleep duration", "h", sleep_dur),
+                ("sleep_hrv", "Suunto sleep HRV", "ms", sleep_hrv),
+                ("sleep_rhr", "Suunto sleep resting HR", "bpm", sleep_rhr),
+                ("sleep_quality", "Suunto sleep quality", "%", sleep_quality),
+                ("sleep_spo2", "Suunto sleep SpO2", "%", sleep_spo2),
+                ("readiness", "Suunto readiness", None, readiness),
+                ("fitness_ctl", "Suunto fitness (CTL)", None, ctl),
+                ("fatigue_atl", "Suunto fatigue (ATL)", None, atl),
+                ("form_tsb", "Suunto form (TSB)", None, tsb),
+            ],
+            sums=[
+                ("steps", "Suunto steps (hourly)", "steps", steps),
+                ("energy", "Suunto energy (hourly)", "kcal", energy),
+            ],
         )

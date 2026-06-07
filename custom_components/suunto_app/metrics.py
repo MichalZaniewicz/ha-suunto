@@ -56,6 +56,46 @@ def training_load(
     }
 
 
+def training_load_series(
+    daily_tss: dict[date, float],
+    today: date,
+    window_days: int = 90,
+    emit_days: int = 60,
+) -> list[tuple[date, float, float, float]]:
+    """Per-day (date, ctl, atl, tsb) for the last ``emit_days``.
+
+    Same EWMA model as ``training_load`` (same seed and recurrence), but captures
+    the value at each day instead of only the last — for backfilling a gap-free
+    fitness/fatigue/form trend as statistics. Only the recent ``emit_days`` are
+    emitted: days close to ``today`` are far from the seeded ramp-up at the window
+    start, so their values are stable across cycles (a distant past day would
+    otherwise shift slightly as the window slides). The final day matches
+    ``training_load``'s returned values.
+    """
+    if not daily_tss:
+        return []
+    total = sum(
+        daily_tss.get(today - timedelta(days=i), 0.0) for i in range(window_days + 1)
+    )
+    seed = total / (window_days + 1)
+
+    ctl = atl = seed
+    series: list[tuple[date, float, float, float]] = []
+    cutoff = today - timedelta(days=emit_days)
+    day = today - timedelta(days=window_days)
+    while day <= today:
+        tss = daily_tss.get(day, 0.0)
+        ctl_prev, atl_prev = ctl, atl
+        ctl += (tss - ctl) / CTL_TIME_CONSTANT
+        atl += (tss - atl) / ATL_TIME_CONSTANT
+        if day >= cutoff:
+            series.append(
+                (day, round(ctl, 1), round(atl, 1), round(ctl_prev - atl_prev, 1))
+            )
+        day += timedelta(days=1)
+    return series
+
+
 def acwr(daily_tss: dict[date, float], today: date) -> float | None:
     """Acute:chronic workload ratio = (7-day load) / (mean weekly 28-day load).
 

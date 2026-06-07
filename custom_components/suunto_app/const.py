@@ -26,9 +26,15 @@ REQUEST_TIMEOUT = 45
 # Look-back windows. Sleep + workouts pull extra history to feed the HRV/RHR
 # baselines and the CTL/ATL training-load model.
 SLEEP_LOOKBACK_DAYS = 60
-RECOVERY_LOOKBACK_DAYS = 4
+RECOVERY_LOOKBACK_DAYS = 5
 ACTIVITY_LOOKBACK_DAYS = 2
 WORKOUTS_LOOKBACK_DAYS = 90
+
+# Backfill buffer for the hourly statistics import (activity + workout heartrates
+# + recovery). Larger than ACTIVITY_LOOKBACK_DAYS (which the 15-min fast poll uses
+# only for "today") so a watch->app sync delayed up to this many days still fills
+# the missed hours retroactively. Re-imported idempotently every daily cycle.
+STATS_LOOKBACK_DAYS = 5
 
 # The Sports Tracker workouts list is occasionally eventually-consistent: a whole
 # workout can vanish from one response and reappear the next cycle, which wobbles

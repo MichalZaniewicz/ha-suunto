@@ -26,17 +26,10 @@ from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
-# (suffix, display name, unit) for the mean-type metrics.
-_MEAN_METRICS = (
-    ("hr", "Suunto HR (hourly)", "bpm"),
-    ("recovery_balance", "Suunto recovery balance (hourly)", "%"),
-    ("stress", "Suunto stress state (hourly)", None),
-)
-# (suffix, display name, unit) for the sum-type metrics.
-_SUM_METRICS = (
-    ("steps", "Suunto steps (hourly)", "steps"),
-    ("energy", "Suunto energy (hourly)", "kcal"),
-)
+# A metric to import is a tuple (statistic suffix, display name, unit, samples)
+# where samples is a list of (timestamp, value). The suffix becomes the external
+# statistic id "suunto_app:<suffix>". Daily metrics (sleep, fitness) pass one
+# sample per day; sub-daily ones (HR, steps) pass the raw stream.
 
 
 def floor_hour(value: datetime) -> datetime:
@@ -69,17 +62,15 @@ def hourly_sum(samples: list[tuple[datetime, float]]) -> dict[datetime, float]:
 async def async_update_statistics(
     hass: Any,
     *,
-    hr: list[tuple[datetime, float]],
-    steps: list[tuple[datetime, float]],
-    energy: list[tuple[datetime, float]],
-    balance: list[tuple[datetime, float]],
-    stress: list[tuple[datetime, float]],
+    means: list[tuple[str, str, str | None, list[tuple[datetime, float]]]],
+    sums: list[tuple[str, str, str | None, list[tuple[datetime, float]]]],
 ) -> None:
-    """Compute hourly buckets and import them as external statistics.
+    """Bucket each metric hourly and import it as external statistics.
 
-    Idempotent: re-importing a window replaces the overlapping rows, so late
-    syncs backfill cleanly. Raises nothing the caller must handle here — the
-    coordinator wraps this so a statistics hiccup never breaks the data update.
+    ``means`` get mean/min/max per hour; ``sums`` get a cumulative sum (HA shows
+    the per-hour delta). Idempotent: re-importing a window replaces the
+    overlapping rows, so late syncs backfill cleanly. Raises nothing the caller
+    must handle — the coordinator wraps this so a hiccup never breaks the update.
     """
     # Imported lazily so the pure helpers above stay HA-free / testable.
     from homeassistant.components.recorder import get_instance
@@ -94,9 +85,8 @@ async def async_update_statistics(
 
     from .const import DOMAIN
 
-    mean_samples = {"hr": hr, "recovery_balance": balance, "stress": stress}
-    for suffix, name, unit in _MEAN_METRICS:
-        buckets = hourly_mean(mean_samples[suffix])
+    for suffix, name, unit, samples in means:
+        buckets = hourly_mean(samples)
         if not buckets:
             continue
         metadata = StatisticMetaData(
@@ -112,25 +102,25 @@ async def async_update_statistics(
             for hour, (mean, low, high) in sorted(buckets.items())
         ]
         async_add_external_statistics(hass, metadata, data)
-        _LOGGER.debug("Imported %d hourly rows for %s:%s", len(data), DOMAIN, suffix)
+        _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
 
-    sum_samples = {"steps": steps, "energy": energy}
-    for suffix, name, unit in _SUM_METRICS:
-        buckets = hourly_sum(sum_samples[suffix])
+    for suffix, name, unit, samples in sums:
+        buckets = hourly_sum(samples)
         if not buckets:
             continue
         ordered = sorted(buckets.items())
         statistic_id = f"{DOMAIN}:{suffix}"
         window_start = ordered[0][0]
 
-        # Continue the cumulative total from whatever is already stored just
-        # before the window, so the per-hour deltas stay correct across reruns.
+        # Continue the cumulative total from the last value already stored before
+        # the window, so the per-hour deltas stay correct across reruns. Look back
+        # a couple of days (not just one hour) so a gap right before the window
+        # doesn't reset the running sum to 0 (which would skew the boundary bar).
         base = 0.0
-        prev_hour = window_start - timedelta(hours=1)
         rows = await get_instance(hass).async_add_executor_job(
             statistics_during_period,
             hass,
-            prev_hour,
+            window_start - timedelta(days=2),
             window_start,
             {statistic_id},
             "hour",
@@ -155,4 +145,4 @@ async def async_update_statistics(
             unit_of_measurement=unit,
         )
         async_add_external_statistics(hass, metadata, data)
-        _LOGGER.debug("Imported %d hourly rows for %s:%s", len(data), DOMAIN, suffix)
+        _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
