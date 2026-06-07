@@ -15,12 +15,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from . import metrics
+from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
     FOOT_ACTIVITY_IDS,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
+    WORKOUT_CACHE_GRACE_HOURS,
     WORKOUTS_LOOKBACK_DAYS,
     activity_name,
 )
@@ -212,7 +214,7 @@ def _normalize_recovery(records: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Sum today's per-15-min steps/energy and take the most recent heart rate."""
+    """Sum today's per-10-min steps/energy and take the most recent heart rate."""
     if not records:
         return None
     today = dt_util.now().date()
@@ -395,6 +397,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
         )
         self._client = client
+        # key -> (workout, last_seen): smooths the API's eventually-consistent
+        # workouts list so a transiently-missing workout doesn't drop sensors.
+        self._workout_cache: dict[str, tuple[dict[str, Any], datetime]] = {}
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -432,6 +437,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("All Suunto endpoints failed this cycle")
 
         sleep, recovery, workouts = data["sleep"], data["recovery"], data["workouts"]
+
+        # Smooth the eventually-consistent workouts list: re-add any workout that
+        # was present recently but is transiently missing this cycle, so every
+        # workout-derived sensor stays stable through an upstream hiccup.
+        workouts = self._merge_workouts(workouts, now)
 
         # Lifetime stats — username comes from a workout record so a cached
         # session (no fresh login) still works.
@@ -500,6 +510,16 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ),
         }
 
+        # Hourly long-term statistics for the fast-changing metrics. Auxiliary:
+        # an import hiccup must never blank the normal data update (but a real
+        # auth failure still surfaces for the reauth flow).
+        try:
+            await self._async_update_statistics(workouts, recovery)
+        except SuuntoAppAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        except Exception:  # noqa: BLE001 - statistics are best-effort
+            _LOGGER.exception("Hourly statistics import failed (non-fatal)")
+
         return {
             "sleep": sleep_norm,
             "recovery": recovery_norm,
@@ -511,3 +531,118 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    def _merge_workouts(
+        self, fresh: list[dict[str, Any]], now: datetime
+    ) -> list[dict[str, Any]]:
+        """Union the fresh workouts with recently-seen ones (keyed by ``key``).
+
+        Refreshes the cache from this cycle's fetch, then re-adds any cached
+        workout that is missing now but was seen within the grace window and is
+        still inside the fetch window. Expired entries are dropped, so a
+        genuinely deleted workout disappears once it has been absent past grace.
+        """
+        cutoff = now - timedelta(hours=WORKOUT_CACHE_GRACE_HOURS)
+        window_start_ms = _since_ms(now, WORKOUTS_LOOKBACK_DAYS)
+
+        fresh_keys: set[str] = set()
+        for workout in fresh:
+            key = workout.get("key")
+            if key:
+                fresh_keys.add(key)
+                self._workout_cache[key] = (workout, now)
+
+        merged = list(fresh)
+        for key, (workout, seen) in list(self._workout_cache.items()):
+            if seen < cutoff:
+                del self._workout_cache[key]
+                continue
+            if key in fresh_keys:
+                continue
+            if (workout.get("startTime") or 0) >= window_start_ms:
+                merged.append(workout)
+                _LOGGER.debug("Re-added transiently-missing workout %s", key)
+
+        merged.sort(key=lambda w: w.get("startTime") or 0, reverse=True)
+        return merged
+
+    async def _async_update_statistics(
+        self, workouts: list[dict[str, Any]], recovery: list[dict[str, Any]]
+    ) -> None:
+        """Build hourly statistic samples from activity/recovery/workouts.
+
+        HR merges the 10-min 24/7 stream with the ~25 s workout heartrates (more
+        samples just sharpen the hourly mean/min/max). Steps/energy come from the
+        24/7 stream ONLY — the workout totals are already counted there, so
+        adding them would double-count the sum.
+        """
+        now = dt_util.utcnow()
+        since_ms = _since_ms(now, ACTIVITY_LOOKBACK_DAYS)
+        activity = await self._client.async_get_wellness("activity", since_ms)
+
+        hr: list[tuple[datetime, float]] = []
+        steps: list[tuple[datetime, float]] = []
+        energy: list[tuple[datetime, float]] = []
+        for rec in activity:
+            ts = _parse_ts(rec.get("timestamp"))
+            if ts is None:
+                continue
+            ed = rec.get("entryData") or {}
+            hz = _as_float(ed.get("hr"))
+            if hz and hz > 0:
+                hr.append((ts, hz * 60))  # Hz -> bpm
+            step_count = _as_float(ed.get("stepCount"))
+            if step_count is not None:
+                steps.append((ts, step_count))
+            cal = _as_float(ed.get("energyConsumption"))
+            if cal is not None:
+                energy.append((ts, cal / 1000))  # cal -> kcal
+
+        balance: list[tuple[datetime, float]] = []
+        stress: list[tuple[datetime, float]] = []
+        for rec in recovery:
+            ts = _parse_ts(rec.get("timestamp"))
+            if ts is None:
+                continue
+            ed = rec.get("entryData") or {}
+            bal = _as_float(ed.get("balance"))
+            if bal is not None:
+                balance.append((ts, bal * 100))  # 0..1 -> %
+            stress_state = _as_float(ed.get("stressState"))
+            if stress_state is not None:
+                stress.append((ts, stress_state))
+
+        # Dense workout HR samples for workouts overlapping the activity window.
+        recent_keys = [
+            key
+            for w in workouts
+            if (w.get("startTime") or 0) >= since_ms and (key := w.get("key"))
+        ]
+        if recent_keys:
+            results = await asyncio.gather(
+                *(self._client.async_get_workout_data(k) for k in recent_keys),
+                return_exceptions=True,
+            )
+            for result in results:
+                if isinstance(result, SuuntoAppAuthError):
+                    raise result
+                if isinstance(result, BaseException):
+                    _LOGGER.debug("Workout data fetch failed (skipped): %s", result)
+                    continue
+                for point in result.get("heartrates") or []:
+                    epoch_ms = point.get("d")
+                    bpm = _as_float(point.get("hr"))
+                    if epoch_ms and bpm and bpm > 0:
+                        when = datetime.fromtimestamp(
+                            int(epoch_ms) / 1000, tz=timezone.utc
+                        )
+                        hr.append((when, bpm))
+
+        await suunto_stats.async_update_statistics(
+            self.hass,
+            hr=hr,
+            steps=steps,
+            energy=energy,
+            balance=balance,
+            stress=stress,
+        )

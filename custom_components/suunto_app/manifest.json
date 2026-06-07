@@ -1,6 +1,7 @@
 {
   "domain": "suunto_app",
   "name": "Suunto App (unofficial)",
+  "after_dependencies": ["recorder"],
   "codeowners": ["@MichalZaniewicz"],
   "config_flow": true,
   "documentation": "https://github.com/MichalZaniewicz/ha-suunto",

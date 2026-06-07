@@ -155,6 +155,26 @@ class SportsTrackerClient:
         items.sort(key=lambda w: w.get("startTime") or 0, reverse=True)
         return items
 
+    async def async_get_workout_data(self, key: str) -> dict[str, Any]:
+        """Return a workout's dense sample tracks (heartrates, locations, ...).
+
+        ``workouts/{key}/data`` carries ``heartrates`` as a list of
+        ``{t: sec_from_start, hr: bpm, d: epoch_ms}`` at ~25 s cadence — much
+        finer than the 10-min 24/7 stream, used to enrich the HR statistics.
+        """
+        body = await self._request(API_BASE, f"workouts/{key}/data")
+        if body[:2] == b"\x1f\x8b":  # defensive: gunzip if served gzipped
+            try:
+                body = gzip.decompress(body)
+            except OSError as err:
+                raise SuuntoAppError(f"Failed to gunzip workout data: {err}") from err
+        try:
+            envelope = json.loads(body)
+        except (ValueError, json.JSONDecodeError) as err:
+            raise SuuntoAppError(f"Bad workout-data response: {err}") from err
+        payload = envelope.get("payload") if isinstance(envelope, dict) else None
+        return payload if isinstance(payload, dict) else {}
+
     async def async_get_stats(self, username: str) -> dict[str, Any]:
         """Return lifetime aggregate workout stats for ``username``."""
         body = await self._request(API_BASE, f"workouts/{username}/stats")

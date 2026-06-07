@@ -13,3 +13,8 @@ Thumbs.db
 
 # Local tooling
 .claude/
+CLAUDE.md
+tools/
+
+# Brand source/staging (inline copies live in custom_components/suunto_app/brand/)
+brand_assets/

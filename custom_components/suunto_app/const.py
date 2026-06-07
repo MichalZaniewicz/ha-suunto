@@ -30,6 +30,14 @@ RECOVERY_LOOKBACK_DAYS = 4
 ACTIVITY_LOOKBACK_DAYS = 2
 WORKOUTS_LOOKBACK_DAYS = 90
 
+# The Sports Tracker workouts list is occasionally eventually-consistent: a whole
+# workout can vanish from one response and reappear the next cycle, which wobbles
+# every workout-derived sensor (counts, weekly volume, CTL/ATL/TSB, statistics).
+# We keep a per-key cache and retain a transiently-missing workout for this grace
+# window so a single flaky fetch can't drop it; a genuinely deleted workout falls
+# out once it has been absent longer than this.
+WORKOUT_CACHE_GRACE_HOURS = 24
+
 PLATFORMS = ["sensor"]
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
