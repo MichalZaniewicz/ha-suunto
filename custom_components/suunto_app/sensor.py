@@ -143,7 +143,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="stress_state",
         translation_key="stress_state",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:emoticon-stressed-outline",
+        icon="mdi:head-flash-outline",
         value_fn=_section("recovery", "stress_state"),
     ),
     # --- Daily activity ---
@@ -359,7 +359,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_pct_hrmax",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-percent",
+        icon="mdi:percent",
         value_fn=_section("workout", "pct_hrmax"),
     ),
     SuuntoAppSensorDescription(
