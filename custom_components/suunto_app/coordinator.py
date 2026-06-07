@@ -241,9 +241,13 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 def _centi_to_min(value: Any) -> float | None:
-    """Convert centiseconds (timeInZone unit) to minutes."""
+    """Convert centiseconds (timeInZone unit) to minutes.
+
+    A present zero stays 0.0 (you spent 0 min in that HR zone) — only a truly
+    absent value is None, so unused zones show "0 min" instead of "unknown".
+    """
     num = _as_float(value)
-    return round(num / 6000, 1) if num else None
+    return round(num / 6000, 1) if num is not None else None
 
 
 def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
@@ -273,8 +277,8 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "ascent_meters": _as_int(workout.get("totalAscent")),
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
-            round(_as_float(workout.get("recoveryTime")) / 3600, 1)
-            if workout.get("recoveryTime")
+            round(total_recovery / 3600, 1)
+            if (total_recovery := _as_float(workout.get("recoveryTime"))) is not None
             else None
         ),
         # Heart rate (already in bpm).
