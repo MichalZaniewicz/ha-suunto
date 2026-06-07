@@ -85,3 +85,20 @@ on first setup or when the server invalidates the session. During normal operati
 - **"Login was rejected"** – wrong email/password, or account 2FA.
 - **"Reauthentication required"** – the session expired; enter the password again.
 - **Light/REM sleep sensors are `unknown`** – your watch does not report them.
+
+## Disclaimer
+
+An unofficial, experimental hobby project — run it at your own risk.
+
+- **No ties to Suunto.** Not affiliated with, endorsed by, or supported by Suunto
+  Oy, Amer Sports, or Sports-Tracker. All trademarks stay with their owners.
+- **Built on shifting ground.** It talks to a private, undocumented endpoint that
+  can change or stop working at any moment — a single app update may break it.
+- **Possibly against Suunto's terms.** Check them yourself. Hammering the service
+  could get your account limited or closed; that's on you, not the author.
+- **Your account only.** Use it strictly for your own data — never to collect or
+  aggregate anyone else's.
+- **No warranty, no liability.** Provided "as is", with no guarantees and no
+  responsibility for anything that follows from using it.
+- Not legal advice. If any of this gives you second thoughts, just use the
+  official Suunto app.
