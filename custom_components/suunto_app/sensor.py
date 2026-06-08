@@ -151,6 +151,13 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:bed-clock",
         value_fn=_section("sleep", "timestamp"),
     ),
+    SuuntoAppSensorDescription(
+        key="wake_time",
+        translation_key="wake_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:weather-sunset-up",
+        value_fn=_section("sleep", "wake_time"),
+    ),
     # --- Recovery ---
     SuuntoAppSensorDescription(
         key="recovery_balance",

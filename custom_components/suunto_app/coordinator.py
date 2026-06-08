@@ -137,6 +137,17 @@ def _aggregate_night(
     weights = [(_as_float(ed.get("duration")) or 0.0) for ed in eds]
     return {
         "timestamp": night[0][0],
+        # Wake-up = end of the last sleep fragment. The API has no explicit wake
+        # field, so we derive it as fragment start + its sleep duration (exact
+        # bar any awake time inside a single fragment, usually a few minutes).
+        "wake_time": max(
+            (
+                ts + timedelta(seconds=dur)
+                for ts, ed in night
+                if (dur := _as_float(ed.get("duration"))) and dur > 0
+            ),
+            default=None,
+        ),
         "duration_hours": _sec_to_hours(
             _sum_present([_as_float(ed.get("duration")) for ed in eds])
         ),

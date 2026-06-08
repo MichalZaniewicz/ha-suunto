@@ -53,6 +53,7 @@
       "sleep_spo2": { "name": "Sleep blood oxygen" },
       "sleep_hrv": { "name": "Sleep HRV" },
       "sleep_time": { "name": "Sleep start" },
+      "wake_time": { "name": "Wake-up time" },
       "recovery_balance": { "name": "Recovery balance" },
       "stress_state": { "name": "Stress state" },
       "daily_steps": { "name": "Daily steps" },
