@@ -85,18 +85,36 @@ async def async_update_statistics(
 
     from .const import DOMAIN
 
-    for suffix, name, unit, samples in means:
-        buckets = hourly_mean(samples)
-        if not buckets:
-            continue
-        metadata = StatisticMetaData(
-            has_mean=True,
-            has_sum=False,
+    # HA 2026.11 drops the implicit mean handling: metadata must declare
+    # `mean_type`. It only exists on newer cores (our floor is 2024.12), so detect
+    # it and fall back to the old `has_mean` flag on older installs.
+    try:
+        from homeassistant.components.recorder.models import StatisticMeanType
+
+        _mean_arith, _mean_none = StatisticMeanType.ARITHMETIC, StatisticMeanType.NONE
+    except ImportError:  # pragma: no cover - older HA without mean_type
+        _mean_arith = _mean_none = None
+
+    def _meta(suffix: str, name: str, unit: str | None, is_mean: bool):
+        kind = (
+            {"mean_type": _mean_arith if is_mean else _mean_none}
+            if _mean_arith is not None
+            else {"has_mean": is_mean}
+        )
+        return StatisticMetaData(
+            has_sum=not is_mean,
             name=name,
             source=DOMAIN,
             statistic_id=f"{DOMAIN}:{suffix}",
             unit_of_measurement=unit,
+            **kind,
         )
+
+    for suffix, name, unit, samples in means:
+        buckets = hourly_mean(samples)
+        if not buckets:
+            continue
+        metadata = _meta(suffix, name, unit, is_mean=True)
         data = [
             StatisticData(start=hour, mean=mean, min=low, max=high)
             for hour, (mean, low, high) in sorted(buckets.items())
@@ -136,13 +154,6 @@ async def async_update_statistics(
         for hour, total in ordered:
             running += total
             data.append(StatisticData(start=hour, state=total, sum=running))
-        metadata = StatisticMetaData(
-            has_mean=False,
-            has_sum=True,
-            name=name,
-            source=DOMAIN,
-            statistic_id=statistic_id,
-            unit_of_measurement=unit,
-        )
+        metadata = _meta(suffix, name, unit, is_mean=False)
         async_add_external_statistics(hass, metadata, data)
         _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
