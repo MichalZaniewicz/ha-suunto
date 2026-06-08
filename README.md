@@ -100,10 +100,12 @@ steps to the newest synced value and can't be filled backwards.
 - `energyConsumption` is in calories (÷1000 → kcal); `timeInZone` is in centiseconds.
 - `lightSleepDuration`/`remSleepDuration` may be absent depending on the watch
   model (then light/REM sleep is `unknown`).
-- **Not exercised inside a live Home Assistant** (config flow / coordinator /
-  statistics import at runtime) — checked statically and against real data via the
-  API. Data cadences confirmed live: 24/7 HR/steps/energy every ~10 min, recovery
-  every ~30 min, workout heart-rate samples every ~25 s.
+- **Verified running inside a live Home Assistant**: the config entry loads, both
+  coordinators poll and update the sensors, and the hourly long-term statistics
+  import runs and accumulates data (the backfilled `suunto_app:*` series, including
+  workout HR peaks). The reauth flow specifically hasn't been force-tested.
+- Data cadences confirmed live: 24/7 HR/steps/energy every ~10 min, recovery every
+  ~30 min, workout heart-rate samples every ~25 s.
 
 ## Troubleshooting
 
