@@ -4,7 +4,7 @@ A custom HACS integration that pulls your **Suunto** data into Home Assistant fr
 the Suunto app (Sports Tracker) — signing in with just your email and password,
 no Docker and no partner keys.
 
-![Suunto example dashboard](docs/dashboard.jpg)
+![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
 
 *Example dashboard — live sensors plus backfilled long-term statistics (heart
 rate, training load, sleep).*
@@ -76,7 +76,7 @@ on first setup or when the server invalidates the session. During normal operati
 
 ## Long-term statistics (intraday curves + backfill)
 
-![Suunto long-term statistics charts](docs/charts.jpg)
+![Suunto long-term statistics charts](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/charts.jpg)
 
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
