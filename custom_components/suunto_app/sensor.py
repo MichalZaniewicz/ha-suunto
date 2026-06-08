@@ -67,6 +67,7 @@ class SuuntoAppSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[dict[str, Any]], Any]
     source: str = SOURCE_DAILY
+    attributes_fn: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None
 
 
 SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
@@ -520,6 +521,16 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:calendar-month",
         value_fn=lambda d: d.get("count_30d"),
     ),
+    # Recent workouts list — state is the count, the list rides in attributes
+    # (render with a markdown/flex-table card). Reuses the fetched 90d list.
+    SuuntoAppSensorDescription(
+        key="workouts_recent",
+        translation_key="workouts_recent",
+        native_unit_of_measurement=UNIT_WORKOUTS,
+        icon="mdi:format-list-bulleted",
+        value_fn=lambda d: len(d.get("recent_workouts") or []),
+        attributes_fn=lambda d: {"workouts": d.get("recent_workouts") or []},
+    ),
 )
 
 
@@ -570,3 +581,10 @@ class SuuntoAppSensor(
         if self.coordinator.data is None:
             return None
         return self.entity_description.value_fn(self.coordinator.data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return extra attributes (e.g. the recent-workouts list), if any."""
+        if self.coordinator.data is None or self.entity_description.attributes_fn is None:
+            return None
+        return self.entity_description.attributes_fn(self.coordinator.data)

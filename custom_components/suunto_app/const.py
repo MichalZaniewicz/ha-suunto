@@ -44,7 +44,7 @@ STATS_LOOKBACK_DAYS = 5
 # out once it has been absent longer than this.
 WORKOUT_CACHE_GRACE_HOURS = 24
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "calendar"]
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {

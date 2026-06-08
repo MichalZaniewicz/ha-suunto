@@ -544,10 +544,33 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception:  # noqa: BLE001 - statistics are best-effort
             _LOGGER.exception("Hourly statistics import failed (non-fatal)")
 
+        # Full normalized list (for the workouts calendar) + a compact recent
+        # slice (for the recent-workouts sensor attribute). Both reuse the 90d
+        # list already fetched — no extra requests.
+        norm_workouts = [_normalize_workout(w) for w in workouts]
+        recent_workouts = [
+            {
+                "start": w["start_time"].isoformat() if w.get("start_time") else None,
+                "activity": w.get("activity"),
+                "distance_km": (
+                    round(w["distance_meters"] / 1000, 1)
+                    if w.get("distance_meters")
+                    else None
+                ),
+                "duration_min": w.get("duration_minutes"),
+                "avg_hr": w.get("avg_hr_bpm"),
+                "max_hr": w.get("max_hr_bpm"),
+                "tss": w.get("tss"),
+            }
+            for w in norm_workouts[:15]
+        ]
+
         return {
             "sleep": sleep_norm,
             "recovery": recovery_norm,
-            "workout": _normalize_workout(workouts[0]) if workouts else None,
+            "workout": norm_workouts[0] if norm_workouts else None,
+            "workouts": norm_workouts,
+            "recent_workouts": recent_workouts,
             "stats": _normalize_stats(stats),
             "load": load,
             "baseline": baseline,
