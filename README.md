@@ -120,6 +120,10 @@ reuse the workout history already fetched — no extra requests.
 - **"Reauthentication required"** – the session expired; enter the password again.
 - **Light/REM sleep sensors are `unknown`** – your watch does not report them.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## Disclaimer
 
 An unofficial, experimental hobby project — run it at your own risk.

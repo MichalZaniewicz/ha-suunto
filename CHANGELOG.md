@@ -1,0 +1,54 @@
+# Changelog
+
+Notable changes per release. Releases are published on GitHub (HACS reads them);
+beta pre-releases are tagged `X.Y.ZbN`.
+
+## 1.0.11
+- **Workouts calendar** — a `calendar` entity exposing every past workout as a
+  browsable event (activity, distance, duration / HR / TSS).
+- **Recent workouts** sensor — the last 15 sessions in its attributes for a
+  list/table card.
+- Activity-type names mapped: Walking, Soccer, Volleyball, Trekking, Kayaking
+  (previously shown as "Activity N").
+- README documents the calendar / recent list with a screenshot.
+
+## 1.0.10
+- Docs only: example dashboard + long-term statistics screenshots in the README;
+  removed the developer-facing "Verification status" section.
+
+## 1.0.9
+- Sleep **wake-up time** sensor (derived as the end of the last sleep fragment;
+  the API has no explicit wake field).
+- Statistics import now declares `mean_type` (fixes the Home Assistant 2026.11
+  deprecation), with a fallback to `has_mean` on cores older than 2024.12.
+
+## 1.0.8
+- Hourly statistics backfill extended to **sleep** (duration / HRV / resting HR /
+  quality / SpO₂), **Readiness** and the **CTL/ATL/TSB** trend.
+- Backfill window widened to 5 days; workout heart-rate samples cached;
+  cumulative-sum base read made gap-tolerant.
+
+## 1.0.7
+- **Hourly long-term statistics** for fast-changing metrics (heart rate, steps,
+  energy, recovery), with dense workout heart-rate folded into the HR series so an
+  intraday curve backfills retroactively after a late sync.
+- Fixed the 7-day sensors' "notch" caused by the eventually-consistent workouts
+  list (per-key cache with a grace window).
+
+## 1.0.6
+- Stride length only for foot-based activities.
+
+## 1.0.5
+- Workout HR zones; recovery shows `0` instead of `unknown`.
+
+## 1.0.4
+- Per-sensor display precision (no more long floating-point artifacts).
+
+## 1.0.3
+- Inline brand icons so the integration-page icon shows (HA 2026.3+).
+
+## 1.0.0 – 1.0.2
+- Initial releases: email/password login via the Sports Tracker backend;
+  sleep / recovery / 24-7 activity / workout sensors; lifetime stats; derived
+  training-load (CTL/ATL/TSB, ACWR) and recovery (HRV/RHR baselines, Readiness)
+  metrics; brand assets.
