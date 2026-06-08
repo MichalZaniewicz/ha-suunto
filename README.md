@@ -91,22 +91,6 @@ older than the window. The hourly **heart-rate** statistic is the way to see a
 gap-free daily HR curve (with workout peaks); the live `current_hr` sensor only
 steps to the newest synced value and can't be filled backwards.
 
-## Verification status
-
-- **Login, data fetching and field mapping verified against a live account** —
-  sleep (`duration/deepSleepDuration/hrAvg/hrMin/maxSpo2/quality/avgHrv`), recovery
-  (`balance/stressState`), activity (`stepCount/energyConsumption/hr`), workouts
-  (zones, TSS, speed/pace, cadence, HR) and lifetime stats.
-- `energyConsumption` is in calories (÷1000 → kcal); `timeInZone` is in centiseconds.
-- `lightSleepDuration`/`remSleepDuration` may be absent depending on the watch
-  model (then light/REM sleep is `unknown`).
-- **Verified running inside a live Home Assistant**: the config entry loads, both
-  coordinators poll and update the sensors, and the hourly long-term statistics
-  import runs and accumulates data (the backfilled `suunto_app:*` series, including
-  workout HR peaks). The reauth flow specifically hasn't been force-tested.
-- Data cadences confirmed live: 24/7 HR/steps/energy every ~10 min, recovery every
-  ~30 min, workout heart-rate samples every ~25 s.
-
 ## Troubleshooting
 
 - **"Login was rejected"** – wrong email/password, or account 2FA.
