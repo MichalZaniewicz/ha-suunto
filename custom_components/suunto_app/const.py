@@ -64,9 +64,13 @@ ACTIVITY_NAMES: dict[int, str] = {
     24: "Nordic walking",
     29: "Climbing",
     30: "Snowboarding",
+    33: "Soccer",
+    38: "Volleyball",
     51: "Yoga",
     52: "Indoor cycling",
     53: "Treadmill running",
+    70: "Trekking",
+    72: "Kayaking",
     76: "Strength training",
     77: "Walking",
 }
