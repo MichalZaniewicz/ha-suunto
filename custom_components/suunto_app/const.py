@@ -48,6 +48,7 @@ PLATFORMS = ["sensor", "calendar"]
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {
+    0: "Walking",
     1: "Running",
     2: "Cycling",
     3: "Cross-country skiing",
