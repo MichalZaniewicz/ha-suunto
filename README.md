@@ -48,7 +48,7 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (55 sensors under one "Suunto" device)
+## Entities (56 sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
@@ -67,6 +67,9 @@ on first setup or when the server invalidates the session. During normal operati
 - **Derived — per workout:** % of max HR, calories per km, ascent rate, stride length.
 - **Weekly volume:** workout distance and time over the last 7 days.
 - **Counts:** workouts in the last 7 / 30 days.
+- **Workouts calendar & recent list:** a `calendar` entity with every past workout
+  as a browsable event, plus a *Recent workouts* sensor whose attribute holds the
+  last 15 (date, type, distance, duration, HR, TSS) — see below.
 
 > Derived metrics are computed locally in HA from history fetched via the API
 > (sleep ~60 days, workouts ~90 days, paginated). CTL/ATL are seeded with the mean
@@ -100,6 +103,16 @@ The backfill window is ~5 days — a sync delayed beyond that won't fill the par
 older than the window. The hourly **heart-rate** statistic is the way to see a
 gap-free daily HR curve (with workout peaks); the live `current_hr` sensor only
 steps to the newest synced value and can't be filled backwards.
+
+## Workouts calendar & recent activities
+
+![Suunto workouts calendar and recent activities list](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/workouts.jpg)
+
+Every past workout is exposed as an event on a **`calendar`** entity — browse your
+whole training history in a Calendar card, each event showing the activity,
+distance and key stats (duration, HR, TSS). A companion **Recent workouts** sensor
+keeps the last 15 sessions in its attributes for a compact list/table card. Both
+reuse the workout history already fetched — no extra requests.
 
 ## Troubleshooting
 
