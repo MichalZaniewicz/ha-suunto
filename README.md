@@ -50,17 +50,19 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (56 sensors + a workouts calendar under one "Suunto" device)
+## Entities (59 sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
 - **Recovery:** recovery balance, stress state.
 - **Daily activity:** steps, energy (kcal), current heart rate.
-- **Last workout:** type, start, distance, duration, ascent, recovery time,
-  average/max heart rate, average speed (km/h) and pace (min/km), cadence, **TSS**,
-  and **time in 5 heart-rate zones**.
+- **Last workout:** type, start, **start location** (latitude/longitude - plots on
+  a Map card), distance, duration, ascent, recovery time, average/max heart rate,
+  average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
+  heart-rate zones**, and **recovered-at** (when the recovery countdown ends).
 - **Lifetime stats:** total distance (km), total time (h), total energy, number of
-  workouts, active days.
+  workouts, active days, plus a **per-sport breakdown** (distance/time/count/energy
+  for each activity type, in the sensor's attributes).
 - **Derived - training load:** Fitness (CTL), Fatigue (ATL), Form (TSB) from TSS
   history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3).
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
@@ -86,7 +88,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 56 live sensors, the integration imports **hourly long-term
+Beyond the 59 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
@@ -115,6 +117,39 @@ whole training history in a Calendar card, each event showing the activity,
 distance and key stats (duration, HR, TSS). A companion **Recent workouts** sensor
 keeps the last 15 sessions in its attributes for a compact list/table card. Both
 reuse the workout history already fetched - no extra requests.
+
+## Workout start on a map
+
+The **Last workout location** sensor carries the start **latitude/longitude** of
+your most recent workout as attributes, so it can be plotted directly on a Map card:
+
+```yaml
+type: map
+entities:
+  - sensor.suunto_last_workout_location   # your entity id (named after the account)
+```
+
+Indoor workouts with no GPS track show as *unknown* (no marker). The same
+`start_lat` / `start_lon` are also present on every entry of the **Recent workouts**
+sensor's attributes, if you'd like to plot more than just the latest one (e.g. with
+a template sensor or a custom card).
+
+## Lifetime totals per sport
+
+The **Lifetime by activity** sensor's state is the number of activity types; the
+per-sport totals ride in its `activities` attribute (each with `activity`,
+`workouts`, `distance_km`, `time_hours`, `energy_kcal`). Render them with a Markdown
+card:
+
+```yaml
+type: markdown
+content: |
+  | Sport | Workouts | Distance | Time |
+  | --- | --: | --: | --: |
+  {% for a in state_attr('sensor.suunto_lifetime_by_activity', 'activities') -%}
+  | {{ a.activity }} | {{ a.workouts }} | {{ a.distance_km }} km | {{ a.time_hours }} h |
+  {% endfor %}
+```
 
 ## Troubleshooting
 

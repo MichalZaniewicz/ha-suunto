@@ -265,11 +265,57 @@ def _centi_to_min(value: Any) -> float | None:
     return round(num / 6000, 1) if num is not None else None
 
 
+def _first_polyline_point(polyline: Any) -> tuple[float, float] | None:
+    """Decode the first ``(lat, lon)`` vertex of a Google-encoded polyline.
+
+    Sports Tracker returns the workout GPS track as a precision-5 encoded
+    polyline (field ``polyline``); its first vertex is the workout start. Only
+    the first point is decoded - enough to drop a start marker on a map without
+    carrying the whole track. Returns None for a workout with no GPS track
+    (e.g. an indoor session) or an undecodable string.
+    """
+    if not isinstance(polyline, str) or not polyline:
+        return None
+    index = 0
+    coords: list[float] = []
+    try:
+        for _ in range(2):  # first latitude, then longitude
+            result = 0
+            shift = 0
+            while True:
+                byte = ord(polyline[index]) - 63
+                index += 1
+                result |= (byte & 0x1F) << shift
+                shift += 5
+                if byte < 0x20:
+                    break
+            # The first vertex is stored as a delta from the (0, 0) origin, so
+            # the decoded delta IS the coordinate.
+            coords.append((~(result >> 1) if result & 1 else (result >> 1)) / 1e5)
+    except (IndexError, TypeError):
+        return None
+    lat, lon = coords[0], coords[1]
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+        return None  # garbled decode - don't emit a nonsense position
+    if abs(lat) < 1e-4 and abs(lon) < 1e-4:
+        return None  # "null island" (0, 0) - GPS no-fix sentinel, not a start
+    return lat, lon
+
+
 def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     activity_id = _as_int(workout.get("activityId"))
     start = workout.get("startTime")
     start_dt = (
         datetime.fromtimestamp(int(start) / 1000, tz=timezone.utc) if start else None
+    )
+    stop = workout.get("stopTime")
+    stop_dt = (
+        datetime.fromtimestamp(int(stop) / 1000, tz=timezone.utc) if stop else None
+    )
+    # When Suunto considers you recovered = workout end + its recovery time (s).
+    recovery_s = _as_float(workout.get("recoveryTime"))
+    recovered_at = (
+        stop_dt + timedelta(seconds=recovery_s) if stop_dt and recovery_s else None
     )
     hrdata = workout.get("hrdata") or {}
     cadence = workout.get("cadence") or {}
@@ -282,11 +328,18 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     total_time = _as_float(workout.get("totalTime"))
     ascent = _as_float(workout.get("totalAscent"))
     cad_avg = _as_float(cadence.get("avg"))
+    start_point = _first_polyline_point(workout.get("polyline"))
     return {
         "key": workout.get("key"),
         "activity_id": activity_id,
         "activity": activity_name(activity_id),
         "start_time": start_dt,
+        "stop_time": stop_dt,
+        # Timestamp when Suunto's recovery countdown finishes for this workout.
+        "recovered_at": recovered_at,
+        # Start GPS position (from the encoded track) - for a map marker.
+        "start_lat": round(start_point[0], 6) if start_point else None,
+        "start_lon": round(start_point[1], 6) if start_point else None,
         "duration_minutes": _sec_to_min(workout.get("totalTime")),
         "distance_meters": _as_int(workout.get("totalDistance")),
         "ascent_meters": _as_int(workout.get("totalAscent")),
@@ -338,6 +391,38 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
+    """Per-activity lifetime totals from the stats payload's ``allStats`` list.
+
+    Each entry uses different keys than the top-level totals (verified live):
+    ``_id`` is the activityId, and the sums are ``totalDistance`` (m),
+    ``totalTime`` (s), ``energyConsumption`` (kcal), ``numberOfWorkouts``.
+    Sorted by workout count, most first.
+    """
+    out: list[dict[str, Any]] = []
+    for item in stats.get("allStats") or []:
+        if not isinstance(item, dict):
+            continue
+        count = _as_int(item.get("numberOfWorkouts"))
+        if not count:  # skip empty / zero-workout activity buckets
+            continue
+        activity_id = _as_int(item.get("_id"))
+        distance = _as_float(item.get("totalDistance"))
+        time_s = _as_float(item.get("totalTime"))
+        out.append(
+            {
+                "activity": activity_name(activity_id),
+                "activity_id": activity_id,
+                "workouts": count,
+                "distance_km": round(distance / 1000, 1) if distance else None,
+                "time_hours": round(time_s / 3600, 1) if time_s else None,
+                "energy_kcal": _as_int(item.get("energyConsumption")),
+            }
+        )
+    out.sort(key=lambda a: a["workouts"] or 0, reverse=True)
+    return out
+
+
 def _normalize_stats(stats: dict[str, Any]) -> dict[str, Any] | None:
     """Flatten the lifetime workout-stats payload."""
     if not stats:
@@ -350,6 +435,7 @@ def _normalize_stats(stats: dict[str, Any]) -> dict[str, Any] | None:
         "energy_kcal": _as_int(stats.get("totalEnergyConsumptionSum")),
         "workouts": _as_int(stats.get("totalNumberOfWorkoutsSum")),
         "active_days": _as_int(stats.get("totalDays")),
+        "by_activity": _lifetime_by_activity(stats),
     }
 
 
@@ -561,6 +647,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "avg_hr": w.get("avg_hr_bpm"),
                 "max_hr": w.get("max_hr_bpm"),
                 "tss": w.get("tss"),
+                # Start GPS (None for indoor workouts) - for a map/marker template.
+                "start_lat": w.get("start_lat"),
+                "start_lon": w.get("start_lon"),
             }
             for w in norm_workouts[:15]
         ]
