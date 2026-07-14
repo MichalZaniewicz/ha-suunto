@@ -20,6 +20,12 @@ Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 > update. Use your own account, at your own risk. Login pipeline ported from
 > [`tajchert/suuntool`](https://github.com/tajchert/suuntool).
 
+## Documentation
+
+Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
+installation, every sensor, dashboard examples, derived metrics, long-term
+statistics and troubleshooting.
+
 ## Installation & configuration
 
 1. Install via HACS (Custom repositories → this repo as an **Integration**) and restart HA.
