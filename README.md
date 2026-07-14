@@ -117,6 +117,22 @@ distance and key stats (duration, HR, TSS). A companion **Recent workouts** sens
 keeps the last 15 sessions in its attributes for a compact list/table card. Both
 reuse the workout history already fetched — no extra requests.
 
+## Workout start on a map
+
+The **Last workout location** sensor carries the start **latitude/longitude** of
+your most recent workout as attributes, so it can be plotted directly on a Map card:
+
+```yaml
+type: map
+entities:
+  - sensor.suunto_last_workout_location   # your entity id (named after the account)
+```
+
+Indoor workouts with no GPS track show as *unknown* (no marker). The same
+`start_lat` / `start_lon` are also present on every entry of the **Recent workouts**
+sensor's attributes, if you'd like to plot more than just the latest one (e.g. with
+a template sensor or a custom card).
+
 ## Troubleshooting
 
 - **"Login was rejected"** – wrong email/password, or account 2FA.
