@@ -58,7 +58,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
             end = start + timedelta(minutes=minutes or 1)
             distance = w.get("distance_meters")
             km = f"{distance / 1000:.1f} km" if distance else None
-            summary = " · ".join(
+            summary = " - ".join(
                 p for p in (w.get("activity") or "Workout", km) if p
             )
             details = []
@@ -75,7 +75,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
                     start=start,
                     end=end,
                     summary=summary,
-                    description=" · ".join(details) or None,
+                    description=" - ".join(details) or None,
                     uid=w.get("key"),
                 )
             )
@@ -83,7 +83,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
 
     @property
     def event(self) -> CalendarEvent | None:
-        """No 'current' event — all workouts are in the past."""
+        """No 'current' event - all workouts are in the past."""
         return None
 
     async def async_get_events(

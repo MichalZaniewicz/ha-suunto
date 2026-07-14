@@ -95,7 +95,7 @@ class SuuntoAppConfigFlow(ConfigFlow, domain=DOMAIN):
                     title=info["username"] or email,
                     data={
                         CONF_EMAIL: email,
-                        # Password intentionally NOT stored — only the session key.
+                        # Password intentionally NOT stored - only the session key.
                         CONF_SESSION_KEY: info["session_key"],
                     },
                 )

@@ -258,7 +258,7 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
 def _centi_to_min(value: Any) -> float | None:
     """Convert centiseconds (timeInZone unit) to minutes.
 
-    A present zero stays 0.0 (you spent 0 min in that HR zone) — only a truly
+    A present zero stays 0.0 (you spent 0 min in that HR zone) - only a truly
     absent value is None, so unused zones show "0 min" instead of "unknown".
     """
     num = _as_float(value)
@@ -328,7 +328,7 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "ascent_rate_m_h": (
             round(ascent / (total_time / 3600)) if ascent and total_time else None
         ),
-        # Stride length (distance per cadence cycle) — only meaningful for
+        # Stride length (distance per cadence cycle) - only meaningful for
         # foot-based activities; for cycling etc. cadence is pedal RPM, not steps.
         "stride_length_m": (
             round(avg_speed / (cad_avg / 60), 2)
@@ -444,7 +444,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data[label] = []
                 errors += 1
             elif isinstance(result, BaseException):
-                raise result  # unexpected error — don't swallow it
+                raise result  # unexpected error - don't swallow it
             else:
                 data[label] = result
 
@@ -459,7 +459,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # workout-derived sensor stays stable through an upstream hiccup.
         workouts = self._merge_workouts(workouts, now)
 
-        # Lifetime stats — username comes from a workout record so a cached
+        # Lifetime stats - username comes from a workout record so a cached
         # session (no fresh login) still works.
         stats: dict[str, Any] = {}
         username = workouts[0].get("username") if workouts else None
@@ -546,7 +546,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Full normalized list (for the workouts calendar) + a compact recent
         # slice (for the recent-workouts sensor attribute). Both reuse the 90d
-        # list already fetched — no extra requests.
+        # list already fetched - no extra requests.
         norm_workouts = [_normalize_workout(w) for w in workouts]
         recent_workouts = [
             {
@@ -628,7 +628,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Sub-daily (hourly buckets): HR merges the 10-min 24/7 stream with the
         ~25 s workout heartrates (more samples just sharpen the hourly
-        mean/min/max); steps/energy come from the 24/7 stream ONLY — the workout
+        mean/min/max); steps/energy come from the 24/7 stream ONLY - the workout
         totals already live there, so adding them would double-count the sum;
         recovery balance/stress from the 30-min stream.
 

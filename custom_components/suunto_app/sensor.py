@@ -521,7 +521,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:calendar-month",
         value_fn=lambda d: d.get("count_30d"),
     ),
-    # Recent workouts list — state is the count, the list rides in attributes
+    # Recent workouts list - state is the count, the list rides in attributes
     # (render with a markdown/flex-table card). Reuses the fetched 90d list.
     SuuntoAppSensorDescription(
         key="workouts_recent",

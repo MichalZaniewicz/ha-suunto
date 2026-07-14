@@ -4,9 +4,9 @@ Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
 ## 1.0.11
-- **Workouts calendar** — a `calendar` entity exposing every past workout as a
+- **Workouts calendar** - a `calendar` entity exposing every past workout as a
   browsable event (activity, distance, duration / HR / TSS).
-- **Recent workouts** sensor — the last 15 sessions in its attributes for a
+- **Recent workouts** sensor - the last 15 sessions in its attributes for a
   list/table card.
 - Activity-type names mapped: Walking, Soccer, Volleyball, Trekking, Kayaking
   (previously shown as "Activity N").
@@ -47,7 +47,7 @@ beta pre-releases are tagged `X.Y.ZbN`.
 ## 1.0.3
 - Inline brand icons so the integration-page icon shows (HA 2026.3+).
 
-## 1.0.0 – 1.0.2
+## 1.0.0 - 1.0.2
 - Initial releases: email/password login via the Sports Tracker backend;
   sleep / recovery / 24-7 activity / workout sensors; lifetime stats; derived
   training-load (CTL/ATL/TSB, ACWR) and recovery (HRV/RHR baselines, Readiness)

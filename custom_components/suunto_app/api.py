@@ -69,7 +69,7 @@ async def async_login(
             body = await resp.read()
             if resp.status in (401, 403):
                 raise SuuntoAppAuthError(
-                    "Login rejected — check email/password (account 2FA can also "
+                    "Login rejected - check email/password (account 2FA can also "
                     "block this)."
                 )
             resp.raise_for_status()
@@ -159,7 +159,7 @@ class SportsTrackerClient:
         """Return a workout's dense sample tracks (heartrates, locations, ...).
 
         ``workouts/{key}/data`` carries ``heartrates`` as a list of
-        ``{t: sec_from_start, hr: bpm, d: epoch_ms}`` at ~25 s cadence — much
+        ``{t: sec_from_start, hr: bpm, d: epoch_ms}`` at ~25 s cadence - much
         finer than the 10-min 24/7 stream, used to enrich the HR statistics.
         """
         body = await self._request(API_BASE, f"workouts/{key}/data")

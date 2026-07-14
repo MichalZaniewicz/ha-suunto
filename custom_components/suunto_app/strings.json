@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Suunto App (unofficial)",
-        "description": "Log in with your Suunto app (Sports Tracker) account. This uses Suunto's private app API and may violate Suunto's Terms of Service — use your own account at your own risk. Your password is used only to obtain a session token and is NOT stored; only the revocable session token is saved.",
+        "description": "Log in with your Suunto app (Sports Tracker) account. This uses Suunto's private app API and may violate Suunto's Terms of Service - use your own account at your own risk. Your password is used only to obtain a session token and is NOT stored; only the revocable session token is saved.",
         "data": {
           "email": "Email",
           "password": "Password"
@@ -36,7 +36,7 @@
         },
         "data_description": {
           "fast_scan_interval": "How often to refresh live data (current heart rate, daily steps/energy).",
-          "scan_interval": "How often to refresh history-based data (sleep, workouts, training load, baselines). Keep this modest — it is an unofficial API."
+          "scan_interval": "How often to refresh history-based data (sleep, workouts, training load, baselines). Keep this modest - it is an unofficial API."
         }
       }
     }
