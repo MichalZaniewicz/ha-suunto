@@ -280,6 +280,14 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:timer-sand",
         value_fn=_section("workout", "recovery_time_hours"),
     ),
+    # When Suunto's recovery countdown from the last workout finishes.
+    SuuntoAppSensorDescription(
+        key="recovery_until",
+        translation_key="recovery_until",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:bed-clock",
+        value_fn=_section("workout", "recovered_at"),
+    ),
     SuuntoAppSensorDescription(
         key="last_avg_hr",
         translation_key="last_avg_hr",
@@ -409,6 +417,17 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:calendar-check",
         value_fn=_section("stats", "active_days"),
+    ),
+    # Lifetime totals split per sport - state is the number of activity types,
+    # the breakdown (distance/time/count/energy per sport) rides in attributes.
+    SuuntoAppSensorDescription(
+        key="lifetime_by_activity",
+        translation_key="lifetime_by_activity",
+        icon="mdi:podium",
+        value_fn=lambda d: len((d.get("stats") or {}).get("by_activity") or []),
+        attributes_fn=lambda d: {
+            "activities": (d.get("stats") or {}).get("by_activity") or []
+        },
     ),
     # --- Per-workout derived ---
     SuuntoAppSensorDescription(

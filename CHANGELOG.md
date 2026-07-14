@@ -3,6 +3,12 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.12b2 (beta)
+- **Recovered-at** sensor (`recovery_until`) - a timestamp for when the last
+  workout's recovery countdown finishes (workout end + recovery time).
+- **Lifetime by activity** sensor - lifetime totals split per sport
+  (distance/time/count/energy for each activity type) in the sensor's attributes.
+
 ## 1.0.12b1 (beta)
 - **Workout start location** - a new `last_workout_location` sensor exposing the
   last workout's start latitude/longitude (decoded from the GPS track) as

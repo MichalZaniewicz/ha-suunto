@@ -50,7 +50,7 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (57 sensors + a workouts calendar under one "Suunto" device)
+## Entities (59 sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
@@ -58,10 +58,11 @@ on first setup or when the server invalidates the session. During normal operati
 - **Daily activity:** steps, energy (kcal), current heart rate.
 - **Last workout:** type, start, **start location** (latitude/longitude - plots on
   a Map card), distance, duration, ascent, recovery time, average/max heart rate,
-  average speed (km/h) and pace (min/km), cadence, **TSS**, and **time in 5
-  heart-rate zones**.
+  average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
+  heart-rate zones**, and **recovered-at** (when the recovery countdown ends).
 - **Lifetime stats:** total distance (km), total time (h), total energy, number of
-  workouts, active days.
+  workouts, active days, plus a **per-sport breakdown** (distance/time/count/energy
+  for each activity type, in the sensor's attributes).
 - **Derived - training load:** Fitness (CTL), Fatigue (ATL), Form (TSB) from TSS
   history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3).
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
