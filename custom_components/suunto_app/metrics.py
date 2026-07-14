@@ -26,7 +26,7 @@ def training_load(
     """Compute CTL (fitness), ATL (fatigue) and TSB (form) from a daily TSS map.
 
     CTL/ATL are exponentially weighted moving averages of daily TSS. TSB (form)
-    is yesterday's CTL minus yesterday's ATL — positive means fresh, negative
+    is yesterday's CTL minus yesterday's ATL - positive means fresh, negative
     means fatigued. Values are seeded from 0 at the start of the window, so the
     first weeks are an underestimate; with a 90-day window they stabilise.
     """
@@ -65,7 +65,7 @@ def training_load_series(
     """Per-day (date, ctl, atl, tsb) for the last ``emit_days``.
 
     Same EWMA model as ``training_load`` (same seed and recurrence), but captures
-    the value at each day instead of only the last — for backfilling a gap-free
+    the value at each day instead of only the last - for backfilling a gap-free
     fitness/fatigue/form trend as statistics. Only the recent ``emit_days`` are
     emitted: days close to ``today`` are far from the seeded ramp-up at the window
     start, so their values are stable across cycles (a distant past day would
@@ -99,7 +99,7 @@ def training_load_series(
 def acwr(daily_tss: dict[date, float], today: date) -> float | None:
     """Acute:chronic workload ratio = (7-day load) / (mean weekly 28-day load).
 
-    The commonly cited "sweet spot" is roughly 0.8–1.3; well above ~1.5 is
+    The commonly cited "sweet spot" is roughly 0.8-1.3; well above ~1.5 is
     associated with elevated injury risk.
     """
     acute = sum(daily_tss.get(today - timedelta(days=i), 0.0) for i in range(7))
@@ -148,7 +148,7 @@ def readiness(
     balance_pct: float | None,
     sleep_target_hours: float = DEFAULT_SLEEP_TARGET_HOURS,
 ) -> int | None:
-    """A 0–100 readiness score blending sleep, HRV, resting HR and recovery balance.
+    """A 0-100 readiness score blending sleep, HRV, resting HR and recovery balance.
 
     This is a heuristic (the component weights are our choice, not an official
     Suunto metric): HRV above baseline, resting HR below baseline, more sleep and

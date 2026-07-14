@@ -15,7 +15,7 @@ CONF_SESSION_KEY = "session_key"
 CONF_SCAN_INTERVAL = "scan_interval"  # daily/history coordinator
 CONF_FAST_SCAN_INTERVAL = "fast_scan_interval"  # live coordinator
 
-# Defaults — two cadences: live data (HR/steps) refreshes often; heavy history
+# Defaults - two cadences: live data (HR/steps) refreshes often; heavy history
 # (sleep, workouts, derived metrics) refreshes infrequently.
 DEFAULT_SCAN_INTERVAL_MINUTES = 60
 MIN_SCAN_INTERVAL_MINUTES = 15

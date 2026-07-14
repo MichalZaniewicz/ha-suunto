@@ -4,7 +4,7 @@ The 24/7 streams (HR/steps/energy every 10 min, recovery every 30 min) and the
 dense workout HR samples are all *backdated* sub-hourly data. Home Assistant's
 only supported way to ingest backdated data is long-term statistics, which are
 hourly. So we bucket the samples into hourly statistics and import them
-idempotently every cycle over a rolling window — a late watch->app sync then
+idempotently every cycle over a rolling window - a late watch->app sync then
 fills past hours retroactively, and because statistics are persisted, history
 accumulates over time even though each fetch only sees a couple of days.
 
@@ -70,7 +70,7 @@ async def async_update_statistics(
     ``means`` get mean/min/max per hour; ``sums`` get a cumulative sum (HA shows
     the per-hour delta). Idempotent: re-importing a window replaces the
     overlapping rows, so late syncs backfill cleanly. Raises nothing the caller
-    must handle — the coordinator wraps this so a hiccup never breaks the update.
+    must handle - the coordinator wraps this so a hiccup never breaks the update.
     """
     # Imported lazily so the pure helpers above stay HA-free / testable.
     from homeassistant.components.recorder import get_instance
