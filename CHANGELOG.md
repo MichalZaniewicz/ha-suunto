@@ -3,6 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.12b1 (beta)
+- **Workout start location** — a new `last_workout_location` sensor exposing the
+  last workout's start latitude/longitude (decoded from the GPS track) as
+  attributes, so it can be plotted directly on a Map card. Indoor workouts with
+  no GPS show as unknown.
+- Start coordinates (`start_lat`/`start_lon`) added to every entry in the Recent
+  workouts sensor attributes too.
+
 ## 1.0.11
 - **Workouts calendar** — a `calendar` entity exposing every past workout as a
   browsable event (activity, distance, duration / HR / TSS).

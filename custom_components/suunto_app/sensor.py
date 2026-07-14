@@ -61,6 +61,24 @@ def _section(section: str, field: str) -> Callable[[dict[str, Any]], Any]:
     return lambda data: (data.get(section) or {}).get(field)
 
 
+def _workout_location_state(data: dict[str, Any]) -> str | None:
+    """Human-readable "lat, lon" for the last workout's start, or None."""
+    workout = data.get("workout") or {}
+    lat, lon = workout.get("start_lat"), workout.get("start_lon")
+    if lat is None or lon is None:
+        return None
+    return f"{lat}, {lon}"
+
+
+def _workout_location_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Expose latitude/longitude so the entity plots on a Map card."""
+    workout = data.get("workout") or {}
+    lat, lon = workout.get("start_lat"), workout.get("start_lon")
+    if lat is None or lon is None:
+        return None
+    return {"latitude": lat, "longitude": lon}
+
+
 @dataclass(frozen=True, kw_only=True)
 class SuuntoAppSensorDescription(SensorEntityDescription):
     """Describes a Suunto App sensor and how to compute its value."""
@@ -216,6 +234,16 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:clock-start",
         value_fn=_section("workout", "start_time"),
+    ),
+    # Start position of the last workout. The latitude/longitude attributes let
+    # the entity be plotted directly on a Map card; state is a "lat, lon" string
+    # (unknown for indoor workouts with no GPS track).
+    SuuntoAppSensorDescription(
+        key="last_workout_location",
+        translation_key="last_workout_location",
+        icon="mdi:map-marker",
+        value_fn=_workout_location_state,
+        attributes_fn=_workout_location_attrs,
     ),
     SuuntoAppSensorDescription(
         key="last_distance",

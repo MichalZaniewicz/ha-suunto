@@ -60,6 +60,7 @@
       "current_hr": { "name": "Current heart rate" },
       "last_activity": { "name": "Last activity" },
       "last_workout_start": { "name": "Last workout start" },
+      "last_workout_location": { "name": "Last workout location" },
       "last_distance": { "name": "Last workout distance" },
       "last_duration": { "name": "Last workout duration" },
       "last_ascent": { "name": "Last workout ascent" },
