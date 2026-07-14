@@ -88,7 +88,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 55 live sensors, the integration imports **hourly long-term
+Beyond the 59 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
@@ -133,6 +133,23 @@ Indoor workouts with no GPS track show as *unknown* (no marker). The same
 `start_lat` / `start_lon` are also present on every entry of the **Recent workouts**
 sensor's attributes, if you'd like to plot more than just the latest one (e.g. with
 a template sensor or a custom card).
+
+## Lifetime totals per sport
+
+The **Lifetime by activity** sensor's state is the number of activity types; the
+per-sport totals ride in its `activities` attribute (each with `activity`,
+`workouts`, `distance_km`, `time_hours`, `energy_kcal`). Render them with a Markdown
+card:
+
+```yaml
+type: markdown
+content: |
+  | Sport | Workouts | Distance | Time |
+  | --- | --: | --: | --: |
+  {% for a in state_attr('sensor.suunto_lifetime_by_activity', 'activities') -%}
+  | {{ a.activity }} | {{ a.workouts }} | {{ a.distance_km }} km | {{ a.time_hours }} h |
+  {% endfor %}
+```
 
 ## Troubleshooting
 
