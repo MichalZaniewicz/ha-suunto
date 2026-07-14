@@ -86,7 +86,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 55 live sensors, the integration imports **hourly long-term
+Beyond the 56 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
