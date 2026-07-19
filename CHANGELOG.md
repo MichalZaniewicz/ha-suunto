@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.13b1
+## 1.0.13
 - **VO2max, estimated VO2max and fitness age** sensors, read from the watch's own
   `FitnessExtension` (no extra API calls - the data was already in the workout
   response). Suunto computes these from **runs and walks only**, so each sensor
