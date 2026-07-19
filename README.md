@@ -11,6 +11,16 @@ no Docker and no partner keys.
 *Example dashboard - live sensors plus backfilled long-term statistics (heart
 rate, training load, sleep).*
 
+---
+
+> ### ⭐ Enjoying this integration?
+>
+> [![Star this repo](https://img.shields.io/github/stars/MichalZaniewicz/ha-suunto?style=for-the-badge&logo=github&label=STAR%20THIS%20REPO&labelColor=1f2328&color=ffc107)](https://github.com/MichalZaniewicz/ha-suunto)
+>
+> Every star is real motivation for me to keep developing it :)
+
+---
+
 ```
 Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 ```
@@ -56,7 +66,7 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (59 sensors + a workouts calendar under one "Suunto" device)
+## Entities (62 sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
@@ -69,6 +79,10 @@ on first setup or when the server invalidates the session. During normal operati
 - **Lifetime stats:** total distance (km), total time (h), total energy, number of
   workouts, active days, plus a **per-sport breakdown** (distance/time/count/energy
   for each activity type, in the sensor's attributes).
+- **Fitness:** **VO2max**, estimated VO2max and **fitness age**, as measured by the
+  watch. Suunto derives these from **runs and walks only**, so they hold their last
+  reading between such workouts - each sensor's `measured_at` attribute shows when
+  (and from which activity) it was taken.
 - **Derived - training load:** Fitness (CTL), Fatigue (ATL), Form (TSB) from TSS
   history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3).
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
@@ -94,7 +108,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 59 live sensors, the integration imports **hourly long-term
+Beyond the 62 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

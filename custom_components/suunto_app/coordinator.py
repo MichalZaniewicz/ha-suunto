@@ -23,6 +23,7 @@ from .const import (
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     STATS_LOOKBACK_DAYS,
+    FITNESS_LOOKBACK_DAYS,
     WORKOUT_CACHE_GRACE_HOURS,
     WORKOUTS_LOOKBACK_DAYS,
     activity_name,
@@ -391,6 +392,44 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _fitness_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Latest VO2max / fitness age from the workouts' ``FitnessExtension``.
+
+    Suunto only computes these from running and walking: confirmed live, 9 of 483
+    workouts carried them and every one was a Walk or a Run, while all 302 rides
+    had them as ``null``. So this scans the whole fetched window newest-first for
+    the most recent workout that actually has a reading, instead of reading the
+    last workout (which on a cyclist's account would be ``null`` nearly always).
+
+    ``measured_at`` rides along so a stale reading is visible rather than being
+    mistaken for today's.
+    """
+    for workout in workouts:  # already sorted newest first
+        for ext in workout.get("extensions") or []:
+            if not isinstance(ext, dict) or ext.get("type") != "FitnessExtension":
+                continue
+            vo2 = _as_float(ext.get("vo2Max"))
+            estimated = _as_float(ext.get("estimatedVo2Max"))
+            age = _as_int(ext.get("fitnessAge"))
+            if vo2 is None and estimated is None and age is None:
+                continue
+            start = workout.get("startTime")
+            return {
+                "vo2max": round(vo2, 1) if vo2 is not None else None,
+                "estimated_vo2max": (
+                    round(estimated, 1) if estimated is not None else None
+                ),
+                "fitness_age": age,
+                "measured_at": (
+                    datetime.fromtimestamp(int(start) / 1000, tz=timezone.utc)
+                    if start
+                    else None
+                ),
+                "activity": activity_name(_as_int(workout.get("activityId"))),
+            }
+    return None
+
+
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
     """Per-activity lifetime totals from the stats payload's ``allStats`` list.
 
@@ -498,6 +537,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # key -> (workout, last_seen): smooths the API's eventually-consistent
         # workouts list so a transiently-missing workout doesn't drop sensors.
         self._workout_cache: dict[str, tuple[dict[str, Any], datetime]] = {}
+        # Last seen VO2max / fitness age. Suunto only derives them from runs and
+        # walks, so on a cycling-heavy account they can age out of the fetch
+        # window entirely; holding the last reading keeps the sensors populated
+        # (their `measured_at` attribute shows how old it is).
+        self._last_fitness: dict[str, Any] | None = None
+        # Guards the one-off deep history scan that seeds the above.
+        self._fitness_seeded = False
         # key -> dense HR samples [(ts, bpm)]: a workout's heartrates are
         # immutable once uploaded, so cache them and only fetch /data for new
         # workouts instead of re-downloading the whole window every cycle.
@@ -654,9 +700,19 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for w in norm_workouts[:15]
         ]
 
+        if (fitness := _fitness_snapshot(workouts)) is not None:
+            self._last_fitness = fitness
+        elif self._last_fitness is None and not self._fitness_seeded:
+            # Nothing in the normal window. VO2max only comes from runs and walks,
+            # so a rider can easily go a year without one and these sensors would
+            # sit unknown forever. Reach further back ONCE to seed them.
+            self._fitness_seeded = True
+            self._last_fitness = await self._async_seed_fitness(now)
+
         return {
             "sleep": sleep_norm,
             "recovery": recovery_norm,
+            "fitness": self._last_fitness,
             "workout": norm_workouts[0] if norm_workouts else None,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
@@ -667,6 +723,31 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    async def _async_seed_fitness(self, now: datetime) -> dict[str, Any] | None:
+        """One-off deep scan for the newest VO2max / fitness-age reading.
+
+        Best-effort: a failure here must never disturb the data update, so it
+        swallows API errors (auth included - the caller's normal fetch already
+        surfaces a genuine auth problem) and simply leaves the sensors unknown
+        until the user logs their next run or walk.
+        """
+        try:
+            deep = await self._client.async_get_workouts(
+                _since_ms(now, FITNESS_LOOKBACK_DAYS), max_pages=12
+            )
+        except SuuntoAppError as err:
+            _LOGGER.debug("Fitness seed scan failed (non-fatal): %s", err)
+            return None
+        fitness = _fitness_snapshot(deep)
+        if fitness is None:
+            _LOGGER.debug(
+                "No VO2max reading in %d days of history (Suunto derives it from "
+                "runs and walks only)", FITNESS_LOOKBACK_DAYS
+            )
+        else:
+            _LOGGER.debug("Seeded fitness from %s", fitness.get("measured_at"))
+        return fitness
 
     def _merge_workouts(
         self, fresh: list[dict[str, Any]], now: datetime

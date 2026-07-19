@@ -3,6 +3,16 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.13b1
+- **VO2max, estimated VO2max and fitness age** sensors, read from the watch's own
+  `FitnessExtension` (no extra API calls - the data was already in the workout
+  response). Suunto computes these from **runs and walks only**, so each sensor
+  holds its last reading and carries `measured_at` / `measured_from` attributes
+  showing when and from which activity it was taken. If the normal 90-day window
+  has no such workout, a one-off deeper history scan seeds them.
+- Fixed: `strings.json` was missing the `wake_time` and `workouts_recent` entries
+  that `translations/en.json` already had.
+
 ## 1.0.12
 - **Workout start location** - a new `last_workout_location` sensor exposing the
   last workout's start latitude/longitude (decoded from the GPS track) as

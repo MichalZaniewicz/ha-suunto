@@ -29,6 +29,8 @@ UNIT_KCAL = "kcal"
 UNIT_STEPS = "steps"
 UNIT_MS = "ms"
 UNIT_WORKOUTS = "workouts"
+UNIT_VO2MAX = "ml/kg/min"
+UNIT_YEARS = "years"
 
 # Decimal places to display per sensor (HA rounds state, history and tooltips).
 # Without this, rounded floats show artifacts like -11.199999999999998.
@@ -39,11 +41,12 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_distance": 0, "last_duration": 0, "last_pct_hrmax": 0, "last_cadence": 0,
     "last_ascent": 0, "last_ascent_rate": 0, "last_cal_per_km": 0, "resting_hr": 0,
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
-    "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0,
+    "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
     "resting_hr_baseline": 1, "fitness_ctl": 1, "fatigue_atl": 1, "form_tsb": 1,
+    "vo2max": 1, "estimated_vo2max": 1,
     "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone1": 1,
     "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
@@ -77,6 +80,23 @@ def _workout_location_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     if lat is None or lon is None:
         return None
     return {"latitude": lat, "longitude": lon}
+
+
+def _fitness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Show when (and from which workout) the fitness reading came.
+
+    Suunto only computes VO2max from runs and walks, so on a cycling-heavy
+    account the value can be weeks old - surface that instead of letting it look
+    like today's measurement.
+    """
+    fitness = data.get("fitness") or {}
+    measured_at = fitness.get("measured_at")
+    if measured_at is None:
+        return None
+    return {
+        "measured_at": measured_at.isoformat(),
+        "measured_from": fitness.get("activity"),
+    }
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -531,6 +551,36 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart-outline",
         value_fn=_section("baseline", "resting_hr_baseline"),
+    ),
+    # --- Fitness (VO2max / fitness age) ---
+    # Suunto derives these from runs and walks only, so they update on those
+    # workouts and simply hold between them; `measured_at` shows the age.
+    SuuntoAppSensorDescription(
+        key="vo2max",
+        translation_key="vo2max",
+        native_unit_of_measurement=UNIT_VO2MAX,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:lungs",
+        value_fn=_section("fitness", "vo2max"),
+        attributes_fn=_fitness_attrs,
+    ),
+    SuuntoAppSensorDescription(
+        key="estimated_vo2max",
+        translation_key="estimated_vo2max",
+        native_unit_of_measurement=UNIT_VO2MAX,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:chart-bell-curve",
+        value_fn=_section("fitness", "estimated_vo2max"),
+        attributes_fn=_fitness_attrs,
+    ),
+    SuuntoAppSensorDescription(
+        key="fitness_age",
+        translation_key="fitness_age",
+        native_unit_of_measurement=UNIT_YEARS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:calendar-heart",
+        value_fn=_section("fitness", "fitness_age"),
+        attributes_fn=_fitness_attrs,
     ),
     # --- Weekly volume ---
     SuuntoAppSensorDescription(

@@ -30,6 +30,12 @@ RECOVERY_LOOKBACK_DAYS = 5
 ACTIVITY_LOOKBACK_DAYS = 2
 WORKOUTS_LOOKBACK_DAYS = 90
 
+# One-off deep scan used ONLY to seed the VO2max / fitness-age sensors. Suunto
+# derives those from runs and walks alone, so an account that mostly rides can go
+# well over a year without a fresh reading (confirmed live: the newest reading was
+# 308 days old). Runs once, and only while no reading is known.
+FITNESS_LOOKBACK_DAYS = 730
+
 # Backfill buffer for the hourly statistics import (activity + workout heartrates
 # + recovery). Larger than ACTIVITY_LOOKBACK_DAYS (which the 15-min fast poll uses
 # only for "today") so a watch->app sync delayed up to this many days still fills
