@@ -20,6 +20,7 @@ from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
     FOOT_ACTIVITY_IDS,
+    JOULES_PER_KCAL,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     STATS_LOOKBACK_DAYS,
@@ -248,10 +249,13 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     latest_ed = (latest or {}).get("entryData") or {}
     current_hr = _hz_to_bpm(latest_ed.get("hr"))
 
-    # energyConsumption appears to be in calories; /1000 -> kcal (best-effort).
+    # energyConsumption is in joules (see JOULES_PER_KCAL) -> kcal.
     return {
+        "date": today,
         "daily_steps": _as_int(steps) if saw_today else None,
-        "daily_energy_kcal": _as_int(energy / 1000) if saw_today else None,
+        "daily_energy_kcal": (
+            _as_int(energy / JOULES_PER_KCAL) if saw_today else None
+        ),
         "current_hr_bpm": current_hr,
     }
 
@@ -502,6 +506,44 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
         )
         self._client = client
+        # Highest steps/energy seen so far today, keyed by the local date they
+        # belong to. See _apply_daily_floor.
+        self._day_peak: dict[str, Any] = {}
+
+    def _apply_daily_floor(self, activity: dict[str, Any] | None) -> None:
+        """Never let today's running totals go backwards (in place).
+
+        `daily_steps` and `daily_energy` are TOTAL_INCREASING, so Home Assistant
+        reads any DROP as a meter reset and starts a new cycle: the next full
+        reading is added to the long-term sum instead of counted as an increase.
+        The 24/7 export is eventually-consistent (same flakiness as the workouts
+        list, see WORKOUT_CACHE_GRACE_HOURS), so one short response mid-day used
+        to inflate the statistics permanently - reported as "calories keep
+        accumulating on every refresh".
+
+        A day total can only grow, so we clamp it to the highest value already
+        seen for that date. A new local date starts a fresh (legitimate) cycle.
+        """
+        if not activity:
+            return
+        date = activity.get("date")
+        if date is None:
+            return
+        if self._day_peak.get("date") != date:
+            self._day_peak = {"date": date}
+        for field in ("daily_steps", "daily_energy_kcal"):
+            value = activity.get(field)
+            peak = self._day_peak.get(field)
+            if value is None:
+                continue
+            if peak is not None and value < peak:
+                _LOGGER.debug(
+                    "Activity %s dipped %s -> %s within %s; holding the peak "
+                    "(partial export)", field, peak, value, date
+                )
+                activity[field] = peak
+            else:
+                self._day_peak[field] = value
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch only the 24/7 activity stream (cheap, changes minute-to-minute)."""
@@ -512,7 +554,9 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except SuuntoAppError as err:
             raise UpdateFailed(str(err)) from err
-        return {"activity": _normalize_activity(activity)}
+        normalized = _normalize_activity(activity)
+        self._apply_daily_floor(normalized)
+        return {"activity": normalized}
 
 
 class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -825,9 +869,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             step_count = _as_float(ed.get("stepCount"))
             if step_count is not None:
                 steps.append((ts, step_count))
-            cal = _as_float(ed.get("energyConsumption"))
-            if cal is not None:
-                energy.append((ts, cal / 1000))  # cal -> kcal
+            joules = _as_float(ed.get("energyConsumption"))
+            if joules is not None:
+                energy.append((ts, joules / JOULES_PER_KCAL))  # J -> kcal
 
         balance: list[tuple[datetime, float]] = []
         stress: list[tuple[datetime, float]] = []

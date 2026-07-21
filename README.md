@@ -71,7 +71,7 @@ on first setup or when the server invalidates the session. During normal operati
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
 - **Recovery:** recovery balance, stress state.
-- **Daily activity:** steps, energy (kcal), current heart rate.
+- **Daily activity:** steps, active energy (kcal), current heart rate.
 - **Last workout:** type, start, **start location** (latitude/longitude - plots on
   a Map card), distance, duration, ascent, recovery time, average/max heart rate,
   average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
