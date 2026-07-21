@@ -260,6 +260,31 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+def _sec_to_min_zero(value: Any) -> int | None:
+    """Convert seconds to whole minutes, keeping a present zero as 0.
+
+    Unlike :func:`_sec_to_min`, a real zero survives - a flat workout genuinely
+    has 0 s of descent, and that should read "0 min", not "unknown". Only a
+    missing field (an indoor session carries no altitude data at all) is None.
+    """
+    num = _as_float(value)
+    return round(num / 60) if num is not None else None
+
+
+def _extension(workout: dict[str, Any], ext_type: str) -> dict[str, Any]:
+    """Return the workout's typed ``extensions`` block, or an empty dict.
+
+    A workout carries a list of typed blocks (``SummaryExtension``,
+    ``FitnessExtension``, ``IntensityExtension``, ``WeatherExtension``) inside
+    the same response the coordinator already fetches, so reading one costs no
+    extra request.
+    """
+    for ext in workout.get("extensions") or []:
+        if isinstance(ext, dict) and ext.get("type") == ext_type:
+            return ext
+    return {}
+
+
 def _centi_to_min(value: Any) -> float | None:
     """Convert centiseconds (timeInZone unit) to minutes.
 
@@ -334,6 +359,16 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     ascent = _as_float(workout.get("totalAscent"))
     cad_avg = _as_float(cadence.get("avg"))
     start_point = _first_polyline_point(workout.get("polyline"))
+    # Peak Training Effect and the climb/descend split live in SummaryExtension.
+    summary = _extension(workout, "SummaryExtension")
+    pte = _as_float(summary.get("pte"))
+    # Altitude range comes from the barometer/GPS, so an indoor session has none.
+    # There it arrives either absent or as a meaningless 0/0 pair - treat both as
+    # "no reading" rather than claiming the workout happened at sea level.
+    min_altitude = _as_int(workout.get("minAltitude"))
+    max_altitude = _as_int(workout.get("maxAltitude"))
+    if not min_altitude and not max_altitude:
+        min_altitude = max_altitude = None
     return {
         "key": workout.get("key"),
         "activity_id": activity_id,
@@ -348,6 +383,14 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "duration_minutes": _sec_to_min(workout.get("totalTime")),
         "distance_meters": _as_int(workout.get("totalDistance")),
         "ascent_meters": _as_int(workout.get("totalAscent")),
+        "descent_meters": _as_int(workout.get("totalDescent")),
+        # Time spent climbing / descending (SummaryExtension, seconds).
+        "ascent_time_minutes": _sec_to_min_zero(summary.get("ascentTime")),
+        "descent_time_minutes": _sec_to_min_zero(summary.get("descentTime")),
+        "min_altitude_meters": min_altitude,
+        "max_altitude_meters": max_altitude,
+        # Peak Training Effect - Suunto's own 1..5 rating for the session.
+        "pte": round(pte, 1) if pte is not None else None,
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
             round(total_recovery / 3600, 1)

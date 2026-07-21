@@ -3,6 +3,26 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.14
+- **Peak Training Effect** sensor (`last_pte`) - Suunto's own 1..5 rating of how
+  hard the last session hit you, read from the workout's `SummaryExtension`.
+- **Descent, climb/descend times and altitude range** for the last workout:
+  `last_descent`, `last_ascent_time`, `last_descent_time`, `last_min_altitude`
+  and `last_max_altitude`. Indoor sessions carry no barometer data, so the
+  altitude pair stays unknown there rather than reporting sea level; a flat
+  outdoor workout correctly reads 0 m of descent.
+  None of the above costs an extra API call - the fields were already in the
+  workout response.
+- Fixed: **daily energy was about 4.19x too high**. `energyConsumption` from the
+  24/7 stream is in joules, not calories, and was being divided by 1000 instead
+  of 4186.8. Corrected in the live sensor and in the hourly statistics import.
+  Values drop accordingly after this update; existing history is not rewritten.
+- Fixed: **daily steps and energy no longer inflate the long-term statistics**.
+  Both are `TOTAL_INCREASING`, so Home Assistant read any dip in the
+  eventually-consistent Suunto export as a meter reset and added the next full
+  reading to the running total. The coordinator now clamps a dip to the highest
+  value already seen for that local date, and starts a fresh cycle on a new date.
+
 ## 1.0.13
 - **VO2max, estimated VO2max and fitness age** sensors, read from the watch's own
   `FitnessExtension` (no extra API calls - the data was already in the workout
