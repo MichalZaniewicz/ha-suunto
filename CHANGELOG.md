@@ -4,6 +4,12 @@ Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
 ## 1.0.14
+- Fixed: the long-term statistics import now declares `unit_class`, which
+  **Home Assistant 2026.11 will require**. Until then HA derives one and logs a
+  deprecation warning; without this the whole statistics import (heart rate,
+  steps, energy, sleep, training load) would stop working on that release. The
+  value is derived exactly the way the recorder derives it today, so no existing
+  statistic changes class and history stays continuous.
 - **Peak Training Effect** sensor (`last_pte`) - Suunto's own 1..5 rating of how
   hard the last session hit you, read from the workout's `SummaryExtension`.
 - **Descent, climb/descend times and altitude range** for the last workout:
