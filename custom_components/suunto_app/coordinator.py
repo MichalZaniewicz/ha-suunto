@@ -271,6 +271,19 @@ def _sec_to_min_zero(value: Any) -> int | None:
     return round(num / 60) if num is not None else None
 
 
+def _dm_to_m(value: Any) -> int | None:
+    """Convert an altitude in decimetres to whole metres.
+
+    ``minAltitude`` / ``maxAltitude`` are DECIMETRES, unlike ``totalAscent`` and
+    ``totalDescent``, which really are metres. Verified live against the
+    per-point ``h`` altitude in ``workouts/{key}/data``: the ratio is 10.00 on
+    every workout checked, from a 120 m city commute to a 2656 m alpine hike.
+    Reading them as metres turned that hike into "26788 m".
+    """
+    num = _as_float(value)
+    return round(num / 10) if num is not None else None
+
+
 def _extension(workout: dict[str, Any], ext_type: str) -> dict[str, Any]:
     """Return the workout's typed ``extensions`` block, or an empty dict.
 
@@ -363,10 +376,10 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     summary = _extension(workout, "SummaryExtension")
     pte = _as_float(summary.get("pte"))
     # Altitude range comes from the barometer/GPS, so an indoor session has none.
-    # There it arrives either absent or as a meaningless 0/0 pair - treat both as
-    # "no reading" rather than claiming the workout happened at sea level.
-    min_altitude = _as_int(workout.get("minAltitude"))
-    max_altitude = _as_int(workout.get("maxAltitude"))
+    # There it arrives as a 0/0 pair (confirmed live on all 98 GPS-less sessions)
+    # - treat that as "no reading" rather than claiming it happened at sea level.
+    min_altitude = _dm_to_m(workout.get("minAltitude"))
+    max_altitude = _dm_to_m(workout.get("maxAltitude"))
     if not min_altitude and not max_altitude:
         min_altitude = max_altitude = None
     return {

@@ -10,7 +10,11 @@ beta pre-releases are tagged `X.Y.ZbN`.
   `last_descent`, `last_ascent_time`, `last_descent_time`, `last_min_altitude`
   and `last_max_altitude`. Indoor sessions carry no barometer data, so the
   altitude pair stays unknown there rather than reporting sea level; a flat
-  outdoor workout correctly reads 0 m of descent.
+  outdoor workout correctly reads 0 m of descent. Note that `minAltitude` /
+  `maxAltitude` arrive in **decimetres** (unlike ascent and descent, which are
+  metres) and are converted - verified against the per-point altitude track,
+  where the ratio is exactly 10 from a 120 m city commute to a 2656 m alpine
+  hike.
   None of the above costs an extra API call - the fields were already in the
   workout response.
 - Fixed: **daily energy was about 4.19x too high**. `energyConsumption` from the
