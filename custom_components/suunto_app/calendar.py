@@ -70,6 +70,9 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
                 )
             if w.get("tss"):
                 details.append(f"TSS {w['tss']}")
+            # Suunto's own 1..5 session-impact rating, alongside the derived TSS.
+            if w.get("pte"):
+                details.append(f"PTE {w['pte']}")
             events.append(
                 CalendarEvent(
                     start=start,

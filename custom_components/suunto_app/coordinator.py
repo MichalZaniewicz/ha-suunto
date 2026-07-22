@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections import defaultdict
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -60,12 +62,21 @@ def _sec_to_min(value: Any) -> int | None:
 
 
 def _as_float(value: Any) -> float | None:
+    """Coerce an API value to float, or None if it is not usable as a number.
+
+    Non-finite values are rejected: Python's ``json.loads`` accepts the
+    non-standard ``NaN`` / ``Infinity`` literals by default, and those survive
+    ``float()`` only to blow up later in ``round()`` (``ValueError`` for NaN,
+    ``OverflowError`` for infinity), which would fail the whole coordinator
+    update. Screening here covers every numeric field at once.
+    """
     if value is None:
         return None
     try:
-        return float(value)
+        num = float(value)
     except (TypeError, ValueError):
         return None
+    return num if math.isfinite(num) else None
 
 
 def _as_int(value: Any) -> int | None:
@@ -284,18 +295,27 @@ def _dm_to_m(value: Any) -> int | None:
     return round(num / 10) if num is not None else None
 
 
-def _extension(workout: dict[str, Any], ext_type: str) -> dict[str, Any]:
-    """Return the workout's typed ``extensions`` block, or an empty dict.
+def _extensions(workout: dict[str, Any], ext_type: str) -> Iterator[dict[str, Any]]:
+    """Yield every typed ``extensions`` block of ``ext_type`` on ``workout``.
 
     A workout carries a list of typed blocks (``SummaryExtension``,
     ``FitnessExtension``, ``IntensityExtension``, ``WeatherExtension``) inside
-    the same response the coordinator already fetches, so reading one costs no
-    extra request.
+    the same response the coordinator already fetches, so reading them costs no
+    extra request. Malformed entries (a non-dict in the list, a missing list)
+    are skipped rather than raising.
     """
     for ext in workout.get("extensions") or []:
         if isinstance(ext, dict) and ext.get("type") == ext_type:
-            return ext
-    return {}
+            yield ext
+
+
+def _extension(workout: dict[str, Any], ext_type: str) -> dict[str, Any]:
+    """Return the first typed ``extensions`` block, or an empty dict.
+
+    Use this when one block per workout is expected. When a caller needs to keep
+    looking past an empty block, iterate :func:`_extensions` instead.
+    """
+    return next(_extensions(workout, ext_type), {})
 
 
 def _centi_to_min(value: Any) -> float | None:
@@ -378,10 +398,17 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     # Altitude range comes from the barometer/GPS, so an indoor session has none.
     # There it arrives as a 0/0 pair (confirmed live on all 98 GPS-less sessions)
     # - treat that as "no reading" rather than claiming it happened at sea level.
-    min_altitude = _dm_to_m(workout.get("minAltitude"))
-    max_altitude = _dm_to_m(workout.get("maxAltitude"))
-    if not min_altitude and not max_altitude:
+    # Test the RAW fields, not the converted ones: _dm_to_m rounds, so anything
+    # inside +/-0.4 m of sea level would otherwise collapse to 0 and be mistaken
+    # for the sentinel, silently discarding a real reading from a beach run or a
+    # coastal ride.
+    raw_min = workout.get("minAltitude")
+    raw_max = workout.get("maxAltitude")
+    if not _as_float(raw_min) and not _as_float(raw_max):
         min_altitude = max_altitude = None
+    else:
+        min_altitude = _dm_to_m(raw_min)
+        max_altitude = _dm_to_m(raw_max)
     return {
         "key": workout.get("key"),
         "activity_id": activity_id,
@@ -465,9 +492,9 @@ def _fitness_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
     mistaken for today's.
     """
     for workout in workouts:  # already sorted newest first
-        for ext in workout.get("extensions") or []:
-            if not isinstance(ext, dict) or ext.get("type") != "FitnessExtension":
-                continue
+        # Iterate rather than take the first block: an all-null FitnessExtension
+        # must not stop the scan, since a later block may carry the reading.
+        for ext in _extensions(workout, "FitnessExtension"):
             vo2 = _as_float(ext.get("vo2Max"))
             estimated = _as_float(ext.get("estimatedVo2Max"))
             age = _as_int(ext.get("fitnessAge"))
