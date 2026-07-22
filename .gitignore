@@ -18,3 +18,11 @@ tools/
 
 # Brand source/staging (inline copies live in custom_components/suunto_app/brand/)
 brand_assets/
+
+# Home Assistant log dumps pulled in for debugging. These carry personal data
+# (names, message bodies, device and gateway ids) and must never be committed.
+*.log
+*.log.[0-9]
+homeassistant_logs*.txt
+home-assistant*.log*
+ha_logs*.txt
