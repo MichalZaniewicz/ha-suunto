@@ -66,16 +66,20 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (62 sensors + a workouts calendar under one "Suunto" device)
+## Entities (68 sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
 - **Recovery:** recovery balance, stress state.
-- **Daily activity:** steps, energy (kcal), current heart rate.
+- **Daily activity:** steps, active energy (kcal), current heart rate.
 - **Last workout:** type, start, **start location** (latitude/longitude - plots on
-  a Map card), distance, duration, ascent, recovery time, average/max heart rate,
+  a Map card), distance, duration, recovery time, average/max heart rate,
   average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
-  heart-rate zones**, and **recovered-at** (when the recovery countdown ends).
+  heart-rate zones**, **Peak Training Effect** (Suunto's own 1-5 rating of the
+  session), and **recovered-at** (when the recovery countdown ends).
+- **Last workout - climbing:** ascent and descent (m), time spent climbing and
+  descending, and the **altitude range** (min/max). Indoor sessions have no
+  barometer data, so the altitude sensors stay unknown there.
 - **Lifetime stats:** total distance (km), total time (h), total energy, number of
   workouts, active days, plus a **per-sport breakdown** (distance/time/count/energy
   for each activity type, in the sensor's attributes).
@@ -108,7 +112,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 62 live sensors, the integration imports **hourly long-term
+Beyond the 68 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

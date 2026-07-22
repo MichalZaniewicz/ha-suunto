@@ -50,6 +50,14 @@ STATS_LOOKBACK_DAYS = 5
 # out once it has been absent longer than this.
 WORKOUT_CACHE_GRACE_HOURS = 24
 
+# The 24/7 activity stream reports `energyConsumption` in JOULES, not calories.
+# Confirmed live 2026-07-21: every per-interval value is an exact multiple of
+# 4186.8 (4186.75, 8373.5, 12560.25, 16747.25, 20934.0, 46054.75, ...), i.e. the
+# backend sends whole kilocalories converted to joules. 4186.8 J = 1 kcal
+# (International Table). We used to divide by 1000, which inflated every energy
+# figure by ~4.19x.
+JOULES_PER_KCAL = 4186.8
+
 PLATFORMS = ["sensor", "calendar"]
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").

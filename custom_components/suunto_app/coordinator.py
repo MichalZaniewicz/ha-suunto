@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections import defaultdict
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -20,6 +22,7 @@ from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
     FOOT_ACTIVITY_IDS,
+    JOULES_PER_KCAL,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     STATS_LOOKBACK_DAYS,
@@ -59,12 +62,21 @@ def _sec_to_min(value: Any) -> int | None:
 
 
 def _as_float(value: Any) -> float | None:
+    """Coerce an API value to float, or None if it is not usable as a number.
+
+    Non-finite values are rejected: Python's ``json.loads`` accepts the
+    non-standard ``NaN`` / ``Infinity`` literals by default, and those survive
+    ``float()`` only to blow up later in ``round()`` (``ValueError`` for NaN,
+    ``OverflowError`` for infinity), which would fail the whole coordinator
+    update. Screening here covers every numeric field at once.
+    """
     if value is None:
         return None
     try:
-        return float(value)
+        num = float(value)
     except (TypeError, ValueError):
         return None
+    return num if math.isfinite(num) else None
 
 
 def _as_int(value: Any) -> int | None:
@@ -248,12 +260,62 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     latest_ed = (latest or {}).get("entryData") or {}
     current_hr = _hz_to_bpm(latest_ed.get("hr"))
 
-    # energyConsumption appears to be in calories; /1000 -> kcal (best-effort).
+    # energyConsumption is in joules (see JOULES_PER_KCAL) -> kcal.
     return {
+        "date": today,
         "daily_steps": _as_int(steps) if saw_today else None,
-        "daily_energy_kcal": _as_int(energy / 1000) if saw_today else None,
+        "daily_energy_kcal": (
+            _as_int(energy / JOULES_PER_KCAL) if saw_today else None
+        ),
         "current_hr_bpm": current_hr,
     }
+
+
+def _sec_to_min_zero(value: Any) -> int | None:
+    """Convert seconds to whole minutes, keeping a present zero as 0.
+
+    Unlike :func:`_sec_to_min`, a real zero survives - a flat workout genuinely
+    has 0 s of descent, and that should read "0 min", not "unknown". Only a
+    missing field (an indoor session carries no altitude data at all) is None.
+    """
+    num = _as_float(value)
+    return round(num / 60) if num is not None else None
+
+
+def _dm_to_m(value: Any) -> int | None:
+    """Convert an altitude in decimetres to whole metres.
+
+    ``minAltitude`` / ``maxAltitude`` are DECIMETRES, unlike ``totalAscent`` and
+    ``totalDescent``, which really are metres. Verified live against the
+    per-point ``h`` altitude in ``workouts/{key}/data``: the ratio is 10.00 on
+    every workout checked, from a 120 m city commute to a 2656 m alpine hike.
+    Reading them as metres turned that hike into "26788 m".
+    """
+    num = _as_float(value)
+    return round(num / 10) if num is not None else None
+
+
+def _extensions(workout: dict[str, Any], ext_type: str) -> Iterator[dict[str, Any]]:
+    """Yield every typed ``extensions`` block of ``ext_type`` on ``workout``.
+
+    A workout carries a list of typed blocks (``SummaryExtension``,
+    ``FitnessExtension``, ``IntensityExtension``, ``WeatherExtension``) inside
+    the same response the coordinator already fetches, so reading them costs no
+    extra request. Malformed entries (a non-dict in the list, a missing list)
+    are skipped rather than raising.
+    """
+    for ext in workout.get("extensions") or []:
+        if isinstance(ext, dict) and ext.get("type") == ext_type:
+            yield ext
+
+
+def _extension(workout: dict[str, Any], ext_type: str) -> dict[str, Any]:
+    """Return the first typed ``extensions`` block, or an empty dict.
+
+    Use this when one block per workout is expected. When a caller needs to keep
+    looking past an empty block, iterate :func:`_extensions` instead.
+    """
+    return next(_extensions(workout, ext_type), {})
 
 
 def _centi_to_min(value: Any) -> float | None:
@@ -330,6 +392,23 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     ascent = _as_float(workout.get("totalAscent"))
     cad_avg = _as_float(cadence.get("avg"))
     start_point = _first_polyline_point(workout.get("polyline"))
+    # Peak Training Effect and the climb/descend split live in SummaryExtension.
+    summary = _extension(workout, "SummaryExtension")
+    pte = _as_float(summary.get("pte"))
+    # Altitude range comes from the barometer/GPS, so an indoor session has none.
+    # There it arrives as a 0/0 pair (confirmed live on all 98 GPS-less sessions)
+    # - treat that as "no reading" rather than claiming it happened at sea level.
+    # Test the RAW fields, not the converted ones: _dm_to_m rounds, so anything
+    # inside +/-0.4 m of sea level would otherwise collapse to 0 and be mistaken
+    # for the sentinel, silently discarding a real reading from a beach run or a
+    # coastal ride.
+    raw_min = workout.get("minAltitude")
+    raw_max = workout.get("maxAltitude")
+    if not _as_float(raw_min) and not _as_float(raw_max):
+        min_altitude = max_altitude = None
+    else:
+        min_altitude = _dm_to_m(raw_min)
+        max_altitude = _dm_to_m(raw_max)
     return {
         "key": workout.get("key"),
         "activity_id": activity_id,
@@ -344,6 +423,14 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "duration_minutes": _sec_to_min(workout.get("totalTime")),
         "distance_meters": _as_int(workout.get("totalDistance")),
         "ascent_meters": _as_int(workout.get("totalAscent")),
+        "descent_meters": _as_int(workout.get("totalDescent")),
+        # Time spent climbing / descending (SummaryExtension, seconds).
+        "ascent_time_minutes": _sec_to_min_zero(summary.get("ascentTime")),
+        "descent_time_minutes": _sec_to_min_zero(summary.get("descentTime")),
+        "min_altitude_meters": min_altitude,
+        "max_altitude_meters": max_altitude,
+        # Peak Training Effect - Suunto's own 1..5 rating for the session.
+        "pte": round(pte, 1) if pte is not None else None,
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
             round(total_recovery / 3600, 1)
@@ -405,9 +492,9 @@ def _fitness_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
     mistaken for today's.
     """
     for workout in workouts:  # already sorted newest first
-        for ext in workout.get("extensions") or []:
-            if not isinstance(ext, dict) or ext.get("type") != "FitnessExtension":
-                continue
+        # Iterate rather than take the first block: an all-null FitnessExtension
+        # must not stop the scan, since a later block may carry the reading.
+        for ext in _extensions(workout, "FitnessExtension"):
             vo2 = _as_float(ext.get("vo2Max"))
             estimated = _as_float(ext.get("estimatedVo2Max"))
             age = _as_int(ext.get("fitnessAge"))
@@ -502,6 +589,44 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
         )
         self._client = client
+        # Highest steps/energy seen so far today, keyed by the local date they
+        # belong to. See _apply_daily_floor.
+        self._day_peak: dict[str, Any] = {}
+
+    def _apply_daily_floor(self, activity: dict[str, Any] | None) -> None:
+        """Never let today's running totals go backwards (in place).
+
+        `daily_steps` and `daily_energy` are TOTAL_INCREASING, so Home Assistant
+        reads any DROP as a meter reset and starts a new cycle: the next full
+        reading is added to the long-term sum instead of counted as an increase.
+        The 24/7 export is eventually-consistent (same flakiness as the workouts
+        list, see WORKOUT_CACHE_GRACE_HOURS), so one short response mid-day used
+        to inflate the statistics permanently - reported as "calories keep
+        accumulating on every refresh".
+
+        A day total can only grow, so we clamp it to the highest value already
+        seen for that date. A new local date starts a fresh (legitimate) cycle.
+        """
+        if not activity:
+            return
+        date = activity.get("date")
+        if date is None:
+            return
+        if self._day_peak.get("date") != date:
+            self._day_peak = {"date": date}
+        for field in ("daily_steps", "daily_energy_kcal"):
+            value = activity.get(field)
+            peak = self._day_peak.get(field)
+            if value is None:
+                continue
+            if peak is not None and value < peak:
+                _LOGGER.debug(
+                    "Activity %s dipped %s -> %s within %s; holding the peak "
+                    "(partial export)", field, peak, value, date
+                )
+                activity[field] = peak
+            else:
+                self._day_peak[field] = value
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch only the 24/7 activity stream (cheap, changes minute-to-minute)."""
@@ -512,7 +637,9 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except SuuntoAppError as err:
             raise UpdateFailed(str(err)) from err
-        return {"activity": _normalize_activity(activity)}
+        normalized = _normalize_activity(activity)
+        self._apply_daily_floor(normalized)
+        return {"activity": normalized}
 
 
 class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -825,9 +952,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             step_count = _as_float(ed.get("stepCount"))
             if step_count is not None:
                 steps.append((ts, step_count))
-            cal = _as_float(ed.get("energyConsumption"))
-            if cal is not None:
-                energy.append((ts, cal / 1000))  # cal -> kcal
+            joules = _as_float(ed.get("energyConsumption"))
+            if joules is not None:
+                energy.append((ts, joules / JOULES_PER_KCAL))  # J -> kcal
 
         balance: list[tuple[datetime, float]] = []
         stress: list[tuple[datetime, float]] = []

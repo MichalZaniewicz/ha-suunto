@@ -95,12 +95,39 @@ async def async_update_statistics(
     except ImportError:  # pragma: no cover - older HA without mean_type
         _mean_arith = _mean_none = None
 
+    # HA 2026.11 likewise requires metadata to declare `unit_class`, the unit
+    # conversion family. Until then the recorder derives one from the unit and
+    # logs a deprecation warning; deriving it exactly the same way keeps every
+    # existing statistic on the class it already has, so nothing is reclassified
+    # mid-history. Gated on the field existing, since our floor is HA 2024.12.
+    try:
+        from homeassistant.components.recorder.statistics import (
+            STATISTIC_UNIT_TO_UNIT_CONVERTER,
+        )
+
+        _unit_map = STATISTIC_UNIT_TO_UNIT_CONVERTER
+        _wants_unit_class = "unit_class" in StatisticMetaData.__annotations__
+    except ImportError:  # pragma: no cover - older HA without the unit map
+        _unit_map, _wants_unit_class = {}, False
+
+    def _unit_class(unit: str | None) -> str | None:
+        """Mirror the recorder's own unit -> unit_class default.
+
+        For what we emit that resolves to: "kcal" -> energy, "h"/"ms" ->
+        duration, "%" and unitless -> unitless, while "bpm" and "steps" have no
+        converter and stay None.
+        """
+        converter = _unit_map.get(unit)
+        return converter.UNIT_CLASS if converter is not None else None
+
     def _meta(suffix: str, name: str, unit: str | None, is_mean: bool):
         kind = (
             {"mean_type": _mean_arith if is_mean else _mean_none}
             if _mean_arith is not None
             else {"has_mean": is_mean}
         )
+        if _wants_unit_class:
+            kind["unit_class"] = _unit_class(unit)
         return StatisticMetaData(
             has_sum=not is_mean,
             name=name,
