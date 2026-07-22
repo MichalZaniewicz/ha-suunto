@@ -180,6 +180,17 @@ content: |
 - **"Login was rejected"** - wrong email/password, or account 2FA.
 - **"Reauthentication required"** - the session expired; enter the password again.
 - **Light/REM sleep sensors are `unknown`** - your watch does not report them.
+- **Daily energy dropped by ~4x after updating to 1.0.14** - that is the fix, not
+  a regression. The value was previously read as calories when the API sends
+  joules. It is **active** energy (above resting), so it is meant to be well
+  below your total daily burn. Existing history is not rewritten, so expect a
+  step in the graph; you can clear the old long-term statistics in
+  **Developer Tools > Statistics** if the jump bothers you.
+- **Altitude sensors are `unknown` after an indoor workout** - intended. Without
+  GPS or a barometer reading the watch reports no altitude, and showing 0 m would
+  claim you trained at sea level.
+- **Stride length is `unknown`** - it is only computed for foot-based activities,
+  so it stays empty after a ride.
 
 ## Changelog
 
