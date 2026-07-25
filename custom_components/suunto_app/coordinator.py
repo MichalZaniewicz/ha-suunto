@@ -736,6 +736,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # window is 90 days, so firing on first run would replay months of
         # history as "new". In memory only, so a restart re-seeds and stays quiet.
         self._known_workout_keys: set[str] | None = None
+        # "key:lastModified" -> normalized workout. The raw records are immutable
+        # unless the user edits the workout, and `lastModified` changes when they
+        # do, so an unchanged record is normalized once instead of on every
+        # cycle (the 90-day window holds hundreds of them).
+        self._norm_cache: dict[str, dict[str, Any]] = {}
         # key -> dense HR samples [(ts, bpm)]: a workout's heartrates are
         # immutable once uploaded, so cache them and only fetch /data for new
         # workouts instead of re-downloading the whole window every cycle.
@@ -871,7 +876,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Full normalized list (for the workouts calendar) + a compact recent
         # slice (for the recent-workouts sensor attribute). Both reuse the 90d
         # list already fetched - no extra requests.
-        norm_workouts = [_normalize_workout(w) for w in workouts]
+        norm_workouts = self._normalize_workouts(workouts)
         recent_workouts = [
             {
                 "start": w["start_time"].isoformat() if w.get("start_time") else None,
@@ -943,6 +948,41 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             _LOGGER.debug("Seeded fitness from %s", fitness.get("measured_at"))
         return fitness
+
+    def _normalize_workouts(
+        self, workouts: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Normalize the fetched list, reusing records that have not changed.
+
+        Every cycle re-fetches the whole 90-day window, but at most a workout or
+        two is ever new; the rest are byte-for-byte the same records that were
+        normalized an hour ago (polyline decode, zone thresholds, a few dozen
+        conversions each). Caching on ``key`` + ``lastModified`` skips that work
+        while still picking up a workout the user edited in the app, since
+        editing bumps ``lastModified``.
+
+        A record missing either field is normalized fresh - correctness first,
+        and it costs no more than the previous behaviour. The cache is rebuilt
+        from this cycle's records, so it cannot outgrow the fetch window.
+
+        The cached dicts are shared between cycles: treat a normalized workout as
+        read-only (nothing mutates one today).
+        """
+        cache: dict[str, dict[str, Any]] = {}
+        normalized: list[dict[str, Any]] = []
+        for raw in workouts:
+            key, modified = raw.get("key"), raw.get("lastModified")
+            if not key or modified is None:
+                normalized.append(_normalize_workout(raw))
+                continue
+            token = f"{key}:{modified}"
+            entry = cache.get(token) or self._norm_cache.get(token)
+            if entry is None:
+                entry = _normalize_workout(raw)
+            cache[token] = entry
+            normalized.append(entry)
+        self._norm_cache = cache
+        return normalized
 
     def _fire_new_workout_events(self, workouts: list[dict[str, Any]]) -> None:
         """Fire ``suunto_app_new_workout`` for every not-yet-seen workout.

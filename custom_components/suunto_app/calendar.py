@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -46,9 +46,25 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
             manufacturer="Suunto",
             model="Suunto App (unofficial)",
         )
+        # Built once per data update rather than per query - see _events().
+        self._cached_events: list[CalendarEvent] | None = None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Drop the cached events when fresh data arrives."""
+        self._cached_events = None
+        super()._handle_coordinator_update()
 
     def _events(self) -> list[CalendarEvent]:
-        """Build a CalendarEvent per workout from the coordinator data."""
+        """Build a CalendarEvent per workout from the coordinator data.
+
+        Cached until the next coordinator update: the whole 90-day list is
+        rebuilt here, and a Calendar card asks for a range every time the user
+        pages through months, which would otherwise redo the same few hundred
+        events on each request.
+        """
+        if self._cached_events is not None:
+            return self._cached_events
         events: list[CalendarEvent] = []
         for w in (self.coordinator.data or {}).get("workouts", []):
             start = w.get("start_time")
@@ -82,6 +98,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
                     uid=w.get("key"),
                 )
             )
+        self._cached_events = events
         return events
 
     @property
