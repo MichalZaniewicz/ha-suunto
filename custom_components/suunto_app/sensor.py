@@ -91,16 +91,21 @@ def _zone_attrs(number: int) -> Callable[[dict[str, Any]], dict[str, Any] | None
     The state is how long the last workout spent in the zone; these turn that
     into something readable ("38 min at 133-152 bpm"). Absent on workouts whose
     record carries no ``IntensityExtension`` thresholds.
+
+    Only the bounds that are actually known are exposed: zone 1 has no lower
+    limit of its own upstream, so it gets an upper bound alone rather than a
+    made-up floor.
     """
 
     def attrs(data: dict[str, Any]) -> dict[str, Any] | None:
         limits = ((data.get("workout") or {}).get("hr_zone_limits") or {}).get(number)
-        if not limits or limits.get("lower_bpm") is None:
+        if not limits:
             return None
-        return {
-            "lower_limit_bpm": limits["lower_bpm"],
+        known = {
+            "lower_limit_bpm": limits.get("lower_bpm"),
             "upper_limit_bpm": limits.get("upper_bpm"),
         }
+        return {key: value for key, value in known.items() if value is not None} or None
 
     return attrs
 

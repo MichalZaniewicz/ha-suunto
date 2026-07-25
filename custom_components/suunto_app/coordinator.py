@@ -340,6 +340,12 @@ def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]
     upwards, so it falls back to the user's max HR when the record has one. A
     bound that would not be above its own lower limit is dropped rather than
     emitted as a nonsense range.
+
+    Zone 1 has no lower limit of its own in the live payload (confirmed on the
+    test account: zones 2..5 came back as 131/140/149/158 with `userMaxHR` 182,
+    while zone 1 was absent) - it is simply "everything below zone 2". So a zone
+    is emitted when EITHER bound is known, and the unknown side is left out
+    rather than invented; zone 1 then reads as an upper bound alone.
     """
     lowers: dict[int, int] = {}
     for ext in _extensions(workout, "IntensityExtension"):
@@ -358,12 +364,14 @@ def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]
     user_max = _as_float((workout.get("hrdata") or {}).get("userMaxHR"))
     top = round(user_max) if user_max else None
     limits: dict[int, dict[str, int | None]] = {}
-    for number, lower in lowers.items():
-        upper = lowers.get(number + 1) or top
-        limits[number] = {
-            "lower_bpm": lower,
-            "upper_bpm": upper if upper and upper > lower else None,
-        }
+    for number in range(1, 6):
+        lower = lowers.get(number)
+        upper = lowers.get(number + 1) or (top if number == 5 else None)
+        if upper is not None and lower is not None and upper <= lower:
+            upper = None
+        if lower is None and upper is None:
+            continue
+        limits[number] = {"lower_bpm": lower, "upper_bpm": upper}
     return limits
 
 
