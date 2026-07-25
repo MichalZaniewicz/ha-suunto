@@ -24,6 +24,7 @@ from .const import (
     EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
+    NEW_WORKOUT_MAX_AGE_DAYS,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     STATS_LOOKBACK_DAYS,
@@ -955,6 +956,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         watch has synced to the Suunto app), not when it ended.
         """
         keys = {w["key"] for w in workouts if w.get("key")}
+        if not keys:
+            # An empty list is almost always a failed or flaky workouts fetch,
+            # not an empty account. Seeding from it would mark the whole history
+            # as unseen and fire a burst of events on the next good cycle, so
+            # treat it as "no information" and leave the known set untouched.
+            return
         if self._known_workout_keys is None:
             self._known_workout_keys = keys
             return
@@ -969,6 +976,8 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
 
         entry_id = self.config_entry.entry_id if self.config_entry else None
+        cutoff = dt_util.utcnow() - timedelta(days=NEW_WORKOUT_MAX_AGE_DAYS)
+        announced = 0
         # Oldest first, so a batch that arrives after a long offline stretch
         # reaches automations in the order the workouts actually happened.
         for workout in sorted(
@@ -976,6 +985,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             key=lambda w: w.get("start_time") or datetime.min.replace(tzinfo=timezone.utc),
         ):
             start = workout.get("start_time")
+            if start is None or start < cutoff:
+                continue  # first seen now, but too old to be news
+            announced += 1
             self.hass.bus.async_fire(
                 EVENT_NEW_WORKOUT,
                 {
@@ -994,7 +1006,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "tags": workout.get("tags"),
                 },
             )
-        _LOGGER.debug("Fired %d new-workout event(s)", len(new_keys))
+        _LOGGER.debug(
+            "Fired %d new-workout event(s) out of %d newly-seen workout(s)",
+            announced,
+            len(new_keys),
+        )
 
     def _merge_workouts(
         self, fresh: list[dict[str, Any]], now: datetime

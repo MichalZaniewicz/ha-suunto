@@ -67,6 +67,12 @@ PLATFORMS = ["sensor", "binary_sensor", "calendar"]
 # replaying all of it as "new" would fire a burst of bogus events).
 EVENT_NEW_WORKOUT = f"{DOMAIN}_new_workout"
 
+# ...and even then, only a workout that STARTED this recently is announced. A
+# genuinely old record can still surface for the first time (pagination cut it
+# off, or the upstream list was mid-reindex), and an automation firing "new
+# workout" for a two-month-old ride is noise. Older ones are recorded silently.
+NEW_WORKOUT_MAX_AGE_DAYS = 7
+
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {
     0: "Walking",

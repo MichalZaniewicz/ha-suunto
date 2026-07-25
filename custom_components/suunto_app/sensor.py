@@ -409,7 +409,9 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_workout_tags",
         icon="mdi:tag-multiple",
         value_fn=_tags_state,
-        attributes_fn=lambda d: {"tags": (d.get("workout") or {}).get("tags") or []},
+        attributes_fn=lambda d: (
+            {"tags": tags} if (tags := (d.get("workout") or {}).get("tags")) else None
+        ),
     ),
     SuuntoAppSensorDescription(
         key="recovery_time",
