@@ -58,7 +58,14 @@ WORKOUT_CACHE_GRACE_HOURS = 24
 # figure by ~4.19x.
 JOULES_PER_KCAL = 4186.8
 
-PLATFORMS = ["sensor", "calendar"]
+PLATFORMS = ["sensor", "binary_sensor", "calendar"]
+
+# Fired on the Home Assistant bus when the daily coordinator first sees a workout
+# key it has never seen before, so automations can react to a finished workout
+# without polling a sensor's state. The very first cycle after a restart only
+# SEEDS the known-key set (the fetch window holds ~90 days of history, and
+# replaying all of it as "new" would fire a burst of bogus events).
+EVENT_NEW_WORKOUT = f"{DOMAIN}_new_workout"
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {

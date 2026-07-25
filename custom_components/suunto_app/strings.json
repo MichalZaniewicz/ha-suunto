@@ -71,6 +71,9 @@
       "last_min_altitude": { "name": "Last workout min altitude" },
       "last_max_altitude": { "name": "Last workout max altitude" },
       "last_pte": { "name": "Last workout peak training effect" },
+      "last_epoc": { "name": "Last workout peak EPOC" },
+      "last_feeling": { "name": "Last workout feeling" },
+      "last_workout_tags": { "name": "Last workout type" },
       "recovery_time": { "name": "Workout recovery time" },
       "recovery_until": { "name": "Recovered at" },
       "last_avg_hr": { "name": "Last workout average heart rate" },
@@ -114,6 +117,10 @@
       "weekly_time": { "name": "Training time (7 days)" },
       "workouts_7d": { "name": "Workouts (7 days)" },
       "workouts_30d": { "name": "Workouts (30 days)" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Recovering" },
+      "workout_today": { "name": "Workout today" }
     }
   }
 }

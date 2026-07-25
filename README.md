@@ -66,7 +66,7 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (68 sensors + a workouts calendar under one "Suunto" device)
+## Entities (71 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time.
@@ -76,7 +76,13 @@ on first setup or when the server invalidates the session. During normal operati
   a Map card), distance, duration, recovery time, average/max heart rate,
   average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
   heart-rate zones**, **Peak Training Effect** (Suunto's own 1-5 rating of the
-  session), and **recovered-at** (when the recovery countdown ends).
+  session), **peak EPOC**, your own **feeling** rating (1-5, when you set it on the
+  watch), the workout **type** as Suunto classifies it (commute, strength, long
+  aerobic base ...; the raw list is in the sensor's `tags` attribute), and
+  **recovered-at** (when the recovery countdown ends).
+  Each heart-rate zone sensor also carries its **bpm range** in the
+  `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
+  an actual effort.
 - **Last workout - climbing:** ascent and descent (m), time spent climbing and
   descending, and the **altitude range** (min/max). Indoor sessions have no
   barometer data, so the altitude sensors stay unknown there.
@@ -98,6 +104,38 @@ on first setup or when the server invalidates the session. During normal operati
 - **Workouts calendar & recent list:** a `calendar` entity with every past workout
   as a browsable event, plus a *Recent workouts* sensor whose attribute holds the
   last 15 (date, type, distance, duration, HR, TSS) - see below.
+- **Binary sensors:** *Recovering* (on while Suunto's recovery countdown from the
+  last workout is still running) and *Workout today*. Both flip on their own
+  clock, so they change the moment the countdown ends or the day rolls over,
+  without waiting for the next poll.
+
+### Automations: the new-workout event
+
+When a workout first reaches the integration (i.e. after your watch has synced to
+the Suunto app), it fires a `suunto_app_new_workout` event on the Home Assistant
+bus, so you don't have to watch a sensor for changes:
+
+```yaml
+automation:
+  - alias: Notify me about a new workout
+    triggers:
+      - trigger: event
+        event_type: suunto_app_new_workout
+    actions:
+      - action: notify.persistent_notification
+        data:
+          message: >
+            {{ trigger.event.data.activity }}:
+            {{ (trigger.event.data.distance_meters | float(0) / 1000) | round(1) }} km
+            in {{ trigger.event.data.duration_minutes }} min,
+            TSS {{ trigger.event.data.tss }}, PTE {{ trigger.event.data.pte }}
+```
+
+The event carries `key`, `activity`, `activity_id`, `start_time`,
+`duration_minutes`, `distance_meters`, `avg_hr_bpm`, `max_hr_bpm`, `tss`, `pte`,
+`recovery_time_hours` and `tags`. The first poll after a Home Assistant restart
+only takes stock of what already exists - it never replays your history as new
+events.
 
 > Derived metrics are computed locally in HA from history fetched via the API
 > (sleep ~60 days, workouts ~90 days, paginated). CTL/ATL are seeded with the mean
@@ -112,7 +150,7 @@ on first setup or when the server invalidates the session. During normal operati
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 68 live sensors, the integration imports **hourly long-term
+Beyond the 71 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

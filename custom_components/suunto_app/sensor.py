@@ -44,11 +44,12 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_min_altitude": 0, "last_max_altitude": 0,
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
+    "last_feeling": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
     "resting_hr_baseline": 1, "fitness_ctl": 1, "fatigue_atl": 1, "form_tsb": 1,
-    "vo2max": 1, "estimated_vo2max": 1, "last_pte": 1,
+    "vo2max": 1, "estimated_vo2max": 1, "last_pte": 1, "last_epoc": 1,
     "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone1": 1,
     "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
@@ -82,6 +83,40 @@ def _workout_location_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     if lat is None or lon is None:
         return None
     return {"latitude": lat, "longitude": lon}
+
+
+def _zone_attrs(number: int) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    """Build an attributes_fn exposing zone ``number``'s bpm bounds.
+
+    The state is how long the last workout spent in the zone; these turn that
+    into something readable ("38 min at 133-152 bpm"). Absent on workouts whose
+    record carries no ``IntensityExtension`` thresholds.
+    """
+
+    def attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+        limits = ((data.get("workout") or {}).get("hr_zone_limits") or {}).get(number)
+        if not limits or limits.get("lower_bpm") is None:
+            return None
+        return {
+            "lower_limit_bpm": limits["lower_bpm"],
+            "upper_limit_bpm": limits.get("upper_bpm"),
+        }
+
+    return attrs
+
+
+def _tags_state(data: dict[str, Any]) -> str | None:
+    """Readable label for the last workout's first Suunto tag.
+
+    Suunto classifies a session itself (``COMMUTE``, ``IMPACT_STRENGTH``,
+    ``IMPACT_LONG_AEROBIC_BASE``, ...). The raw vocabulary is SHOUTED, so the
+    state is title-cased for the UI while the untouched list rides in the
+    ``tags`` attribute for automations to match on.
+    """
+    tags = (data.get("workout") or {}).get("tags") or []
+    if not tags:
+        return None
+    return tags[0].replace("_", " ").capitalize()
 
 
 def _fitness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -346,6 +381,31 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:lightning-bolt",
         value_fn=_section("workout", "pte"),
     ),
+    # Peak EPOC - the oxygen debt the session built up; PTE is derived from it.
+    SuuntoAppSensorDescription(
+        key="last_epoc",
+        translation_key="last_epoc",
+        native_unit_of_measurement="ml/kg",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:lungs",
+        value_fn=_section("workout", "epoc"),
+    ),
+    # The user's own 1..5 rating, only present when they rated it on the watch.
+    SuuntoAppSensorDescription(
+        key="last_feeling",
+        translation_key="last_feeling",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:emoticon-outline",
+        value_fn=_section("workout", "feeling"),
+    ),
+    # Suunto's own classification; the full raw list rides in the attributes.
+    SuuntoAppSensorDescription(
+        key="last_workout_tags",
+        translation_key="last_workout_tags",
+        icon="mdi:tag-multiple",
+        value_fn=_tags_state,
+        attributes_fn=lambda d: {"tags": (d.get("workout") or {}).get("tags") or []},
+    ),
     SuuntoAppSensorDescription(
         key="recovery_time",
         translation_key="recovery_time",
@@ -417,6 +477,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart-outline",
         value_fn=_section("workout", "zone1_min"),
+        attributes_fn=_zone_attrs(1),
     ),
     SuuntoAppSensorDescription(
         key="last_zone2",
@@ -425,6 +486,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart-outline",
         value_fn=_section("workout", "zone2_min"),
+        attributes_fn=_zone_attrs(2),
     ),
     SuuntoAppSensorDescription(
         key="last_zone3",
@@ -433,6 +495,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart-half-full",
         value_fn=_section("workout", "zone3_min"),
+        attributes_fn=_zone_attrs(3),
     ),
     SuuntoAppSensorDescription(
         key="last_zone4",
@@ -441,6 +504,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart",
         value_fn=_section("workout", "zone4_min"),
+        attributes_fn=_zone_attrs(4),
     ),
     SuuntoAppSensorDescription(
         key="last_zone5",
@@ -449,6 +513,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:heart-flash",
         value_fn=_section("workout", "zone5_min"),
+        attributes_fn=_zone_attrs(5),
     ),
     # --- Lifetime stats ---
     SuuntoAppSensorDescription(

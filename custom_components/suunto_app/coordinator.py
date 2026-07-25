@@ -21,6 +21,7 @@ from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
+    EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     RECOVERY_LOOKBACK_DAYS,
@@ -328,6 +329,44 @@ def _centi_to_min(value: Any) -> float | None:
     return round(num / 6000, 1) if num is not None else None
 
 
+def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]:
+    """Heart-rate zone bounds in bpm, from ``IntensityExtension``.
+
+    The workout carries the zone DURATIONS at top level (``timeInZone1..5``) but
+    the thresholds live only here, as ``zones.heartRate.zone1..5.lowerLimit``.
+    Without them "42 min in zone 3" says nothing about the effort that was.
+
+    Each zone's upper bound is the next zone's lower bound; zone 5 is open-ended
+    upwards, so it falls back to the user's max HR when the record has one. A
+    bound that would not be above its own lower limit is dropped rather than
+    emitted as a nonsense range.
+    """
+    lowers: dict[int, int] = {}
+    for ext in _extensions(workout, "IntensityExtension"):
+        heart_rate = ((ext.get("zones") or {}).get("heartRate")) or {}
+        for number in range(1, 6):
+            zone = heart_rate.get(f"zone{number}")
+            if not isinstance(zone, dict):
+                continue
+            lower = _as_float(zone.get("lowerLimit"))
+            if lower:  # a 0 lower limit is the "unset" sentinel, not a threshold
+                lowers[number] = round(lower)
+        if lowers:
+            break  # an all-empty block must not stop the scan; a filled one does
+    if not lowers:
+        return {}
+    user_max = _as_float((workout.get("hrdata") or {}).get("userMaxHR"))
+    top = round(user_max) if user_max else None
+    limits: dict[int, dict[str, int | None]] = {}
+    for number, lower in lowers.items():
+        upper = lowers.get(number + 1) or top
+        limits[number] = {
+            "lower_bpm": lower,
+            "upper_bpm": upper if upper and upper > lower else None,
+        }
+    return limits
+
+
 def _first_polyline_point(polyline: Any) -> tuple[float, float] | None:
     """Decode the first ``(lat, lon)`` vertex of a Google-encoded polyline.
 
@@ -395,6 +434,12 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     # Peak Training Effect and the climb/descend split live in SummaryExtension.
     summary = _extension(workout, "SummaryExtension")
     pte = _as_float(summary.get("pte"))
+    epoc = _as_float(summary.get("peakEpoc"))
+    # The user's own post-workout rating, 1..5. Only set when they actually rated
+    # the session on the watch, so it is absent on most workouts.
+    feeling = _as_int(summary.get("feeling"))
+    # Suunto's own classification of the session (COMMUTE, IMPACT_STRENGTH, ...).
+    tags = [tag for tag in (workout.get("suuntoTags") or []) if isinstance(tag, str)]
     # Altitude range comes from the barometer/GPS, so an indoor session has none.
     # There it arrives as a 0/0 pair (confirmed live on all 98 GPS-less sessions)
     # - treat that as "no reading" rather than claiming it happened at sea level.
@@ -431,6 +476,10 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "max_altitude_meters": max_altitude,
         # Peak Training Effect - Suunto's own 1..5 rating for the session.
         "pte": round(pte, 1) if pte is not None else None,
+        # Peak EPOC (excess post-exercise oxygen consumption), ml/kg.
+        "epoc": round(epoc, 1) if epoc is not None else None,
+        "feeling": feeling if feeling and 1 <= feeling <= 5 else None,
+        "tags": tags,
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
             round(total_recovery / 3600, 1)
@@ -451,6 +500,8 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
             if tss.get("trainingStressScore")
             else None
         ),
+        # Zone thresholds in bpm, so the times below have a scale (may be empty).
+        "hr_zone_limits": _hr_zone_limits(workout),
         # Time in each HR zone (centiseconds -> minutes).
         "zone1_min": _centi_to_min(workout.get("timeInZone1")),
         "zone2_min": _centi_to_min(workout.get("timeInZone2")),
@@ -671,6 +722,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_fitness: dict[str, Any] | None = None
         # Guards the one-off deep history scan that seeds the above.
         self._fitness_seeded = False
+        # Workout keys already reported on the event bus. None = never populated,
+        # i.e. the next cycle only seeds it (see EVENT_NEW_WORKOUT): the fetch
+        # window is 90 days, so firing on first run would replay months of
+        # history as "new". In memory only, so a restart re-seeds and stays quiet.
+        self._known_workout_keys: set[str] | None = None
         # key -> dense HR samples [(ts, bpm)]: a workout's heartrates are
         # immutable once uploaded, so cache them and only fetch /data for new
         # workouts instead of re-downloading the whole window every cycle.
@@ -827,6 +883,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for w in norm_workouts[:15]
         ]
 
+        # Let automations react to a finished workout without polling a sensor.
+        self._fire_new_workout_events(norm_workouts)
+
         if (fitness := _fitness_snapshot(workouts)) is not None:
             self._last_fitness = fitness
         elif self._last_fitness is None and not self._fitness_seeded:
@@ -875,6 +934,59 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             _LOGGER.debug("Seeded fitness from %s", fitness.get("measured_at"))
         return fitness
+
+    def _fire_new_workout_events(self, workouts: list[dict[str, Any]]) -> None:
+        """Fire ``suunto_app_new_workout`` for every not-yet-seen workout.
+
+        The first call after a restart only seeds the known-key set, because the
+        90-day fetch window would otherwise announce months of old workouts at
+        once. Events carry the summary an automation is likely to want, so a
+        notification can be built without templating over a dozen sensors.
+
+        Note this fires when the workout REACHES US (the daily poll after the
+        watch has synced to the Suunto app), not when it ended.
+        """
+        keys = {w["key"] for w in workouts if w.get("key")}
+        if self._known_workout_keys is None:
+            self._known_workout_keys = keys
+            return
+
+        new_keys = keys - self._known_workout_keys
+        # Union, not replace: keys are kept even after a workout ages out of the
+        # 90-day window, so the eventually-consistent list (see the "notch" bug)
+        # cannot re-announce a workout it briefly dropped. A few hundred short
+        # strings a year, discarded on restart.
+        self._known_workout_keys = keys | self._known_workout_keys
+        if not new_keys:
+            return
+
+        entry_id = self.config_entry.entry_id if self.config_entry else None
+        # Oldest first, so a batch that arrives after a long offline stretch
+        # reaches automations in the order the workouts actually happened.
+        for workout in sorted(
+            (w for w in workouts if w.get("key") in new_keys),
+            key=lambda w: w.get("start_time") or datetime.min.replace(tzinfo=timezone.utc),
+        ):
+            start = workout.get("start_time")
+            self.hass.bus.async_fire(
+                EVENT_NEW_WORKOUT,
+                {
+                    "entry_id": entry_id,
+                    "key": workout.get("key"),
+                    "activity": workout.get("activity"),
+                    "activity_id": workout.get("activity_id"),
+                    "start_time": start.isoformat() if start else None,
+                    "duration_minutes": workout.get("duration_minutes"),
+                    "distance_meters": workout.get("distance_meters"),
+                    "avg_hr_bpm": workout.get("avg_hr_bpm"),
+                    "max_hr_bpm": workout.get("max_hr_bpm"),
+                    "tss": workout.get("tss"),
+                    "pte": workout.get("pte"),
+                    "recovery_time_hours": workout.get("recovery_time_hours"),
+                    "tags": workout.get("tags"),
+                },
+            )
+        _LOGGER.debug("Fired %d new-workout event(s)", len(new_keys))
 
     def _merge_workouts(
         self, fresh: list[dict[str, Any]], now: datetime
