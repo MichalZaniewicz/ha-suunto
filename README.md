@@ -82,7 +82,8 @@ on first setup or when the server invalidates the session. During normal operati
   **recovered-at** (when the recovery countdown ends).
   Each heart-rate zone sensor also carries its **bpm range** in the
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
-  an actual effort.
+  an actual effort. Zone 1 is everything below zone 2, so it has an upper bound
+  only; the top of zone 5 is your max heart rate.
 - **Last workout - climbing:** ascent and descent (m), time spent climbing and
   descending, and the **altitude range** (min/max). Indoor sessions have no
   barometer data, so the altitude sensors stay unknown there.
@@ -134,8 +135,9 @@ automation:
 The event carries `key`, `activity`, `activity_id`, `start_time`,
 `duration_minutes`, `distance_meters`, `avg_hr_bpm`, `max_hr_bpm`, `tss`, `pte`,
 `recovery_time_hours` and `tags`. The first poll after a Home Assistant restart
-only takes stock of what already exists - it never replays your history as new
-events.
+only takes stock of what already exists, and a workout that shows up more than a
+week after it happened is recorded silently - your history is never replayed as a
+burst of events.
 
 > Derived metrics are computed locally in HA from history fetched via the API
 > (sleep ~60 days, workouts ~90 days, paginated). CTL/ATL are seeded with the mean

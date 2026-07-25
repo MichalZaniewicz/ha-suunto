@@ -3,6 +3,38 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.15
+- **Heart-rate zone thresholds.** Each *time in HR zone* sensor now carries that
+  zone's bpm range in its `lower_limit_bpm` / `upper_limit_bpm` attributes, read
+  from the workout's `IntensityExtension`. Until now the integration reported how
+  long you spent in zone 3 without ever saying what zone 3 was. Suunto sends no
+  lower limit for zone 1 (it is simply everything below zone 2), so that zone
+  shows an upper bound alone rather than an invented floor, and the top of zone 5
+  comes from your max heart rate.
+- **Three new sensors:** `last_epoc` (peak EPOC, the oxygen debt the session
+  built up - Peak Training Effect is derived from it), `last_feeling` (your own
+  1-5 rating, present only when you set it on the watch) and `last_workout_tags`
+  (how Suunto itself classifies the session - commute, strength, long aerobic
+  base and so on; the raw list is in the `tags` attribute).
+- **Two binary sensors:** *Recovering* (on while the recovery countdown from the
+  last workout is still running) and *Workout today*. Both flip on their own
+  clock, so they change the moment the countdown ends or the day rolls over
+  instead of waiting for the next poll.
+- **`suunto_app_new_workout` event** on the Home Assistant bus, so automations
+  can react to a finished workout without watching a sensor for changes. It
+  carries the activity, start time, duration, distance, average and max heart
+  rate, TSS, PTE, recovery time and tags. The first poll after a restart only
+  takes stock of what already exists, and a workout that surfaces late (more than
+  7 days after it happened) is recorded silently - your history is never replayed
+  as a burst of events, and neither is a flaky fetch mistaken for an empty
+  account.
+- Faster: an unchanged workout is normalized once instead of on every hourly
+  cycle (the whole 90-day window used to be reprocessed each time), and the
+  workouts calendar builds its events once per update rather than on every card
+  query.
+  As with the previous release, none of the new data costs an extra API call -
+  every field was already in the workout response.
+
 ## 1.0.14
 - Fixed: the long-term statistics import now declares `unit_class`, which
   **Home Assistant 2026.11 will require**. Until then HA derives one and logs a
