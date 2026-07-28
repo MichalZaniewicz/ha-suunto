@@ -54,6 +54,7 @@
       "sleep_hrv": { "name": "Sleep HRV" },
       "sleep_time": { "name": "Sleep start" },
       "wake_time": { "name": "Wake-up time" },
+      "nap_duration": { "name": "Nap duration" },
       "recovery_balance": { "name": "Recovery balance" },
       "stress_state": { "name": "Stress state" },
       "daily_steps": { "name": "Daily steps" },

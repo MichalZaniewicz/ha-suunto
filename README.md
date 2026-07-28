@@ -66,10 +66,21 @@ Suunto sends a new-login notification on **every** `/login2` call. The integrati
 on first setup or when the server invalidates the session. During normal operation
 (data fetching) it **does not log in and does not generate emails**.
 
-## Entities (71 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
+### Diagnostics
+
+Settings → Devices & Services → the Suunto entry's **⋮ menu → Download diagnostics**
+gives a redacted JSON dump of the integration's current state (useful when
+reporting a bug). Email, session token and GPS start coordinates are stripped;
+everything else - including the raw 24/7 sleep export used to build the sleep and
+nap sensors - is included as-is.
+
+## Entities (72 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
-  SpO₂, HRV, sleep start, wake-up time.
+  SpO₂, HRV, sleep start, wake-up time, and **nap duration** (tracked separately
+  from night sleep so a nap never inflates it; state holds the most recent day
+  that had a nap, with `nap_count` and `date` attributes since naps are
+  irregular and the value can be several days old).
 - **Recovery:** recovery balance, stress state.
 - **Daily activity:** steps, active energy (kcal), current heart rate.
 - **Last workout:** type, start, **start location** (latitude/longitude - plots on
@@ -152,7 +163,7 @@ burst of events.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 71 live sensors, the integration imports **hourly long-term
+Beyond the 72 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

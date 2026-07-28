@@ -3,6 +3,19 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.16b1
+- **New `nap_duration` sensor.** Night sleep (`sleep_duration` and the other
+  `sleep_*` sensors) deliberately excludes naps so a daytime nap never inflates
+  a night's numbers - that filter stays. Naps are now tracked on their own
+  instead of simply being dropped: the new sensor shows the most recent day's
+  total nap time (minutes), with `nap_count` and `date` attributes, since naps
+  are irregular and the value can be several days old.
+- **Diagnostics support.** Settings → Devices & Services → the Suunto entry's
+  ⋮ menu → *Download diagnostics* now works, giving a redacted JSON dump of the
+  integration's state (email, session token and GPS start coordinates
+  stripped) - including the raw 24/7 sleep export, to make bug reports about
+  sleep/nap bucketing reproducible without needing the reporter's account.
+
 ## 1.0.15
 - **Heart-rate zone thresholds.** Each *time in HR zone* sensor now carries that
   zone's bpm range in its `lower_limit_bpm` / `upper_limit_bpm` attributes, read

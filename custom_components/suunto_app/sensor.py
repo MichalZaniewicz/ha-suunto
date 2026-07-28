@@ -37,6 +37,7 @@ UNIT_YEARS = "years"
 _DISPLAY_PRECISION: dict[str, int] = {
     # whole numbers
     "current_hr": 0, "daily_steps": 0, "daily_energy": 0, "sleep_deep": 0,
+    "nap_duration": 0,
     "sleep_avg_hr": 0, "sleep_min_hr": 0, "last_avg_hr": 0, "last_max_hr": 0,
     "last_distance": 0, "last_duration": 0, "last_pct_hrmax": 0, "last_cadence": 0,
     "last_ascent": 0, "last_ascent_rate": 0, "last_cal_per_km": 0, "resting_hr": 0,
@@ -122,6 +123,19 @@ def _tags_state(data: dict[str, Any]) -> str | None:
     if not tags:
         return None
     return tags[0].replace("_", " ").capitalize()
+
+
+def _nap_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Show the nap count and the day it was recorded.
+
+    Naps are far less regular than night sleep, so the state can be several
+    days old - surface the date instead of letting it look like today's nap.
+    """
+    nap = data.get("nap") or {}
+    date = nap.get("date")
+    if date is None:
+        return None
+    return {"nap_count": nap.get("segments"), "date": date.isoformat()}
 
 
 def _fitness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -238,6 +252,16 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:weather-sunset-up",
         value_fn=_section("sleep", "wake_time"),
+    ),
+    SuuntoAppSensorDescription(
+        key="nap_duration",
+        translation_key="nap_duration",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:power-sleep",
+        value_fn=_section("nap", "duration_minutes"),
+        attributes_fn=_nap_attrs,
     ),
     # --- Recovery ---
     SuuntoAppSensorDescription(

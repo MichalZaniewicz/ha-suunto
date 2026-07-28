@@ -150,6 +150,7 @@ def _aggregate_night(
     night = sorted(night, key=lambda x: x[0])
     eds = [ed for _, ed in night]
     weights = [(_as_float(ed.get("duration")) or 0.0) for ed in eds]
+    total_duration = _sum_present([_as_float(ed.get("duration")) for ed in eds])
     return {
         "timestamp": night[0][0],
         # Wake-up = end of the last sleep fragment. The API has no explicit wake
@@ -163,9 +164,8 @@ def _aggregate_night(
             ),
             default=None,
         ),
-        "duration_hours": _sec_to_hours(
-            _sum_present([_as_float(ed.get("duration")) for ed in eds])
-        ),
+        "duration_hours": _sec_to_hours(total_duration),
+        "duration_minutes": _sec_to_min(total_duration),
         "deep_minutes": _min_from_sum(eds, "deepSleepDuration"),
         "light_minutes": _min_from_sum(eds, "lightSleepDuration"),
         "rem_minutes": _min_from_sum(eds, "remSleepDuration"),
@@ -197,6 +197,40 @@ def _normalize_sleep(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not groups:
         return None
     return _aggregate_night(groups[max(groups)])
+
+
+def _group_naps(
+    records: list[dict[str, Any]],
+) -> dict[Any, list[tuple[datetime, dict[str, Any]]]]:
+    """Group nap segments (``isNap: true``) by plain local calendar date.
+
+    Night sleep uses a noon-to-noon key so an evening start and its post-
+    midnight continuation land together. A nap is taken mid-day, so it must
+    use the calendar date it actually happened on - a noon-to-noon key would
+    instead pull an afternoon nap into the bucket for the NEXT night (the one
+    that starts that same evening), attributing it to the wrong day.
+    """
+    groups: dict[Any, list[tuple[datetime, dict[str, Any]]]] = {}
+    for rec in records:
+        if not (rec.get("entryData") or {}).get("isNap"):
+            continue
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None:
+            continue
+        day_key = dt_util.as_local(ts).date()
+        groups.setdefault(day_key, []).append((ts, rec.get("entryData") or {}))
+    return groups
+
+
+def _normalize_nap(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return the most recent day's aggregated nap summary, or None if none."""
+    groups = _group_naps(records)
+    if not groups:
+        return None
+    key = max(groups)
+    agg = _aggregate_night(groups[key])
+    agg["date"] = key
+    return agg
 
 
 def _sleep_series(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -745,6 +779,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # immutable once uploaded, so cache them and only fetch /data for new
         # workouts instead of re-downloading the whole window every cycle.
         self._workout_hr_cache: dict[str, list[tuple[datetime, float]]] = {}
+        # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
+        # kept only for diagnostics.py - lets a downloaded diagnostics bundle
+        # show exactly why sleep_duration/nap_duration bucketed the way they
+        # did, without needing another live account to reproduce a report.
+        self.last_sleep_raw: list[dict[str, Any]] = []
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -782,6 +821,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("All Suunto endpoints failed this cycle")
 
         sleep, recovery, workouts = data["sleep"], data["recovery"], data["workouts"]
+        self.last_sleep_raw = sleep
 
         # Smooth the eventually-consistent workouts list: re-add any workout that
         # was present recently but is transiently missing this cycle, so every
@@ -808,6 +848,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         count_30d = sum(1 for w in workouts if (w.get("startTime") or 0) >= month_ago)
 
         sleep_norm = _normalize_sleep(sleep)
+        nap_norm = _normalize_nap(sleep)
         recovery_norm = _normalize_recovery(recovery)
 
         # --- Training load (CTL/ATL/TSB + ACWR) from per-workout TSS history ---
@@ -911,6 +952,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return {
             "sleep": sleep_norm,
+            "nap": nap_norm,
             "recovery": recovery_norm,
             "fitness": self._last_fitness,
             "workout": norm_workouts[0] if norm_workouts else None,
