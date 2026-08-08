@@ -8,6 +8,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import DeviceInfo
 
 from .api import SportsTrackerClient
 from .const import (
@@ -16,6 +17,7 @@ from .const import (
     CONF_SESSION_KEY,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_MINUTES,
+    DOMAIN,
     PLATFORMS,
 )
 from .coordinator import SuuntoActivityCoordinator, SuuntoDailyCoordinator
@@ -30,6 +32,27 @@ class SuuntoAppRuntimeData:
 
 
 type SuuntoAppConfigEntry = ConfigEntry[SuuntoAppRuntimeData]
+
+
+def suunto_device_info(entry: SuuntoAppConfigEntry) -> DeviceInfo:
+    """Shared device descriptor for every Suunto App entity (one device/entry).
+
+    Model/manufacturer come from the last workout's recorded gear
+    (SummaryExtension.gear), read off the daily coordinator's data at entity
+    setup time - which runs after its first refresh (see async_setup_entry
+    below), so this reflects real data on everything but a brand-new account
+    with no workout history yet. If the model becomes known (or changes) on a
+    later cycle, the daily coordinator pushes that update straight into the
+    device registry itself (see SuuntoDailyCoordinator._sync_device_registry).
+    """
+    daily_data = entry.runtime_data.daily.data if entry.runtime_data else None
+    device = (daily_data or {}).get("device") or {}
+    return DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=entry.title,
+        manufacturer=device.get("manufacturer") or "Suunto",
+        model=device.get("model") or "Suunto App (unofficial)",
+    )
 
 
 async def async_setup_entry(

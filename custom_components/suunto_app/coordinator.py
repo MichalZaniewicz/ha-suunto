@@ -13,6 +13,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -21,6 +22,7 @@ from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
+    DOMAIN,
     EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
@@ -331,6 +333,28 @@ def _dm_to_m(value: Any) -> int | None:
     return round(num / 10) if num is not None else None
 
 
+# OpenWeather-style 2-digit icon prefix -> human condition. WeatherExtension.
+# weatherIcon carries a day/night suffix (e.g. "03d") that this ignores.
+_WEATHER_CONDITIONS: dict[str, str] = {
+    "01": "Clear sky",
+    "02": "Few clouds",
+    "03": "Scattered clouds",
+    "04": "Broken clouds",
+    "09": "Shower rain",
+    "10": "Rain",
+    "11": "Thunderstorm",
+    "13": "Snow",
+    "50": "Mist",
+}
+
+
+def _weather_condition(icon: Any) -> str | None:
+    """Human label for an OpenWeather-style icon code, or None if unrecognised."""
+    if not isinstance(icon, str) or len(icon) < 2:
+        return None
+    return _WEATHER_CONDITIONS.get(icon[:2])
+
+
 def _extensions(workout: dict[str, Any], ext_type: str) -> Iterator[dict[str, Any]]:
     """Yield every typed ``extensions`` block of ``ext_type`` on ``workout``.
 
@@ -483,6 +507,25 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     feeling = _as_int(summary.get("feeling"))
     # Suunto's own classification of the session (COMMUTE, IMPACT_STRENGTH, ...).
     tags = [tag for tag in (workout.get("suuntoTags") or []) if isinstance(tag, str)]
+    # Watch model, from the same SummaryExtension block (populated on effectively
+    # every workout - 491/491 in the 2026-07-19 live probe).
+    gear = summary.get("gear") or {}
+    gear_model = gear.get("displayName") or gear.get("name") or None
+    gear_manufacturer = gear.get("manufacturer") or None
+    # On-site weather at the workout, outdoor sessions only (WeatherExtension is
+    # absent indoors). Temperature arrives in KELVIN, humidity already in %.
+    weather = _extension(workout, "WeatherExtension")
+    weather_temp_k = _as_float(weather.get("temperature"))
+    weather_wind_ms = _as_float(weather.get("windSpeed"))
+    weather_icon = weather.get("weatherIcon")
+    # Route achievements ("Fastest time on this route", ...) and this workout's
+    # rank on its route, if Suunto tracked one. The per-item shape of
+    # `achievements` was never confirmed live (only the field name and an
+    # aggregate count, 48 across the whole history) - passed through untouched
+    # rather than guessed at, same as the raw `tags` list above.
+    raw_achievements = workout.get("achievements")
+    achievements = raw_achievements if isinstance(raw_achievements, list) else []
+    route_ranking = _as_int((workout.get("rankings") or {}).get("totalTimeOnRouteRanking"))
     # Altitude range comes from the barometer/GPS, so an indoor session has none.
     # There it arrives as a 0/0 pair (confirmed live on all 98 GPS-less sessions)
     # - treat that as "no reading" rather than claiming it happened at sea level.
@@ -523,6 +566,25 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "epoc": round(epoc, 1) if epoc is not None else None,
         "feeling": feeling if feeling and 1 <= feeling <= 5 else None,
         "tags": tags,
+        # Watch model (for the device registry) - None on a workout that carries
+        # no gear block (e.g. manually added).
+        "gear_model": gear_model,
+        "gear_manufacturer": gear_manufacturer,
+        # On-site weather (outdoor workouts only).
+        "weather_temp_c": (
+            round(weather_temp_k - 273.15, 1) if weather_temp_k is not None else None
+        ),
+        "weather_humidity_pct": _as_int(weather.get("humidity")),
+        "weather_wind_kmh": (
+            round(weather_wind_ms * 3.6, 1) if weather_wind_ms is not None else None
+        ),
+        "weather_wind_deg": _as_int(weather.get("windDirection")),
+        "weather_condition": _weather_condition(weather_icon),
+        "weather_icon_code": weather_icon if isinstance(weather_icon, str) else None,
+        # Route achievements - raw upstream list - and this workout's rank on its
+        # route, if any.
+        "achievements": achievements,
+        "route_ranking": route_ranking,
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
             round(total_recovery / 3600, 1)
@@ -608,6 +670,21 @@ def _fitness_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
                 ),
                 "activity": activity_name(_as_int(workout.get("activityId"))),
             }
+    return None
+
+
+def _device_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Newest workout's watch model (``gear_model``/``gear_manufacturer``).
+
+    ``workouts`` must already be normalized (newest first). Present on
+    effectively every workout (491/491 in the 2026-07-19 live probe), so this
+    rarely needs to look past the first one - but scans anyway in case a
+    manually-added or edited workout carries no gear block.
+    """
+    for w in workouts:
+        model = w.get("gear_model")
+        if model:
+            return {"model": model, "manufacturer": w.get("gear_manufacturer") or "Suunto"}
     return None
 
 
@@ -765,6 +842,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_fitness: dict[str, Any] | None = None
         # Guards the one-off deep history scan that seeds the above.
         self._fitness_seeded = False
+        # Last known watch model (SummaryExtension.gear), held the same way as
+        # fitness above - not every workout has one (manual entries), and a fresh
+        # install has none until its first fetch completes.
+        self._last_device: dict[str, Any] | None = None
         # Workout keys already reported on the event bus. None = never populated,
         # i.e. the next cycle only seeds it (see EVENT_NEW_WORKOUT): the fetch
         # window is 90 days, so firing on first run would replay months of
@@ -950,11 +1031,21 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._fitness_seeded = True
             self._last_fitness = await self._async_seed_fitness(now)
 
+        # Watch model for the device registry entry. A fresh install has none
+        # until the first fetch completes, and a rider who switches watches
+        # should see the change reflected - both handled by only pushing a
+        # registry update when the detected model actually differs.
+        if (device := _device_snapshot(norm_workouts)) is not None:
+            if device != self._last_device:
+                self._sync_device_registry(device)
+            self._last_device = device
+
         return {
             "sleep": sleep_norm,
             "nap": nap_norm,
             "recovery": recovery_norm,
             "fitness": self._last_fitness,
+            "device": self._last_device,
             "workout": norm_workouts[0] if norm_workouts else None,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
@@ -965,6 +1056,30 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    def _sync_device_registry(self, device: dict[str, Any]) -> None:
+        """Push a freshly-detected watch model into the device registry.
+
+        Entities read ``suunto_device_info()`` (see __init__.py) only once, at
+        startup - so an account with no workout history yet, or a rider who
+        just switched watches, would otherwise show the generic "Suunto App
+        (unofficial)" model forever. The device is looked up by its existing
+        identifier rather than assumed to exist, since this can run before any
+        entity has registered it (e.g. right after the very first fetch).
+        """
+        if self.config_entry is None:
+            return
+        registry = dr.async_get(self.hass)
+        entry = registry.async_get_device(
+            identifiers={(DOMAIN, self.config_entry.entry_id)}
+        )
+        if entry is None:
+            return
+        registry.async_update_device(
+            entry.id,
+            model=device["model"],
+            manufacturer=device.get("manufacturer") or "Suunto",
+        )
 
     async def _async_seed_fitness(self, now: datetime) -> dict[str, Any] | None:
         """One-off deep scan for the newest VO2max / fitness-age reading.

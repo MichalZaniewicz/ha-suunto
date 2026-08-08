@@ -75,6 +75,8 @@
       "last_epoc": { "name": "Last workout peak EPOC" },
       "last_feeling": { "name": "Last workout feeling" },
       "last_workout_tags": { "name": "Last workout type" },
+      "last_workout_weather": { "name": "Last workout weather" },
+      "last_workout_achievements": { "name": "Last workout achievements" },
       "recovery_time": { "name": "Workout recovery time" },
       "recovery_until": { "name": "Recovered at" },
       "last_avg_hr": { "name": "Last workout average heart rate" },

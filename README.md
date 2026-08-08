@@ -74,7 +74,10 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (72 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (74 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
+
+The device card itself shows your actual **watch model** (e.g. "Suunto 9 Peak
+Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 
 - **Sleep:** duration, stages (deep/light/REM), average/min heart rate, quality,
   SpO₂, HRV, sleep start, wake-up time, and **nap duration** (tracked separately
@@ -95,6 +98,15 @@ nap sensors - is included as-is.
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
   an actual effort. Zone 1 is everything below zone 2, so it has an upper bound
   only; the top of zone 5 is your max heart rate.
+- **Last workout - weather:** on-site **temperature** (°C) as the sensor state,
+  with **humidity**, **wind speed** (km/h), **wind direction** and a decoded
+  **condition** (e.g. "Scattered clouds") in its attributes. Outdoor workouts
+  only - unknown on an indoor session, since there's no weather to record.
+- **Last workout - achievements:** state is how many route achievements (e.g.
+  "Fastest time on this route") the workout earned - 0 on most workouts, since
+  Suunto only awards these on a route you've ridden/run before. The full raw
+  list and this workout's `route_ranking` (if Suunto tracked one) are in the
+  attributes.
 - **Last workout - climbing:** ascent and descent (m), time spent climbing and
   descending, and the **altitude range** (min/max). Indoor sessions have no
   barometer data, so the altitude sensors stay unknown there.
@@ -163,7 +175,7 @@ burst of events.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 72 live sensors, the integration imports **hourly long-term
+Beyond the 74 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

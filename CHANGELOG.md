@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.16b2
+- **Watch model on the device card.** The Suunto device now shows your actual
+  watch (e.g. "Suunto 9 Peak Pro") instead of the generic "Suunto App
+  (unofficial)", read from your most recent workout's recorded gear. Updates
+  itself if it wasn't known yet (a brand-new account) or you switch watches.
+- **New `last_workout_weather` sensor.** On-site temperature (°C) as the
+  state; humidity, wind speed/direction and a decoded condition (e.g.
+  "Scattered clouds") in the attributes. Outdoor workouts only.
+- **New `last_workout_achievements` sensor.** State is the number of route
+  achievements ("Fastest time on this route", ...) the workout earned (0 on
+  most); the raw list and the workout's route ranking are in the attributes.
+
 ## 1.0.16b1
 - **New `nap_duration` sensor.** Night sleep (`sleep_duration` and the other
   `sleep_*` sensors) deliberately excludes naps so a daytime nap never inflates

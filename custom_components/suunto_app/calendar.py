@@ -12,12 +12,10 @@ from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import SuuntoAppConfigEntry
-from .const import DOMAIN
+from . import SuuntoAppConfigEntry, suunto_device_info
 
 
 async def async_setup_entry(
@@ -40,12 +38,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
         """Initialize the calendar."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_workouts_calendar"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="Suunto",
-            model="Suunto App (unofficial)",
-        )
+        self._attr_device_info = suunto_device_info(entry)
         # Built once per data update rather than per query - see _events().
         self._cached_events: list[CalendarEvent] | None = None
 

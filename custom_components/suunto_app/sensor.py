@@ -12,17 +12,15 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
 
-from . import SuuntoAppConfigEntry
-from .const import DOMAIN
+from . import SuuntoAppConfigEntry, suunto_device_info
 
 UNIT_BPM = "bpm"
 UNIT_KCAL = "kcal"
@@ -54,6 +52,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone1": 1,
     "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
+    "last_workout_weather": 1,
     # two decimals
     "acwr": 2, "last_avg_pace": 2,
 }
@@ -136,6 +135,31 @@ def _nap_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     if date is None:
         return None
     return {"nap_count": nap.get("segments"), "date": date.isoformat()}
+
+
+def _weather_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Humidity/wind/condition alongside the last workout's temperature state.
+
+    Only present on outdoor workouts (WeatherExtension is absent indoors).
+    """
+    workout = data.get("workout") or {}
+    known = {
+        "humidity_pct": workout.get("weather_humidity_pct"),
+        "wind_speed_kmh": workout.get("weather_wind_kmh"),
+        "wind_direction_deg": workout.get("weather_wind_deg"),
+        "condition": workout.get("weather_condition"),
+    }
+    return {k: v for k, v in known.items() if v is not None} or None
+
+
+def _achievements_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The last workout's raw achievements list plus its route ranking."""
+    workout = data.get("workout") or {}
+    known = {
+        "achievements": workout.get("achievements") or None,
+        "route_ranking": workout.get("route_ranking"),
+    }
+    return {k: v for k, v in known.items() if v is not None} or None
 
 
 def _fitness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -436,6 +460,27 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         attributes_fn=lambda d: (
             {"tags": tags} if (tags := (d.get("workout") or {}).get("tags")) else None
         ),
+    ),
+    # On-site temperature at the last workout; humidity/wind/condition ride in
+    # attributes. Outdoor workouts only - unknown on an indoor session.
+    SuuntoAppSensorDescription(
+        key="last_workout_weather",
+        translation_key="last_workout_weather",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-partly-cloudy",
+        value_fn=_section("workout", "weather_temp_c"),
+        attributes_fn=_weather_attrs,
+    ),
+    # Route achievements ("Fastest time on this route", ...); state is the count
+    # (0 on most workouts - only 48 of 491 carried one in the live probe).
+    SuuntoAppSensorDescription(
+        key="last_workout_achievements",
+        translation_key="last_workout_achievements",
+        icon="mdi:trophy",
+        value_fn=lambda d: len((d.get("workout") or {}).get("achievements") or []),
+        attributes_fn=_achievements_attrs,
     ),
     SuuntoAppSensorDescription(
         key="recovery_time",
@@ -816,12 +861,7 @@ class SuuntoAppSensor(
         if (precision := _DISPLAY_PRECISION.get(description.key)) is not None:
             self._attr_suggested_display_precision = precision
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="Suunto",
-            model="Suunto App (unofficial)",
-        )
+        self._attr_device_info = suunto_device_info(entry)
 
     @property
     def native_value(self) -> Any:

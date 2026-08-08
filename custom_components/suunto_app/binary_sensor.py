@@ -23,7 +23,6 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.update_coordinator import (
@@ -32,8 +31,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.util import dt as dt_util
 
-from . import SuuntoAppConfigEntry
-from .const import DOMAIN
+from . import SuuntoAppConfigEntry, suunto_device_info
 
 
 def _recovered_at(data: dict[str, Any]) -> datetime | None:
@@ -125,12 +123,7 @@ class SuuntoAppBinarySensor(
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="Suunto",
-            model="Suunto App (unofficial)",
-        )
+        self._attr_device_info = suunto_device_info(entry)
         self._unsub_timer: CALLBACK_TYPE | None = None
 
     @property
