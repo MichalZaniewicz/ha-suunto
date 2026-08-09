@@ -3,6 +3,13 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.17b1
+- **7 more languages.** Every sensor/binary sensor/calendar name and the
+  config/options flow text now has Polish, German, Portuguese, French,
+  Spanish, Italian and Dutch translations, alongside the existing English -
+  Home Assistant picks the right one automatically based on your HA
+  language. Display names only; `entity_id`s are unchanged.
+
 ## 1.0.16
 - **Watch model on the device card.** The Suunto device now shows your actual
   watch (e.g. "Suunto 9 Peak Pro") instead of the generic "Suunto App

@@ -1,0 +1,132 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (no oficial)",
+        "description": "Inicia sesión con tu cuenta de la app Suunto (Sports Tracker). Esto usa la API privada de la app Suunto y puede infringir las Condiciones de Servicio de Suunto - usa tu propia cuenta bajo tu propio riesgo. Tu contraseña se usa solo para obtener un token de sesión y NO se almacena; solo se guarda el token de sesión revocable.",
+        "data": {
+          "email": "Correo electrónico",
+          "password": "Contraseña"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Volver a autenticar Suunto",
+        "description": "La sesión de {email} ha caducado. Introduce tu contraseña de nuevo para obtener un nuevo token de sesión (la contraseña no se almacena).",
+        "data": {
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "El inicio de sesión fue rechazado. Comprueba tu correo/contraseña (la 2FA en la cuenta también puede bloquear esto).",
+      "cannot_connect": "No se pudo contactar con los servidores de Suunto/Sports Tracker."
+    },
+    "abort": {
+      "already_configured": "Esta cuenta Suunto ya está configurada.",
+      "reauth_successful": "La reautenticación se realizó correctamente."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Suunto App",
+        "data": {
+          "fast_scan_interval": "Intervalo de datos en vivo (minutos)",
+          "scan_interval": "Intervalo de historial (minutos)"
+        },
+        "data_description": {
+          "fast_scan_interval": "Con qué frecuencia se actualizan los datos en vivo (frecuencia cardíaca actual, pasos/energía diarios).",
+          "scan_interval": "Con qué frecuencia se actualizan los datos basados en el historial (sueño, entrenamientos, carga de entrenamiento, valores de referencia). Mantén esto moderado - es una API no oficial."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Duración del sueño" },
+      "sleep_deep": { "name": "Sueño profundo" },
+      "sleep_light": { "name": "Sueño ligero" },
+      "sleep_rem": { "name": "Sueño REM" },
+      "sleep_avg_hr": { "name": "Frecuencia cardíaca media en el sueño" },
+      "sleep_min_hr": { "name": "Frecuencia cardíaca mínima en el sueño" },
+      "sleep_quality": { "name": "Calidad del sueño" },
+      "sleep_spo2": { "name": "Oxígeno en sangre durante el sueño" },
+      "sleep_hrv": { "name": "HRV durante el sueño" },
+      "sleep_time": { "name": "Inicio del sueño" },
+      "wake_time": { "name": "Hora de despertar" },
+      "nap_duration": { "name": "Duración de la siesta" },
+      "recovery_balance": { "name": "Equilibrio de recuperación" },
+      "stress_state": { "name": "Estado de estrés" },
+      "daily_steps": { "name": "Pasos diarios" },
+      "daily_energy": { "name": "Energía diaria" },
+      "current_hr": { "name": "Frecuencia cardíaca actual" },
+      "last_activity": { "name": "Última actividad" },
+      "last_workout_start": { "name": "Inicio del último entrenamiento" },
+      "last_workout_location": { "name": "Ubicación del último entrenamiento" },
+      "last_distance": { "name": "Distancia del último entrenamiento" },
+      "last_duration": { "name": "Duración del último entrenamiento" },
+      "last_ascent": { "name": "Ascenso del último entrenamiento" },
+      "last_descent": { "name": "Descenso del último entrenamiento" },
+      "last_ascent_time": { "name": "Tiempo de ascenso del último entrenamiento" },
+      "last_descent_time": { "name": "Tiempo de descenso del último entrenamiento" },
+      "last_min_altitude": { "name": "Altitud mínima del último entrenamiento" },
+      "last_max_altitude": { "name": "Altitud máxima del último entrenamiento" },
+      "last_pte": { "name": "Efecto de entrenamiento máximo del último entrenamiento" },
+      "last_epoc": { "name": "EPOC máximo del último entrenamiento" },
+      "last_feeling": { "name": "Sensación del último entrenamiento" },
+      "last_workout_tags": { "name": "Tipo del último entrenamiento" },
+      "last_workout_weather": { "name": "Clima del último entrenamiento" },
+      "last_workout_achievements": { "name": "Logros del último entrenamiento" },
+      "recovery_time": { "name": "Tiempo de recuperación del entrenamiento" },
+      "recovery_until": { "name": "Recuperado a las" },
+      "last_avg_hr": { "name": "Frecuencia cardíaca media del último entrenamiento" },
+      "last_max_hr": { "name": "Frecuencia cardíaca máxima del último entrenamiento" },
+      "last_avg_speed": { "name": "Velocidad media del último entrenamiento" },
+      "last_avg_pace": { "name": "Ritmo medio del último entrenamiento" },
+      "last_cadence": { "name": "Cadencia del último entrenamiento" },
+      "last_tss": { "name": "Carga de entrenamiento del último entrenamiento (TSS)" },
+      "last_zone1": { "name": "Tiempo en zona de FC 1 del último entrenamiento" },
+      "last_zone2": { "name": "Tiempo en zona de FC 2 del último entrenamiento" },
+      "last_zone3": { "name": "Tiempo en zona de FC 3 del último entrenamiento" },
+      "last_zone4": { "name": "Tiempo en zona de FC 4 del último entrenamiento" },
+      "last_zone5": { "name": "Tiempo en zona de FC 5 del último entrenamiento" },
+      "lifetime_distance": { "name": "Distancia total" },
+      "lifetime_time": { "name": "Tiempo de entrenamiento total" },
+      "lifetime_energy": { "name": "Energía total" },
+      "lifetime_workouts": { "name": "Entrenamientos totales" },
+      "lifetime_days": { "name": "Días activos totales" },
+      "lifetime_by_activity": { "name": "Total por actividad" },
+      "last_pct_hrmax": { "name": "% de FC máx. del último entrenamiento" },
+      "last_cal_per_km": { "name": "Calorías por km del último entrenamiento" },
+      "last_ascent_rate": { "name": "Velocidad de ascenso del último entrenamiento" },
+      "last_stride": { "name": "Longitud de zancada del último entrenamiento" },
+      "fitness_ctl": { "name": "Forma (CTL)" },
+      "fatigue_atl": { "name": "Fatiga (ATL)" },
+      "form_tsb": { "name": "Forma (TSB)" },
+      "acwr": { "name": "Ratio de carga aguda:crónica" },
+      "readiness": { "name": "Preparación" },
+      "hrv_baseline": { "name": "Valor de referencia de HRV" },
+      "hrv_status": {
+        "name": "Estado de HRV",
+        "state": { "low": "Bajo", "balanced": "Equilibrado", "high": "Alto" }
+      },
+      "resting_hr": { "name": "Frecuencia cardíaca en reposo" },
+      "resting_hr_baseline": { "name": "Valor de referencia de FC en reposo" },
+      "vo2max": { "name": "VO2max" },
+      "estimated_vo2max": { "name": "VO2max estimado" },
+      "fitness_age": { "name": "Edad física" },
+      "workouts_recent": { "name": "Entrenamientos recientes" },
+      "weekly_distance": { "name": "Distancia (7 días)" },
+      "weekly_time": { "name": "Tiempo de entrenamiento (7 días)" },
+      "workouts_7d": { "name": "Entrenamientos (7 días)" },
+      "workouts_30d": { "name": "Entrenamientos (30 días)" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Recuperando" },
+      "workout_today": { "name": "Entrenamiento hoy" }
+    },
+    "calendar": {
+      "workouts": { "name": "Entrenamientos" }
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (niet-officieel)",
+        "description": "Log in met je Suunto-app-account (Sports Tracker). Dit gebruikt de privé-API van de Suunto-app en kan in strijd zijn met de gebruiksvoorwaarden van Suunto - gebruik je eigen account op eigen risico. Je wachtwoord wordt alleen gebruikt om een sessietoken te verkrijgen en wordt NIET opgeslagen; alleen het intrekbare sessietoken wordt bewaard.",
+        "data": {
+          "email": "E-mail",
+          "password": "Wachtwoord"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Suunto opnieuw verifiëren",
+        "description": "De sessie voor {email} is verlopen. Voer je wachtwoord opnieuw in om een nieuw sessietoken te krijgen (het wachtwoord wordt niet opgeslagen).",
+        "data": {
+          "password": "Wachtwoord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Inloggen is geweigerd. Controleer je e-mail/wachtwoord (2FA op het account kan dit ook blokkeren).",
+      "cannot_connect": "Kon de Suunto/Sports Tracker-servers niet bereiken."
+    },
+    "abort": {
+      "already_configured": "Dit Suunto-account is al geconfigureerd.",
+      "reauth_successful": "Opnieuw verifiëren is gelukt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Suunto App-opties",
+        "data": {
+          "fast_scan_interval": "Interval voor live gegevens (minuten)",
+          "scan_interval": "Interval voor geschiedenis (minuten)"
+        },
+        "data_description": {
+          "fast_scan_interval": "Hoe vaak live gegevens worden vernieuwd (huidige hartslag, dagelijkse stappen/energie).",
+          "scan_interval": "Hoe vaak op geschiedenis gebaseerde gegevens worden vernieuwd (slaap, trainingen, trainingsbelasting, basiswaarden). Houd dit bescheiden - het is een niet-officiële API."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Slaapduur" },
+      "sleep_deep": { "name": "Diepe slaap" },
+      "sleep_light": { "name": "Lichte slaap" },
+      "sleep_rem": { "name": "REM-slaap" },
+      "sleep_avg_hr": { "name": "Gemiddelde hartslag tijdens slaap" },
+      "sleep_min_hr": { "name": "Minimale hartslag tijdens slaap" },
+      "sleep_quality": { "name": "Slaapkwaliteit" },
+      "sleep_spo2": { "name": "Bloedzuurstof tijdens slaap" },
+      "sleep_hrv": { "name": "HRV tijdens slaap" },
+      "sleep_time": { "name": "Begin van slaap" },
+      "wake_time": { "name": "Wektijd" },
+      "nap_duration": { "name": "Duur van dutje" },
+      "recovery_balance": { "name": "Herstelbalans" },
+      "stress_state": { "name": "Stresstoestand" },
+      "daily_steps": { "name": "Dagelijkse stappen" },
+      "daily_energy": { "name": "Dagelijkse energie" },
+      "current_hr": { "name": "Huidige hartslag" },
+      "last_activity": { "name": "Laatste activiteit" },
+      "last_workout_start": { "name": "Start van laatste training" },
+      "last_workout_location": { "name": "Locatie van laatste training" },
+      "last_distance": { "name": "Afstand van laatste training" },
+      "last_duration": { "name": "Duur van laatste training" },
+      "last_ascent": { "name": "Stijging van laatste training" },
+      "last_descent": { "name": "Daling van laatste training" },
+      "last_ascent_time": { "name": "Stijgtijd van laatste training" },
+      "last_descent_time": { "name": "Daaltijd van laatste training" },
+      "last_min_altitude": { "name": "Minimale hoogte van laatste training" },
+      "last_max_altitude": { "name": "Maximale hoogte van laatste training" },
+      "last_pte": { "name": "Piek trainingseffect van laatste training" },
+      "last_epoc": { "name": "Piek EPOC van laatste training" },
+      "last_feeling": { "name": "Gevoel bij laatste training" },
+      "last_workout_tags": { "name": "Type van laatste training" },
+      "last_workout_weather": { "name": "Weer bij laatste training" },
+      "last_workout_achievements": { "name": "Prestaties van laatste training" },
+      "recovery_time": { "name": "Hersteltijd na training" },
+      "recovery_until": { "name": "Hersteld om" },
+      "last_avg_hr": { "name": "Gemiddelde hartslag van laatste training" },
+      "last_max_hr": { "name": "Maximale hartslag van laatste training" },
+      "last_avg_speed": { "name": "Gemiddelde snelheid van laatste training" },
+      "last_avg_pace": { "name": "Gemiddeld tempo van laatste training" },
+      "last_cadence": { "name": "Cadans van laatste training" },
+      "last_tss": { "name": "Trainingsbelasting van laatste training (TSS)" },
+      "last_zone1": { "name": "Tijd in hartslagzone 1 van laatste training" },
+      "last_zone2": { "name": "Tijd in hartslagzone 2 van laatste training" },
+      "last_zone3": { "name": "Tijd in hartslagzone 3 van laatste training" },
+      "last_zone4": { "name": "Tijd in hartslagzone 4 van laatste training" },
+      "last_zone5": { "name": "Tijd in hartslagzone 5 van laatste training" },
+      "lifetime_distance": { "name": "Totale afstand" },
+      "lifetime_time": { "name": "Totale trainingstijd" },
+      "lifetime_energy": { "name": "Totale energie" },
+      "lifetime_workouts": { "name": "Totaal aantal trainingen" },
+      "lifetime_days": { "name": "Totaal actieve dagen" },
+      "lifetime_by_activity": { "name": "Totaal per activiteit" },
+      "last_pct_hrmax": { "name": "% van max. hartslag van laatste training" },
+      "last_cal_per_km": { "name": "Calorieën per km van laatste training" },
+      "last_ascent_rate": { "name": "Stijgsnelheid van laatste training" },
+      "last_stride": { "name": "Paslengte van laatste training" },
+      "fitness_ctl": { "name": "Fitheid (CTL)" },
+      "fatigue_atl": { "name": "Vermoeidheid (ATL)" },
+      "form_tsb": { "name": "Vorm (TSB)" },
+      "acwr": { "name": "Acute:chronische belastingsratio" },
+      "readiness": { "name": "Gereedheid" },
+      "hrv_baseline": { "name": "HRV-basiswaarde" },
+      "hrv_status": {
+        "name": "HRV-status",
+        "state": { "low": "Laag", "balanced": "In balans", "high": "Hoog" }
+      },
+      "resting_hr": { "name": "Rusthartslag" },
+      "resting_hr_baseline": { "name": "Rusthartslag-basiswaarde" },
+      "vo2max": { "name": "VO2max" },
+      "estimated_vo2max": { "name": "Geschat VO2max" },
+      "fitness_age": { "name": "Fitheidsleeftijd" },
+      "workouts_recent": { "name": "Recente trainingen" },
+      "weekly_distance": { "name": "Afstand (7 dagen)" },
+      "weekly_time": { "name": "Trainingstijd (7 dagen)" },
+      "workouts_7d": { "name": "Trainingen (7 dagen)" },
+      "workouts_30d": { "name": "Trainingen (30 dagen)" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Aan het herstellen" },
+      "workout_today": { "name": "Training vandaag" }
+    },
+    "calendar": {
+      "workouts": { "name": "Trainingen" }
+    }
+  }
+}

@@ -88,6 +88,10 @@ nap sensors - is included as-is.
 
 ## Entities (74 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
 
+Every entity name follows your Home Assistant language automatically - English, Polish, German,
+Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
+(Display names only; `entity_id`s never change with your language.)
+
 The device card itself shows your actual **watch model** (e.g. "Suunto 9 Peak
 Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 
