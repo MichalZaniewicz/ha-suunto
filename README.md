@@ -36,6 +36,18 @@ Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suun
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
 
+## Custom Lovelace cards
+
+Want a dashboard without wiring 74 sensors into generic entity/gauge cards by hand?
+**[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
+HACS repo with 7 purpose-built cards - last workout, HR zones, sleep & readiness,
+recovery, training load, week & lifetime stats, and a live "today" snapshot. Each
+card auto-detects your Suunto device (zero YAML for the common case), themes with
+your Home Assistant theme automatically, and follows your HA language (English,
+Polish, German, Portuguese, French, Spanish, Italian, Dutch).
+
+![Suunto Cards preview](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto-cards/master/docs/screenshots/cards-overview-dark.png)
+
 ## Installation & configuration
 
 1. Install via HACS (Custom repositories → this repo as an **Integration**) and restart HA.
