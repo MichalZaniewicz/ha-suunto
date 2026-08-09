@@ -9,6 +9,15 @@ beta pre-releases are tagged `X.Y.ZbN`.
   Spanish, Italian and Dutch translations, alongside the existing English -
   Home Assistant picks the right one automatically based on your HA
   language. Display names only; `entity_id`s are unchanged.
+- **New companion repo: [Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards).**
+  7 purpose-built Lovelace cards (last workout, HR zones, sleep & readiness,
+  recovery, training load, week & lifetime stats, today) instead of wiring
+  this integration's 74 sensors into generic entity/gauge cards by hand.
+  Zero-config for one Suunto account, themes with your HA theme, and comes
+  with the same 8 languages as above. Separate HACS repo (category
+  Dashboard) - install it alongside this integration.
+
+  ![Suunto Cards preview](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto-cards/master/docs/screenshots/cards-overview-dark.png)
 
 ## 1.0.16
 - **Watch model on the device card.** The Suunto device now shows your actual
