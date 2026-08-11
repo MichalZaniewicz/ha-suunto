@@ -27,6 +27,7 @@ UNIT_KCAL = "kcal"
 UNIT_STEPS = "steps"
 UNIT_MS = "ms"
 UNIT_WORKOUTS = "workouts"
+UNIT_LAPS = "laps"
 UNIT_VO2MAX = "ml/kg/min"
 UNIT_YEARS = "years"
 
@@ -49,8 +50,8 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
     "resting_hr_baseline": 1, "fitness_ctl": 1, "fatigue_atl": 1, "form_tsb": 1,
     "vo2max": 1, "estimated_vo2max": 1, "last_pte": 1, "last_epoc": 1,
-    "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone1": 1,
-    "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
+    "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone0": 1,
+    "last_zone1": 1, "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
     "last_workout_weather": 1,
     # two decimals
@@ -108,6 +109,20 @@ def _zone_attrs(number: int) -> Callable[[dict[str, Any]], dict[str, Any] | None
         return {key: value for key, value in known.items() if value is not None} or None
 
     return attrs
+
+
+def _laps_count(data: dict[str, Any]) -> int | None:
+    """State = number of laps in the last workout, or None if we have no workout at all yet."""
+    workout = data.get("workout")
+    if workout is None:
+        return None
+    return len(workout.get("laps") or [])
+
+
+def _laps_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Per-lap time/distance/pace, the same shape as the recent-workouts list."""
+    laps = (data.get("workout") or {}).get("laps")
+    return {"laps": laps} if laps else None
 
 
 def _tags_state(data: dict[str, Any]) -> str | None:
@@ -547,6 +562,15 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         value_fn=_section("workout", "tss"),
     ),
     SuuntoAppSensorDescription(
+        key="last_zone0",
+        translation_key="last_zone0",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-minus-outline",
+        value_fn=_section("workout", "zone0_min"),
+        attributes_fn=_zone_attrs(0),
+    ),
+    SuuntoAppSensorDescription(
         key="last_zone1",
         translation_key="last_zone1",
         native_unit_of_measurement=UnitOfTime.MINUTES,
@@ -590,6 +614,15 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:heart-flash",
         value_fn=_section("workout", "zone5_min"),
         attributes_fn=_zone_attrs(5),
+    ),
+    SuuntoAppSensorDescription(
+        key="last_workout_laps",
+        translation_key="last_workout_laps",
+        native_unit_of_measurement=UNIT_LAPS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:flag-checkered",
+        value_fn=_laps_count,
+        attributes_fn=_laps_attrs,
     ),
     # --- Lifetime stats ---
     SuuntoAppSensorDescription(

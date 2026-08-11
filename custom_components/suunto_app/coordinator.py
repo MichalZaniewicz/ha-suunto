@@ -391,7 +391,7 @@ def _centi_to_min(value: Any) -> float | None:
 def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]:
     """Heart-rate zone bounds in bpm, from ``IntensityExtension``.
 
-    The workout carries the zone DURATIONS at top level (``timeInZone1..5``) but
+    The workout carries the zone DURATIONS at top level (``timeInZone0..5``) but
     the thresholds live only here, as ``zones.heartRate.zone1..5.lowerLimit``.
     Without them "42 min in zone 3" says nothing about the effort that was.
 
@@ -405,6 +405,16 @@ def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]
     while zone 1 was absent) - it is simply "everything below zone 2". So a zone
     is emitted when EITHER bound is known, and the unknown side is left out
     rather than invented; zone 1 then reads as an upper bound alone.
+
+    Zone 0 (``timeInZone0``, "below zone 1" - time spent so easy it doesn't
+    even reach zone 1) is synthesized the same way: its upper bound is zone
+    1's own ``lowerLimit`` - a DIFFERENT value from zone 1's own reported
+    upper bound (zone 2's lower). In the common case zone 1 carries no
+    ``lowerLimit`` of its own (see above), so most of the time zone 0 gets no
+    bpm attributes at all - reusing zone 1's upper (zone 2's lower) here
+    would silently claim zone 0 and zone 1 share the exact same range, which
+    is wrong on its face (they are separately tracked durations) and exactly
+    the kind of invented bound this function otherwise refuses to emit.
     """
     lowers: dict[int, int] = {}
     for ext in _extensions(workout, "IntensityExtension"):
@@ -431,7 +441,49 @@ def _hr_zone_limits(workout: dict[str, Any]) -> dict[int, dict[str, int | None]]
         if lower is None and upper is None:
             continue
         limits[number] = {"lower_bpm": lower, "upper_bpm": upper}
+    if 1 in lowers:
+        limits[0] = {"lower_bpm": None, "upper_bpm": lowers[1]}
     return limits
+
+
+def _normalize_laps(eventlaps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Per-lap splits from ``workouts/{key}/data``'s ``eventlaps``.
+
+    Each row is the CUMULATIVE state at that lap's end (``{t, la, ln, s, h, v,
+    d}``), so every value here is a delta against the previous lap (or the
+    workout start, for lap 1). ``t`` is seconds from workout start - confirmed
+    by this same endpoint's ``heartrates.t`` field, which uses that exact
+    convention (see :meth:`SuuntoAppApiClient.async_get_workout_data`).
+
+    ``s`` is assumed to be cumulative distance in METERS, matching every other
+    distance field in this API - inferred from the field name and the
+    surrounding schema, NOT independently confirmed against a live account
+    this session. Treat as best-effort until checked, same caution this file
+    already applies to ``SummaryExtension``'s suspect temperature fields.
+    """
+    laps: list[dict[str, Any]] = []
+    prev_t = 0.0
+    prev_s = 0.0
+    for index, row in enumerate(eventlaps, start=1):
+        t = _as_float(row.get("t"))
+        if t is None or t < prev_t:
+            continue  # malformed/out-of-order row - skip rather than emit a negative split
+        s = _as_float(row.get("s"))
+        duration_min = round((t - prev_t) / 60, 2)
+        distance_km = round((s - prev_s) / 1000, 2) if s is not None and s >= prev_s else None
+        pace_min_km = round(duration_min / distance_km, 2) if distance_km else None
+        laps.append(
+            {
+                "lap": index,
+                "duration_minutes": duration_min,
+                "distance_km": distance_km,
+                "pace_min_km": pace_min_km,
+            }
+        )
+        prev_t = t
+        if s is not None:
+            prev_s = s
+    return laps
 
 
 def _first_polyline_point(polyline: Any) -> tuple[float, float] | None:
@@ -607,7 +659,9 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         ),
         # Zone thresholds in bpm, so the times below have a scale (may be empty).
         "hr_zone_limits": _hr_zone_limits(workout),
-        # Time in each HR zone (centiseconds -> minutes).
+        # Time in each HR zone (centiseconds -> minutes). Zone 0 is "below
+        # zone 1" - time too easy to register in any real zone.
+        "zone0_min": _centi_to_min(workout.get("timeInZone0")),
         "zone1_min": _centi_to_min(workout.get("timeInZone1")),
         "zone2_min": _centi_to_min(workout.get("timeInZone2")),
         "zone3_min": _centi_to_min(workout.get("timeInZone3")),
@@ -860,6 +914,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # immutable once uploaded, so cache them and only fetch /data for new
         # workouts instead of re-downloading the whole window every cycle.
         self._workout_hr_cache: dict[str, list[tuple[datetime, float]]] = {}
+        # key -> normalized lap splits, fetched from the same /data response as
+        # the HR cache above (same immutability reasoning).
+        self._workout_laps_cache: dict[str, list[dict[str, Any]]] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
         # show exactly why sleep_duration/nap_duration bucketed the way they
@@ -1040,13 +1097,26 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._sync_device_registry(device)
             self._last_device = device
 
+        # Lap splits for the last workout only (from the cache
+        # _async_update_statistics just populated). Built as a shallow copy
+        # rather than mutated onto norm_workouts[0] directly, since that dict
+        # is shared with self._norm_cache and stays there even after a newer
+        # workout takes over index 0 - mutating it would leak a stale "laps"
+        # key onto an object nothing reads it from anymore.
+        last_workout = norm_workouts[0] if norm_workouts else None
+        if last_workout is not None:
+            last_workout = {
+                **last_workout,
+                "laps": self._workout_laps_cache.get(last_workout.get("key"), []),
+            }
+
         return {
             "sleep": sleep_norm,
             "nap": nap_norm,
             "recovery": recovery_norm,
             "fitness": self._last_fitness,
             "device": self._last_device,
-            "workout": norm_workouts[0] if norm_workouts else None,
+            "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
             "stats": _normalize_stats(stats),
@@ -1263,9 +1333,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         recovery balance/stress from the 30-min stream.
 
         Daily (one point per night/day, for a gap-free backfilled trend): sleep
-        duration/HRV/resting-HR/quality/SpO2, the readiness score, and the
-        CTL/ATL/TSB training-load series. These are derived from data we already
-        fetch, so a late-synced night/day fills its point retroactively.
+        duration/HRV/resting-HR/quality/SpO2, the readiness score, the
+        CTL/ATL/TSB training-load series, and peak Training Effect/EPOC (the
+        day's hardest session, when there was more than one). These are
+        derived from data we already fetch, so a late-synced night/day fills
+        its point retroactively.
         """
         now = dt_util.utcnow()
         since_ms = _since_ms(now, STATS_LOOKBACK_DAYS)
@@ -1310,6 +1382,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for w in workouts
             if (w.get("startTime") or 0) >= since_ms and (key := w.get("key"))
         ]
+        # The most recent workout's laps must always be available for
+        # last_workout_laps regardless of the statistics window - a rider who
+        # hasn't synced in a while should still see laps for their last ride,
+        # the same way every other last_* sensor reads it whenever it was.
+        last_key = workouts[0].get("key") if workouts else None
+        if last_key and last_key not in recent_keys:
+            recent_keys.append(last_key)
         to_fetch = [k for k in recent_keys if k not in self._workout_hr_cache]
         if to_fetch:
             results = await asyncio.gather(
@@ -1336,9 +1415,15 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             )
                         )
                 self._workout_hr_cache[key] = samples
+                self._workout_laps_cache[key] = _normalize_laps(
+                    result.get("eventlaps") or []
+                )
         # Drop cached workouts that have aged out of the window (bound memory).
         self._workout_hr_cache = {
             k: v for k, v in self._workout_hr_cache.items() if k in recent_keys
+        }
+        self._workout_laps_cache = {
+            k: v for k, v in self._workout_laps_cache.items() if k in recent_keys
         }
         for key in recent_keys:
             hr.extend(self._workout_hr_cache.get(key, []))
@@ -1385,6 +1470,36 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if score is not None:
                 readiness.append((ts, score))
 
+        # Peak Training Effect / EPOC (one point per day, noon UTC). Suunto
+        # computes both PER WORKOUT, not per day - on a day with more than one
+        # session, the day's MAX is used (the hardest/most significant effort
+        # of the day), matching how CTL/ATL/TSB below also collapse to one
+        # point per day.
+        pte_acc: dict[Any, list[float]] = defaultdict(list)
+        epoc_acc: dict[Any, list[float]] = defaultdict(list)
+        for w in workouts:
+            start = w.get("startTime")
+            if not start:
+                continue
+            day = dt_util.as_local(
+                datetime.fromtimestamp(int(start) / 1000, tz=timezone.utc)
+            ).date()
+            summary = _extension(w, "SummaryExtension")
+            pte_v = _as_float(summary.get("pte"))
+            if pte_v is not None:
+                pte_acc[day].append(pte_v)
+            epoc_v = _as_float(summary.get("peakEpoc"))
+            if epoc_v is not None:
+                epoc_acc[day].append(epoc_v)
+        pte_daily: list[tuple[datetime, float]] = [
+            (datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc), round(max(values), 1))
+            for day, values in pte_acc.items()
+        ]
+        epoc_daily: list[tuple[datetime, float]] = [
+            (datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc), round(max(values), 1))
+            for day, values in epoc_acc.items()
+        ]
+
         # CTL/ATL/TSB trend (one point per day), placed at noon UTC.
         ctl: list[tuple[datetime, float]] = []
         atl: list[tuple[datetime, float]] = []
@@ -1410,6 +1525,8 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ("fitness_ctl", "Suunto fitness (CTL)", None, ctl),
                 ("fatigue_atl", "Suunto fatigue (ATL)", None, atl),
                 ("form_tsb", "Suunto form (TSB)", None, tsb),
+                ("pte", "Suunto peak training effect", None, pte_daily),
+                ("epoc", "Suunto peak EPOC", "ml/kg", epoc_daily),
             ],
             sums=[
                 ("steps", "Suunto steps (hourly)", "steps", steps),

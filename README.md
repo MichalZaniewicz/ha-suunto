@@ -38,7 +38,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 74 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 76 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 29 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -88,7 +88,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (74 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (76 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -106,16 +106,24 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Daily activity:** steps, active energy (kcal), current heart rate.
 - **Last workout:** type, start, **start location** (latitude/longitude - plots on
   a Map card), distance, duration, recovery time, average/max heart rate,
-  average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 5
-  heart-rate zones**, **Peak Training Effect** (Suunto's own 1-5 rating of the
-  session), **peak EPOC**, your own **feeling** rating (1-5, when you set it on the
-  watch), the workout **type** as Suunto classifies it (commute, strength, long
+  average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 6
+  heart-rate zones (0-5)**, **Peak Training Effect** (Suunto's own 1-5 rating of
+  the session), **peak EPOC**, your own **feeling** rating (1-5, when you set it on
+  the watch), the workout **type** as Suunto classifies it (commute, strength, long
   aerobic base ...; the raw list is in the sensor's `tags` attribute), and
   **recovered-at** (when the recovery countdown ends).
   Each heart-rate zone sensor also carries its **bpm range** in the
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
-  an actual effort. Zone 1 is everything below zone 2, so it has an upper bound
-  only; the top of zone 5 is your max heart rate.
+  an actual effort. Zone 0 is everything below zone 1, zone 1 is everything below
+  zone 2 - most watches don't report a numeric split between zones 0 and 1
+  specifically, so zone 0 usually has no bpm range of its own even though its
+  duration is always there; the top of zone 5 is your max heart rate.
+- **Last workout - laps:** state is how many laps the workout has; each lap in the
+  `laps` attribute carries its own duration, distance and pace. 0 on a workout with
+  no manual/auto laps, which is most of them. Distance/pace assume the upstream lap
+  data is in meters, matching every other distance field in this API - flag it if a
+  lap's distance looks obviously wrong, since this one hasn't been checked against
+  a live account.
 - **Last workout - weather:** on-site **temperature** (°C) as the sensor state,
   with **humidity**, **wind speed** (km/h), **wind direction** and a decoded
   **condition** (e.g. "Scattered clouds") in its attributes. Outdoor workouts
@@ -193,7 +201,7 @@ burst of events.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 74 live sensors, the integration imports **hourly long-term
+Beyond the 76 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
@@ -206,7 +214,8 @@ These are external statistics (`suunto_app:...`), **not entities** - view them i
   ~25 s heart-rate samples from workouts, so workout peaks show up), steps, energy,
   recovery balance, stress.
 - **Daily:** sleep duration, HRV, resting heart rate, quality, SpO₂; Readiness;
-  and the Fitness / Fatigue / Form (CTL/ATL/TSB) trend.
+  the Fitness / Fatigue / Form (CTL/ATL/TSB) trend; and peak Training Effect /
+  peak EPOC (the day's hardest session, when there was more than one).
 
 The backfill window is ~5 days - a sync delayed beyond that won't fill the part
 older than the window. The hourly **heart-rate** statistic is the way to see a

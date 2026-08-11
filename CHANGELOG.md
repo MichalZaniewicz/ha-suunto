@@ -3,6 +3,27 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.18b1
+- **Time in HR zone 0.** The five zone sensors (1-5) now have a sixth
+  sibling, `last_zone0` - time spent below zone 1, too easy to register in
+  any real zone. Same `lower_limit_bpm`/`upper_limit_bpm` attribute pattern
+  as the others, though most watches don't report a numeric split between
+  zones 0 and 1 specifically, so zone 0 usually has no bpm range of its own
+  even though its duration is always there.
+- **New `last_workout_laps` sensor.** State is how many laps your last
+  workout has; each lap in the `laps` attribute carries its own duration,
+  distance and pace. Reuses the same `workouts/{key}/data` fetch already
+  made for the dense heart-rate statistics - no extra requests. Distance/
+  pace assume the upstream lap distance is in meters, matching every other
+  distance field in this API, but that specific assumption hasn't been
+  checked against a live account yet.
+- **Peak Training Effect and peak EPOC as daily long-term statistics**
+  (`suunto_app:pte`, `suunto_app:epoc`), alongside the existing CTL/ATL/TSB
+  trend - so a session's training impact gets the same backfilled history
+  view the load metrics already have, instead of only ever showing the last
+  workout's value. On a day with more than one workout, the day's MAX is
+  used (the hardest session of the day).
+
 ## 1.0.17
 - **7 more languages.** Every sensor/binary sensor/calendar name and the
   config/options flow text now has Polish, German, Portuguese, French,
