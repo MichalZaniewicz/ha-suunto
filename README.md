@@ -120,10 +120,7 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   duration is always there; the top of zone 5 is your max heart rate.
 - **Last workout - laps:** state is how many laps the workout has; each lap in the
   `laps` attribute carries its own duration, distance and pace. 0 on a workout with
-  no manual/auto laps, which is most of them. Distance/pace assume the upstream lap
-  data is in meters, matching every other distance field in this API - flag it if a
-  lap's distance looks obviously wrong, since this one hasn't been checked against
-  a live account.
+  no manual/auto laps, which is most of them.
 - **Last workout - weather:** on-site **temperature** (°C) as the sensor state,
   with **humidity**, **wind speed** (km/h), **wind direction** and a decoded
   **condition** (e.g. "Scattered clouds") in its attributes. Outdoor workouts

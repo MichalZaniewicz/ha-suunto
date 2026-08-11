@@ -13,10 +13,7 @@ beta pre-releases are tagged `X.Y.ZbN`.
 - **New `last_workout_laps` sensor.** State is how many laps your last
   workout has; each lap in the `laps` attribute carries its own duration,
   distance and pace. Reuses the same `workouts/{key}/data` fetch already
-  made for the dense heart-rate statistics - no extra requests. Distance/
-  pace assume the upstream lap distance is in meters, matching every other
-  distance field in this API, but that specific assumption hasn't been
-  checked against a live account yet.
+  made for the dense heart-rate statistics - no extra requests.
 - **Peak Training Effect and peak EPOC as daily long-term statistics**
   (`suunto_app:pte`, `suunto_app:epoc`), alongside the existing CTL/ATL/TSB
   trend - so a session's training impact gets the same backfilled history
