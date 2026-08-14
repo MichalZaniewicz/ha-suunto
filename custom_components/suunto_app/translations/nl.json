@@ -62,6 +62,7 @@
       "current_hr": { "name": "Huidige hartslag" },
       "last_activity": { "name": "Laatste activiteit" },
       "last_workout_start": { "name": "Start van laatste training" },
+      "days_since_last_workout": { "name": "Dagen sinds laatste training" },
       "last_workout_location": { "name": "Locatie van laatste training" },
       "last_distance": { "name": "Afstand van laatste training" },
       "last_duration": { "name": "Duur van laatste training" },

@@ -1114,9 +1114,21 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # key onto an object nothing reads it from anymore.
         last_workout = norm_workouts[0] if norm_workouts else None
         if last_workout is not None:
+            start = last_workout.get("start_time")
             last_workout = {
                 **last_workout,
                 "laps": self._workout_laps_cache.get(last_workout.get("key"), []),
+                # Whole local days since the last workout started (0 = today).
+                # Computed fresh each cycle rather than cached on the workout
+                # itself, since it depends on "today" - caching it on the
+                # normalized-workout dict (reused across cycles via
+                # _norm_cache) would freeze it at the value from whichever
+                # cycle first normalized that record.
+                "days_since": (
+                    (today - dt_util.as_local(start).date()).days
+                    if start
+                    else None
+                ),
             }
 
         return {

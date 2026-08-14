@@ -38,7 +38,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 77 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 78 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 29 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -88,7 +88,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (77 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (78 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -104,14 +104,16 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   irregular and the value can be several days old).
 - **Recovery:** recovery balance, stress state.
 - **Daily activity:** steps, active energy (kcal), current heart rate.
-- **Last workout:** type, start, **start location** (latitude/longitude - plots on
-  a Map card), distance, duration, recovery time, average/max heart rate,
-  average speed (km/h) and pace (min/km), cadence, **TSS**, **time in 6
-  heart-rate zones (0-5)**, **Peak Training Effect** (Suunto's own 1-5 rating of
-  the session), **peak EPOC**, your own **feeling** rating (1-5, when you set it on
-  the watch), the workout **type** as Suunto classifies it (commute, strength, long
-  aerobic base ...; the raw list is in the sensor's `tags` attribute), and
-  **recovered-at** (when the recovery countdown ends).
+- **Last workout:** type, start, **days since** (a rest-day counter - 0 means
+  you trained today, handy as an automation trigger), **start location**
+  (latitude/longitude - plots on a Map card), distance, duration, recovery
+  time, average/max heart rate, average speed (km/h) and pace (min/km),
+  cadence, **TSS**, **time in 6 heart-rate zones (0-5)**, **Peak Training
+  Effect** (Suunto's own 1-5 rating of the session), **peak EPOC**, your own
+  **feeling** rating (1-5, when you set it on the watch), the workout **type**
+  as Suunto classifies it (commute, strength, long aerobic base ...; the raw
+  list is in the sensor's `tags` attribute), and **recovered-at** (when the
+  recovery countdown ends).
   Each heart-rate zone sensor also carries its **bpm range** in the
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
   an actual effort. Zone 0 is everything below zone 1, zone 1 is everything below
@@ -195,7 +197,7 @@ burst of events.
 
 ### Automation blueprints
 
-Three ready-to-import blueprints under
+Four ready-to-import blueprints under
 [`blueprints/automation/suunto_app/`](blueprints/automation/suunto_app/) wrap the
 patterns above so you don't have to write the YAML yourself - each just asks for
 an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
@@ -204,10 +206,12 @@ an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
 | --- | --- |
 | [New Workout Notification](blueprints/automation/suunto_app/new_workout_notification.yaml) | Runs your action with a one-line workout summary whenever `suunto_app_new_workout` fires. |
 | [Low Readiness Alert](blueprints/automation/suunto_app/low_readiness_alert.yaml) | Runs your action once when the Readiness sensor drops below a threshold you set. |
+| [Unusual Recovery Alert](blueprints/automation/suunto_app/unusual_recovery_alert.yaml) | Runs your action the moment the Unusual recovery sensor turns on. |
 | [Weekly Training Digest](blueprints/automation/suunto_app/weekly_digest.yaml) | Runs your action with a weekly summary (workouts, distance, time, form) on the day(s)/time you pick. |
 
 [![Open your Home Assistant instance and show the blueprint import dialog with the new-workout-notification blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fnew_workout_notification.yaml)
 [![Open your Home Assistant instance and show the blueprint import dialog with the low-readiness-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Flow_readiness_alert.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with the unusual-recovery-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Funusual_recovery_alert.yaml)
 [![Open your Home Assistant instance and show the blueprint import dialog with the weekly-digest blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fweekly_digest.yaml)
 
 Or import manually: Settings -> Automations & Scenes -> Blueprints -> Import
@@ -228,7 +232,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 77 live sensors, the integration imports **hourly long-term
+Beyond the 78 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

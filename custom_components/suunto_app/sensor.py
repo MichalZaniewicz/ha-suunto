@@ -44,7 +44,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_min_altitude": 0, "last_max_altitude": 0,
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
-    "last_feeling": 0,
+    "last_feeling": 0, "days_since_last_workout": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -359,6 +359,14 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:clock-start",
         value_fn=_section("workout", "start_time"),
+    ),
+    SuuntoAppSensorDescription(
+        key="days_since_last_workout",
+        translation_key="days_since_last_workout",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:calendar-clock-outline",
+        value_fn=_section("workout", "days_since"),
     ),
     # Start position of the last workout. The latitude/longitude attributes let
     # the entity be plotted directly on a Map card; state is a "lat, lon" string

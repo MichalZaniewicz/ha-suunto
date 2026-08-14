@@ -62,6 +62,7 @@
       "current_hr": { "name": "Frequência cardíaca atual" },
       "last_activity": { "name": "Última atividade" },
       "last_workout_start": { "name": "Início do último treino" },
+      "days_since_last_workout": { "name": "Dias desde o último treino" },
       "last_workout_location": { "name": "Localização do último treino" },
       "last_distance": { "name": "Distância do último treino" },
       "last_duration": { "name": "Duração do último treino" },

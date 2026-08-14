@@ -3,6 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.19b2
+- **New `days_since_last_workout` sensor.** Whole days since your last workout
+  started (0 = today) - a simple rest-day counter, handy as an automation
+  trigger ("remind me after 3 days off"). Computed fresh each cycle from data
+  already fetched - no extra API calls.
+- **New "Unusual Recovery Alert" automation blueprint**, alongside the
+  existing 3 - runs your chosen action the moment `unusual_recovery` turns on.
+
 ## 1.0.19b1
 - **New `training_suggestion` sensor.** A rest/easy/moderate/hard read on
   today's effort, derived from your existing Form (TSB) and ACWR - a spiking

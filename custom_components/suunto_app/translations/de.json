@@ -62,6 +62,7 @@
       "current_hr": { "name": "Aktueller Puls" },
       "last_activity": { "name": "Letzte Aktivität" },
       "last_workout_start": { "name": "Start des letzten Trainings" },
+      "days_since_last_workout": { "name": "Tage seit dem letzten Training" },
       "last_workout_location": { "name": "Ort des letzten Trainings" },
       "last_distance": { "name": "Distanz des letzten Trainings" },
       "last_duration": { "name": "Dauer des letzten Trainings" },

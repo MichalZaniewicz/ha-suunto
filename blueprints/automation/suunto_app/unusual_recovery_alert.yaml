@@ -1,0 +1,31 @@
+blueprint:
+  name: "Suunto: Unusual Recovery Alert"
+  description: >
+    Runs an action - typically a notification - when your Suunto "Unusual
+    recovery" binary sensor turns on: resting heart rate elevated *and* HRV
+    suppressed at the same time versus your own baseline. A commonly used
+    early signal of illness or overreaching, not a diagnosis.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/unusual_recovery_alert.yaml
+  input:
+    unusual_recovery_entity:
+      name: Unusual recovery sensor
+      description: Your Suunto "Unusual recovery" binary sensor.
+      selector:
+        entity:
+          domain: binary_sensor
+    notify_action:
+      name: Notification action
+      description: The action to run when it turns on.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: state
+    entity_id: !input unusual_recovery_entity
+    to: "on"
+
+actions:
+  - !input notify_action
+
+mode: single

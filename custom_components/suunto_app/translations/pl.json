@@ -62,6 +62,7 @@
       "current_hr": { "name": "Aktualne tętno" },
       "last_activity": { "name": "Ostatnia aktywność" },
       "last_workout_start": { "name": "Początek ostatniego treningu" },
+      "days_since_last_workout": { "name": "Dni od ostatniego treningu" },
       "last_workout_location": { "name": "Lokalizacja ostatniego treningu" },
       "last_distance": { "name": "Dystans ostatniego treningu" },
       "last_duration": { "name": "Czas trwania ostatniego treningu" },
