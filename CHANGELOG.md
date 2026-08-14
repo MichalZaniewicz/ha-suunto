@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.18b1
+## 1.0.18
 - **Time in HR zone 0.** The five zone sensors (1-5) now have a sixth
   sibling, `last_zone0` - time spent below zone 1, too easy to register in
   any real zone. Same `lower_limit_bpm`/`upper_limit_bpm` attribute pattern
