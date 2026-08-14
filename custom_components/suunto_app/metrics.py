@@ -138,6 +138,56 @@ def hrv_status(
     return "balanced"
 
 
+def training_suggestion(tsb: float | None, acwr: float | None) -> str | None:
+    """Suggest today's effort ("rest"/"easy"/"moderate"/"hard") from TSB and ACWR.
+
+    A heuristic (our own band choice, not an official Suunto metric), shaped
+    like the bands commonly used to read a Performance Management Chart: well
+    above neutral reads as fresh enough to push, well below reads as needing
+    rest, with two shades in between. An ACWR above 1.5 (the same elevated-
+    injury-risk threshold documented on ``acwr`` itself) forces "rest"
+    regardless of form, since a spike in recent load is a nearer-term risk
+    than the form trend.
+    """
+    if acwr is not None and acwr > 1.5:
+        return "rest"
+    if tsb is None:
+        return None
+    if tsb < -25:
+        return "rest"
+    if tsb < -10:
+        return "easy"
+    if tsb <= 5:
+        return "moderate"
+    return "hard"
+
+
+def unusual_recovery(
+    *,
+    latest_hrv: float | None,
+    baseline_hrv: float | None,
+    hrv_sd: float | None,
+    latest_rhr: float | None,
+    baseline_rhr: float | None,
+    rhr_sd: float | None,
+) -> bool | None:
+    """True when resting HR is elevated AND HRV is suppressed at the same time.
+
+    Either signal alone is noisy (resting HR varies for many harmless reasons;
+    HRV swings night to night), but both moving the wrong way together is a
+    commonly cited early signal of illness or overreaching (the same idea
+    behind Whoop's/Oura's recovery flags) - this is a heuristic signal, not a
+    diagnosis. Returns None rather than False until there is enough sleep
+    history to have a real standard deviation on both series, so a fresh
+    install reads as "unknown", not "fine".
+    """
+    if not (latest_hrv and baseline_hrv and hrv_sd and latest_rhr and baseline_rhr and rhr_sd):
+        return None
+    hrv_suppressed = latest_hrv < baseline_hrv - hrv_sd
+    rhr_elevated = latest_rhr > baseline_rhr + rhr_sd
+    return hrv_suppressed and rhr_elevated
+
+
 def readiness(
     *,
     latest_hrv: float | None,

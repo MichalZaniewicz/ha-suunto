@@ -1,0 +1,42 @@
+blueprint:
+  name: "Suunto: Low Readiness Alert"
+  description: >
+    Runs an action - typically a "take it easy today" notification - when
+    your Suunto Readiness sensor drops below a threshold. Triggers once per
+    crossing (a numeric_state trigger), not on every update while it stays
+    low.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/low_readiness_alert.yaml
+  input:
+    readiness_entity:
+      name: Readiness sensor
+      description: Your Suunto "Readiness" sensor.
+      selector:
+        entity:
+          domain: sensor
+    threshold:
+      name: Threshold
+      description: Run the action when readiness drops below this value.
+      default: 40
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    notify_action:
+      name: Notification action
+      description: The action to run when readiness drops below the threshold.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input readiness_entity
+    below: !input threshold
+
+actions:
+  - variables:
+      readiness_value: "{{ trigger.to_state.state }}"
+  - !input notify_action
+
+mode: single

@@ -3,6 +3,23 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.19b1
+- **New `training_suggestion` sensor.** A rest/easy/moderate/hard read on
+  today's effort, derived from your existing Form (TSB) and ACWR - a spiking
+  ACWR (>1.5, the same elevated-injury-risk threshold the ACWR sensor already
+  documents) always suggests rest, regardless of how fresh your form looks.
+  No extra API calls - reuses the training-load numbers already computed.
+- **New `unusual_recovery` binary sensor.** On when your resting heart rate is
+  elevated *and* your HRV is suppressed at the same time, both versus your own
+  sleep-night baseline - either signal alone is noisy, but both moving the
+  wrong way together is a commonly used early signal of illness or
+  overreaching (not a diagnosis). Stays `unknown` until there is enough sleep
+  history for a real baseline, rather than reading as a false "fine".
+- **Automation blueprints.** Three ready-to-import blueprints under
+  `blueprints/automation/suunto_app/`: a new-workout push notification, a
+  low-readiness alert, and a weekly training digest. See the README for the
+  one-click import badges.
+
 ## 1.0.18
 - **Time in HR zone 0.** The five zone sensors (1-5) now have a sixth
   sibling, `last_zone0` - time spent below zone 1, too easy to register in

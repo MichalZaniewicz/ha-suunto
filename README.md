@@ -38,7 +38,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 76 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 78 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 29 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -88,7 +88,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (76 sensors + 2 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (78 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -141,7 +141,10 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   reading between such workouts - each sensor's `measured_at` attribute shows when
   (and from which activity) it was taken.
 - **Derived - training load:** Fitness (CTL), Fatigue (ATL), Form (TSB) from TSS
-  history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3).
+  history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3), and
+  a **training suggestion** (rest/easy/moderate/hard) for today, derived from
+  those same two numbers - a spiking ACWR (>1.5) always suggests rest,
+  regardless of how fresh your form looks.
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
   rate + baseline, and **Readiness** (0-100, a heuristic blending sleep, HRV,
   resting HR and recovery balance).
@@ -152,9 +155,14 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   as a browsable event, plus a *Recent workouts* sensor whose attribute holds the
   last 15 (date, type, distance, duration, HR, TSS) - see below.
 - **Binary sensors:** *Recovering* (on while Suunto's recovery countdown from the
-  last workout is still running) and *Workout today*. Both flip on their own
-  clock, so they change the moment the countdown ends or the day rolls over,
-  without waiting for the next poll.
+  last workout is still running), *Workout today*, and **Unusual recovery** (on
+  when your resting heart rate is elevated *and* your HRV is suppressed at the
+  same time, both vs. your own sleep-night baseline - a commonly used early
+  signal of illness or overreaching, not a diagnosis; stays `unknown` until
+  there is enough sleep history to have a real baseline). The first two flip on
+  their own clock, so they change the moment the countdown ends or the day
+  rolls over, without waiting for the next poll; *Unusual recovery* only
+  changes when new sleep data arrives.
 
 ### Automations: the new-workout event
 
@@ -185,11 +193,33 @@ only takes stock of what already exists, and a workout that shows up more than a
 week after it happened is recorded silently - your history is never replayed as a
 burst of events.
 
+### Automation blueprints
+
+Three ready-to-import blueprints under
+[`blueprints/automation/suunto_app/`](blueprints/automation/suunto_app/) wrap the
+patterns above so you don't have to write the YAML yourself - each just asks for
+an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
+
+| Blueprint | What it does |
+| --- | --- |
+| [New Workout Notification](blueprints/automation/suunto_app/new_workout_notification.yaml) | Runs your action with a one-line workout summary whenever `suunto_app_new_workout` fires. |
+| [Low Readiness Alert](blueprints/automation/suunto_app/low_readiness_alert.yaml) | Runs your action once when the Readiness sensor drops below a threshold you set. |
+| [Weekly Training Digest](blueprints/automation/suunto_app/weekly_digest.yaml) | Runs your action with a weekly summary (workouts, distance, time, form) on the day(s)/time you pick. |
+
+[![Open your Home Assistant instance and show the blueprint import dialog with the new-workout-notification blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fnew_workout_notification.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with the low-readiness-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Flow_readiness_alert.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with the weekly-digest blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fweekly_digest.yaml)
+
+Or import manually: Settings -> Automations & Scenes -> Blueprints -> Import
+Blueprint, and paste a blueprint's GitHub URL.
+
 > Derived metrics are computed locally in HA from history fetched via the API
 > (sleep ~60 days, workouts ~90 days, paginated). CTL/ATL are seeded with the mean
-> daily load to avoid an early-window underestimate. **Readiness** and its weights
-> are a heuristic, not an official Suunto metric. All the math (CTL/ATL/TSB, ACWR,
-> baseline, readiness) is covered by deterministic tests in `metrics.py`.
+> daily load to avoid an early-window underestimate. **Readiness**, **training
+> suggestion** and **unusual recovery** are heuristics, not official Suunto
+> metrics. All the math (CTL/ATL/TSB, ACWR, baseline, readiness, training
+> suggestion, unusual recovery) is covered by deterministic tests in
+> `metrics.py`.
 
 ## Long-term statistics (intraday curves + backfill)
 
@@ -198,7 +228,7 @@ burst of events.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 76 live sensors, the integration imports **hourly long-term
+Beyond the 78 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

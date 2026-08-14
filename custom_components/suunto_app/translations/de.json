@@ -106,6 +106,10 @@
       "fatigue_atl": { "name": "Ermüdung (ATL)" },
       "form_tsb": { "name": "Form (TSB)" },
       "acwr": { "name": "Akut-zu-chronisch-Belastungsverhältnis" },
+      "training_suggestion": {
+        "name": "Trainingsempfehlung",
+        "state": { "rest": "Ruhe", "easy": "Leicht", "moderate": "Moderat", "hard": "Intensiv" }
+      },
       "readiness": { "name": "Bereitschaft" },
       "hrv_baseline": { "name": "HRV-Basiswert" },
       "hrv_status": {
@@ -125,7 +129,8 @@
     },
     "binary_sensor": {
       "is_recovering": { "name": "Erholung" },
-      "workout_today": { "name": "Training heute" }
+      "workout_today": { "name": "Training heute" },
+      "unusual_recovery": { "name": "Ungewöhnliche Erholung" }
     },
     "calendar": {
       "workouts": { "name": "Trainings" }

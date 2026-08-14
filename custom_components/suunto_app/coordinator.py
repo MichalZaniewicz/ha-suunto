@@ -1002,11 +1002,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 daily_tss[day] += score
         load = metrics.training_load(daily_tss, today)
         load["acwr"] = metrics.acwr(daily_tss, today)
+        load["suggestion"] = metrics.training_suggestion(load["tsb"], load["acwr"])
 
         # --- HRV / resting-HR baselines + readiness from the sleep series ---
         nights = _sleep_series(sleep)
         hrv_mean, hrv_sd = metrics.baseline_stats([n["hrv"] for n in nights])
-        rhr_mean, _ = metrics.baseline_stats([n["rhr"] for n in nights])
+        rhr_mean, rhr_sd = metrics.baseline_stats([n["rhr"] for n in nights])
         latest_hrv = sleep_norm["avg_hrv_ms"] if sleep_norm else None
         latest_rhr = sleep_norm["min_hr_bpm"] if sleep_norm else None
         baseline = {
@@ -1021,6 +1022,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 baseline_rhr=rhr_mean,
                 sleep_hours=sleep_norm["duration_hours"] if sleep_norm else None,
                 balance_pct=recovery_norm["balance_pct"] if recovery_norm else None,
+            ),
+            "unusual_recovery": metrics.unusual_recovery(
+                latest_hrv=latest_hrv,
+                baseline_hrv=hrv_mean,
+                hrv_sd=hrv_sd,
+                latest_rhr=latest_rhr,
+                baseline_rhr=rhr_mean,
+                rhr_sd=rhr_sd,
             ),
         }
 

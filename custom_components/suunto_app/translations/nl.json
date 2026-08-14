@@ -106,6 +106,10 @@
       "fatigue_atl": { "name": "Vermoeidheid (ATL)" },
       "form_tsb": { "name": "Vorm (TSB)" },
       "acwr": { "name": "Acute:chronische belastingsratio" },
+      "training_suggestion": {
+        "name": "Trainingsadvies",
+        "state": { "rest": "Rust", "easy": "Licht", "moderate": "Matig", "hard": "Intensief" }
+      },
       "readiness": { "name": "Gereedheid" },
       "hrv_baseline": { "name": "HRV-basiswaarde" },
       "hrv_status": {
@@ -125,7 +129,8 @@
     },
     "binary_sensor": {
       "is_recovering": { "name": "Aan het herstellen" },
-      "workout_today": { "name": "Training vandaag" }
+      "workout_today": { "name": "Training vandaag" },
+      "unusual_recovery": { "name": "Afwijkend herstel" }
     },
     "calendar": {
       "workouts": { "name": "Trainingen" }

@@ -740,6 +740,14 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:scale-balance",
         value_fn=_section("load", "acwr"),
     ),
+    SuuntoAppSensorDescription(
+        key="training_suggestion",
+        translation_key="training_suggestion",
+        device_class=SensorDeviceClass.ENUM,
+        options=["rest", "easy", "moderate", "hard"],
+        icon="mdi:compass-outline",
+        value_fn=_section("load", "suggestion"),
+    ),
     # --- Recovery baselines & readiness ---
     SuuntoAppSensorDescription(
         key="readiness",

@@ -106,6 +106,10 @@
       "fatigue_atl": { "name": "Fatigue (ATL)" },
       "form_tsb": { "name": "Form (TSB)" },
       "acwr": { "name": "Acute:chronic load ratio" },
+      "training_suggestion": {
+        "name": "Training suggestion",
+        "state": { "rest": "Rest", "easy": "Easy", "moderate": "Moderate", "hard": "Hard" }
+      },
       "readiness": { "name": "Readiness" },
       "hrv_baseline": { "name": "HRV baseline" },
       "hrv_status": {
@@ -125,7 +129,8 @@
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recovering" },
-      "workout_today": { "name": "Workout today" }
+      "workout_today": { "name": "Workout today" },
+      "unusual_recovery": { "name": "Unusual recovery" }
     },
     "calendar": {
       "workouts": { "name": "Workouts" }

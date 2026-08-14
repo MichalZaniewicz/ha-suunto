@@ -1,0 +1,36 @@
+blueprint:
+  name: "Suunto: New Workout Notification"
+  description: >
+    Runs an action - typically "Send a notification" to your phone - with a
+    workout summary (activity, distance, duration, average heart rate, TSS,
+    Peak Training Effect) whenever a new Suunto workout syncs in via the
+    `suunto_app_new_workout` event.
+
+
+    Inside your chosen action, use `{{ workout_summary }}` for the ready-made
+    one-line summary, or reference the individual fields directly, e.g.
+    `{{ trigger.event.data.activity }}` or `{{ trigger.event.data.pte }}`.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/new_workout_notification.yaml
+  input:
+    notify_action:
+      name: Notification action
+      description: The action to run for each new workout.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: event
+    event_type: suunto_app_new_workout
+
+actions:
+  - variables:
+      workout_summary: >-
+        {{ trigger.event.data.activity }}:
+        {{ (trigger.event.data.distance_meters | float(0) / 1000) | round(1) }} km
+        in {{ trigger.event.data.duration_minutes }} min, avg HR
+        {{ trigger.event.data.avg_hr_bpm }}, TSS {{ trigger.event.data.tss }},
+        PTE {{ trigger.event.data.pte }}
+  - !input notify_action
+
+mode: single

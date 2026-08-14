@@ -1,0 +1,77 @@
+blueprint:
+  name: "Suunto: Weekly Training Digest"
+  description: >
+    Runs an action with a weekly summary (workouts, distance, time, form) on
+    the day(s) and time you pick.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/weekly_digest.yaml
+  input:
+    weekdays:
+      name: Day(s) of week
+      description: Which day(s) to send the digest.
+      default: [mon]
+      selector:
+        select:
+          multiple: true
+          options:
+            - { value: mon, label: Monday }
+            - { value: tue, label: Tuesday }
+            - { value: wed, label: Wednesday }
+            - { value: thu, label: Thursday }
+            - { value: fri, label: Friday }
+            - { value: sat, label: Saturday }
+            - { value: sun, label: Sunday }
+    time:
+      name: Time
+      description: What time to send the digest.
+      default: "08:00:00"
+      selector:
+        time: {}
+    workouts_7d_entity:
+      name: Workouts (7 days) sensor
+      selector:
+        entity:
+          domain: sensor
+    weekly_distance_entity:
+      name: Distance (7 days) sensor
+      selector:
+        entity:
+          domain: sensor
+    weekly_time_entity:
+      name: Time (7 days) sensor
+      selector:
+        entity:
+          domain: sensor
+    form_tsb_entity:
+      name: Form (TSB) sensor
+      selector:
+        entity:
+          domain: sensor
+    notify_action:
+      name: Notification action
+      description: The action to run with the digest.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: time
+    at: !input time
+
+conditions:
+  - condition: time
+    weekday: !input weekdays
+
+actions:
+  - variables:
+      workouts_7d_entity: !input workouts_7d_entity
+      weekly_distance_entity: !input weekly_distance_entity
+      weekly_time_entity: !input weekly_time_entity
+      form_tsb_entity: !input form_tsb_entity
+      digest: >-
+        This week: {{ states(workouts_7d_entity) }} workouts,
+        {{ states(weekly_distance_entity) }} km,
+        {{ states(weekly_time_entity) }} h. Form (TSB):
+        {{ states(form_tsb_entity) }}.
+  - !input notify_action
+
+mode: single

@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -66,6 +67,18 @@ def _next_local_midnight(data: dict[str, Any]) -> datetime | None:
     return dt_util.start_of_local_day(dt_util.now() + timedelta(days=1))
 
 
+def _unusual_recovery(data: dict[str, Any]) -> bool | None:
+    """True when resting HR is elevated and HRV suppressed at the same time.
+
+    Computed by the daily coordinator (metrics.unusual_recovery) from the
+    sleep-night HRV/RHR baselines, the same series the hrv_status/readiness
+    sensors already read - no extra fetch. Only changes when new sleep data
+    arrives, so unlike the two entities above this needs no self-scheduled
+    timer.
+    """
+    return (data.get("baseline") or {}).get("unusual_recovery")
+
+
 @dataclass(frozen=True, kw_only=True)
 class SuuntoAppBinarySensorDescription(BinarySensorEntityDescription):
     """Describes a Suunto App binary sensor and how to compute its state."""
@@ -89,6 +102,13 @@ BINARY_SENSORS: tuple[SuuntoAppBinarySensorDescription, ...] = (
         icon="mdi:calendar-check",
         is_on_fn=_workout_today,
         next_change_fn=_next_local_midnight,
+    ),
+    SuuntoAppBinarySensorDescription(
+        key="unusual_recovery",
+        translation_key="unusual_recovery",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        icon="mdi:shield-alert-outline",
+        is_on_fn=_unusual_recovery,
     ),
 )
 
