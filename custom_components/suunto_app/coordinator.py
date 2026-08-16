@@ -27,6 +27,7 @@ from .const import (
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     NEW_WORKOUT_MAX_AGE_DAYS,
+    RECENT_WORKOUTS_LIMIT,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
     STATS_LOOKBACK_DAYS,
@@ -1217,7 +1218,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "start_lat": w.get("start_lat"),
                 "start_lon": w.get("start_lon"),
             }
-            for w in norm_workouts[:15]
+            for w in norm_workouts[:RECENT_WORKOUTS_LIMIT]
         ]
 
         # Let automations react to a finished workout without polling a sensor.

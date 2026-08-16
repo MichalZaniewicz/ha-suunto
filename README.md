@@ -164,7 +164,7 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Counts:** workouts in the last 7 / 30 days.
 - **Workouts calendar & recent list:** a `calendar` entity with every past workout
   as a browsable event, plus a *Recent workouts* sensor whose attribute holds the
-  last 15 (date, type, distance, duration, HR, TSS) - see below.
+  last 60 (date, type, distance, duration, HR, TSS) - see below.
 - **Binary sensors:** *Recovering* (on while Suunto's recovery countdown from the
   last workout is still running), *Workout today*, and **Unusual recovery** (on
   when your resting heart rate is elevated *and* your HRV is suppressed at the
@@ -269,7 +269,7 @@ steps to the newest synced value and can't be filled backwards.
 Every past workout is exposed as an event on a **`calendar`** entity - browse your
 whole training history in a Calendar card, each event showing the activity,
 distance and key stats (duration, HR, TSS). A companion **Recent workouts** sensor
-keeps the last 15 sessions in its attributes for a compact list/table card. Both
+keeps the last 60 sessions in its attributes for a compact list/table card. Both
 reuse the workout history already fetched - no extra requests.
 
 ## Workout start on a map

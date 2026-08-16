@@ -3,6 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.21b1
+- **Fix: `recent_workouts` held only your last 15 workouts**, which undercounted
+  anyone training more than ~2-3x/week - the companion cards repo's Activity
+  Calendar card (6 weeks) and Recent Workouts card both looked more empty than
+  they should have, since older workouts had already fallen out of that window.
+  Raised to 60. Zero extra API calls - it was already slicing the same 90-day
+  window the training-load model uses, just too short.
+
 ## 1.0.20
 - **New `training_records` sensor.** State is your longest-ever workout
   streak (consecutive days); attributes carry four more all-time personal

@@ -30,6 +30,17 @@ RECOVERY_LOOKBACK_DAYS = 5
 ACTIVITY_LOOKBACK_DAYS = 2
 WORKOUTS_LOOKBACK_DAYS = 90
 
+# How many of the most recent workouts ride along in the recent_workouts
+# sensor's attribute. Sliced from norm_workouts, which is already the full
+# 90-day window fetched above - no extra cost to raising this. Needs to
+# comfortably outlast the 6-week window suunto-cards' Activity Calendar card
+# builds from this same attribute: 15 undercounted for anyone training more
+# than ~2-3x/week, leaving weeks of the calendar looking falsely inactive
+# (confirmed live - reported by a user whose calendar showed 4 empty weeks
+# then 2 active ones, exactly the shape a frequent exerciser's top-15 window
+# produces). 60 covers 6 weeks at up to ~1.4 workouts/day.
+RECENT_WORKOUTS_LIMIT = 60
+
 # One-off deep scan used ONLY to seed the VO2max / fitness-age sensors. Suunto
 # derives those from runs and walks alone, so an account that mostly rides can go
 # well over a year without a fresh reading (confirmed live: the newest reading was
