@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.21b1
+## 1.0.21
 - **Fix: `recent_workouts` held only your last 15 workouts**, which undercounted
   anyone training more than ~2-3x/week - the companion cards repo's Activity
   Calendar card (6 weeks) and Recent Workouts card both looked more empty than
