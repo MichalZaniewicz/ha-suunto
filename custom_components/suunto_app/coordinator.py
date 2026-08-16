@@ -742,6 +742,134 @@ def _device_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any] | None:
     return None
 
 
+def _longest_streak(workouts: list[dict[str, Any]]) -> int:
+    """Longest run of consecutive LOCAL calendar days with >=1 workout.
+
+    ``workouts`` is normalized (has ``start_time``); order doesn't matter, the
+    dates are sorted here. A pure extremum, so it's valid to compute this over
+    any window and later keep the max across windows (see ``_merge_records``).
+    """
+    dates = sorted(
+        {dt_util.as_local(w["start_time"]).date() for w in workouts if w.get("start_time")}
+    )
+    if not dates:
+        return 0
+    best = current = 1
+    for prev, nxt in zip(dates, dates[1:]):
+        gap = (nxt - prev).days
+        if gap == 1:
+            current += 1
+            best = max(best, current)
+        elif gap > 1:
+            current = 1
+    return best
+
+
+def _best_workout(
+    workouts: list[dict[str, Any]],
+    value_fn: Callable[[dict[str, Any]], Any],
+    *,
+    prefer_max: bool,
+) -> dict[str, Any] | None:
+    """Scan ``workouts`` for the one maximizing (or minimizing) ``value_fn``.
+
+    Returns ``{value, key, start_time, activity}`` for the winner, or None if
+    no workout in the list has a usable value (e.g. no foot-activity workout
+    for a pace record).
+    """
+    best_workout: dict[str, Any] | None = None
+    best_value: float | None = None
+    for w in workouts:
+        value = value_fn(w)
+        if value is None:
+            continue
+        if best_value is None or (value > best_value if prefer_max else value < best_value):
+            best_value = value
+            best_workout = w
+    if best_workout is None or best_value is None:
+        return None
+    return {
+        "value": best_value,
+        "key": best_workout.get("key"),
+        "start_time": best_workout.get("start_time"),
+        "activity": best_workout.get("activity"),
+    }
+
+
+def _better_pr(
+    a: dict[str, Any] | None, b: dict[str, Any] | None, *, prefer_max: bool
+) -> dict[str, Any] | None:
+    """Pick whichever of two PR entries (see ``_best_workout``) is better."""
+    if a is None:
+        return b
+    if b is None:
+        return a
+    if prefer_max:
+        return a if a["value"] >= b["value"] else b
+    return a if a["value"] <= b["value"] else b
+
+
+def _records_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any]:
+    """All-time-candidate personal records from a window of normalized workouts.
+
+    Always returns a full dict (unlike ``_fitness_snapshot``'s Optional) - an
+    empty window just yields Nones/0, which ``_merge_records`` treats as "no
+    improvement" rather than "no data". Pace is restricted to foot activities
+    (cycling's ``avg_pace_min_km`` isn't a meaningful "pace" record), same
+    gating ``_normalize_workout`` already uses for stride length.
+    """
+    foot_workouts = [w for w in workouts if w.get("activity_id") in FOOT_ACTIVITY_IDS]
+    return {
+        "longest_streak_days": _longest_streak(workouts),
+        "fastest_pace": _best_workout(
+            foot_workouts, lambda w: w.get("avg_pace_min_km"), prefer_max=False
+        ),
+        "biggest_climb": _best_workout(
+            workouts, lambda w: w.get("ascent_meters"), prefer_max=True
+        ),
+        "longest_workout": _best_workout(
+            workouts, lambda w: w.get("duration_minutes"), prefer_max=True
+        ),
+        "farthest_workout": _best_workout(
+            workouts, lambda w: w.get("distance_meters"), prefer_max=True
+        ),
+        "hardest_workout": _best_workout(
+            workouts, lambda w: w.get("tss"), prefer_max=True
+        ),
+    }
+
+
+def _merge_records(
+    a: dict[str, Any] | None, b: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Combine two records snapshots, keeping the better value per field.
+
+    Lets a one-off deep scan (which may reach further back than the normal
+    fetch window) and this cycle's normal-window scan coexist: a genuinely
+    new personal best set today is picked up, while an older record the deep
+    scan found beyond the normal window is never lost to a smaller window's
+    "improvement".
+    """
+    if a is None:
+        return b
+    if b is None:
+        return a
+    merged: dict[str, Any] = {
+        "longest_streak_days": max(
+            a.get("longest_streak_days") or 0, b.get("longest_streak_days") or 0
+        )
+    }
+    for field, prefer_max in (
+        ("fastest_pace", False),
+        ("biggest_climb", True),
+        ("longest_workout", True),
+        ("farthest_workout", True),
+        ("hardest_workout", True),
+    ):
+        merged[field] = _better_pr(a.get(field), b.get(field), prefer_max=prefer_max)
+    return merged
+
+
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
     """Per-activity lifetime totals from the stats payload's ``allStats`` list.
 
@@ -896,6 +1024,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_fitness: dict[str, Any] | None = None
         # Guards the one-off deep history scan that seeds the above.
         self._fitness_seeded = False
+        # All-time personal records (longest streak, fastest pace, biggest
+        # climb, longest/farthest/hardest single workout). Unlike fitness
+        # above, "all-time" always needs a deep scan once (a record can hide
+        # anywhere in the account's history, not just when the normal window
+        # comes up empty) - see _async_seed_records / _merge_records.
+        self._last_records: dict[str, Any] | None = None
+        self._records_seeded = False
         # Last known watch model (SummaryExtension.gear), held the same way as
         # fitness above - not every workout has one (manual entries), and a fresh
         # install has none until its first fetch completes.
@@ -1106,6 +1241,20 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._sync_device_registry(device)
             self._last_device = device
 
+        # All-time personal records. The normal 90-day window can only ever
+        # improve a record (a genuinely new PR set today); anything a record
+        # could hold from further back is seeded once via a deep scan below
+        # and then never lost, since _merge_records keeps the better of the
+        # two on every cycle.
+        current_records = _records_snapshot(norm_workouts)
+        if not self._records_seeded:
+            self._records_seeded = True
+            self._last_records = _merge_records(
+                await self._async_seed_records(now), current_records
+            )
+        else:
+            self._last_records = _merge_records(self._last_records, current_records)
+
         # Lap splits for the last workout only (from the cache
         # _async_update_statistics just populated). Built as a shallow copy
         # rather than mutated onto norm_workouts[0] directly, since that dict
@@ -1137,6 +1286,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "recovery": recovery_norm,
             "fitness": self._last_fitness,
             "device": self._last_device,
+            "records": self._last_records,
             "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
@@ -1196,6 +1346,32 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             _LOGGER.debug("Seeded fitness from %s", fitness.get("measured_at"))
         return fitness
+
+    async def _async_seed_records(self, now: datetime) -> dict[str, Any] | None:
+        """One-off deep scan for all-time personal records.
+
+        Same reach as the fitness seed above, but unconditional: unlike a
+        "latest reading" (fitness), a record can be sitting anywhere in the
+        account's history, so this always runs once per restart rather than
+        only when the normal window comes up empty. Normalizes the deep batch
+        directly (bypassing ``_normalize_workouts``' cache) so a one-off scan
+        of up to 1200 workouts never mutates ``self._norm_cache``.
+
+        Best-effort: a failure here must never disturb the data update.
+        """
+        try:
+            deep = await self._client.async_get_workouts(
+                _since_ms(now, FITNESS_LOOKBACK_DAYS), max_pages=12
+            )
+        except SuuntoAppError as err:
+            _LOGGER.debug("Records seed scan failed (non-fatal): %s", err)
+            return None
+        records = _records_snapshot([_normalize_workout(w) for w in deep])
+        _LOGGER.debug(
+            "Seeded records from %d days of history: streak=%d",
+            FITNESS_LOOKBACK_DAYS, records["longest_streak_days"]
+        )
+        return records
 
     def _normalize_workouts(
         self, workouts: list[dict[str, Any]]

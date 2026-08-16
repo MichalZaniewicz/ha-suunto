@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.20
+- **New `training_records` sensor.** State is your longest-ever workout
+  streak (consecutive days); attributes carry four more all-time personal
+  records - fastest pace, biggest single-workout climb, longest single
+  workout, farthest single workout, and highest single-session TSS - each
+  with the workout it happened in. Seeded once via a deep history scan (the
+  same technique the VO2max sensor already uses), then held in memory and
+  only ever improved from there, so these are true lifetime bests, not
+  bounded to the normal 90-day fetch window. Built for the upcoming
+  achievement-style cards in the companion [Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)
+  repo, but useful on its own.
+
 ## 1.0.19
 - **New `days_since_last_workout` sensor.** Whole days since your last workout
   started (0 = today) - a simple rest-day counter, handy as an automation

@@ -99,6 +99,7 @@
       "lifetime_workouts": { "name": "Totaal aantal trainingen" },
       "lifetime_days": { "name": "Totaal actieve dagen" },
       "lifetime_by_activity": { "name": "Totaal per activiteit" },
+      "training_records": { "name": "Trainingsrecords" },
       "last_pct_hrmax": { "name": "% van max. hartslag van laatste training" },
       "last_cal_per_km": { "name": "Calorieën per km van laatste training" },
       "last_ascent_rate": { "name": "Stijgsnelheid van laatste training" },

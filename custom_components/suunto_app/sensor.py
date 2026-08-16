@@ -44,7 +44,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_min_altitude": 0, "last_max_altitude": 0,
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
-    "last_feeling": 0, "days_since_last_workout": 0,
+    "last_feeling": 0, "days_since_last_workout": 0, "training_records": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -192,6 +192,45 @@ def _fitness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
         "measured_at": measured_at.isoformat(),
         "measured_from": fitness.get("activity"),
     }
+
+
+def _pr_dict(
+    entry: dict[str, Any] | None, *, divisor: float = 1, round_to: int = 0
+) -> dict[str, Any] | None:
+    """Reshape one coordinator PR entry (``{value, key, start_time, activity}``)
+    for display: convert the raw unit (meters, minutes, ...) and drop the
+    internal workout ``key``.
+    """
+    if not entry or entry.get("value") is None:
+        return None
+    start = entry.get("start_time")
+    return {
+        "value": round(entry["value"] / divisor, round_to),
+        "activity": entry.get("activity"),
+        "start_time": start.isoformat() if start else None,
+    }
+
+
+def _records_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """All-time personal records - fastest pace, biggest climb, longest and
+    farthest single workout, highest single-session TSS - each with the
+    workout it happened in.
+
+    Seeded once via a deep history scan then held forever in memory
+    (coordinator._async_seed_records / _merge_records), so these are true
+    lifetime bests, not bounded to the normal 90-day fetch window.
+    """
+    records = data.get("records") or {}
+    out = {
+        "fastest_pace_min_km": _pr_dict(records.get("fastest_pace"), round_to=2),
+        "biggest_climb_m": _pr_dict(records.get("biggest_climb")),
+        "longest_workout_min": _pr_dict(records.get("longest_workout")),
+        "farthest_workout_km": _pr_dict(
+            records.get("farthest_workout"), divisor=1000, round_to=1
+        ),
+        "hardest_workout_tss": _pr_dict(records.get("hardest_workout"), round_to=1),
+    }
+    return {k: v for k, v in out.items() if v is not None} or None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -685,6 +724,19 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         attributes_fn=lambda d: {
             "activities": (d.get("stats") or {}).get("by_activity") or []
         },
+    ),
+    # All-time personal records - state is the longest streak (days); the
+    # individual PRs (fastest pace, biggest climb, longest/farthest/hardest
+    # single workout) ride in attributes, each with the workout it happened
+    # in. See coordinator._async_seed_records for how "all-time" is seeded.
+    SuuntoAppSensorDescription(
+        key="training_records",
+        translation_key="training_records",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:trophy-outline",
+        value_fn=_section("records", "longest_streak_days"),
+        attributes_fn=_records_attrs,
     ),
     # --- Per-workout derived ---
     SuuntoAppSensorDescription(

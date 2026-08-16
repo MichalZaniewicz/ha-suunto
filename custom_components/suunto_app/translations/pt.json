@@ -99,6 +99,7 @@
       "lifetime_workouts": { "name": "Treinos totais" },
       "lifetime_days": { "name": "Dias ativos totais" },
       "lifetime_by_activity": { "name": "Total por modalidade" },
+      "training_records": { "name": "Recordes de treino" },
       "last_pct_hrmax": { "name": "% da FC máx. do último treino" },
       "last_cal_per_km": { "name": "Calorias por km do último treino" },
       "last_ascent_rate": { "name": "Taxa de subida do último treino" },
