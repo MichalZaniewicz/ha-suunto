@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.22b1
+## 1.0.22
 - **New `training_records_month` sensor.** The same personal-records shape as
   `training_records` - longest streak, fastest pace, biggest climb, longest
   and farthest single workout, highest single-session TSS - but scoped to the
@@ -15,6 +15,12 @@ beta pre-releases are tagged `X.Y.ZbN`.
   every sport, which reads oddly for a runner expecting steps/min - the fix
   adds the steps/min equivalent as an attribute rather than changing the
   sensor's own unit, so nobody's existing history gets rewritten.
+- **Fixed a device-registry deprecation warning**, caught by live testing:
+  `device_registry.async_get_device` is deprecated upstream (removal in HA
+  2027.8.0) in favor of `async_get_device_by_identifier`, which the
+  integration now uses when it detects a watch-model change. No user-visible
+  behavior change - the watch model still syncs to the device card exactly
+  as before.
 
 ## 1.0.21
 - **Fix: `recent_workouts` held only your last 15 workouts**, which undercounted
