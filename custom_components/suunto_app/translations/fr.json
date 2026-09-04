@@ -100,6 +100,7 @@
       "lifetime_days": { "name": "Jours actifs cumulés" },
       "lifetime_by_activity": { "name": "Cumul par activité" },
       "training_records": { "name": "Records d'entraînement" },
+      "training_records_month": { "name": "Records d'entraînement (ce mois-ci)" },
       "last_pct_hrmax": { "name": "% de FC max de la dernière séance" },
       "last_cal_per_km": { "name": "Calories par km de la dernière séance" },
       "last_ascent_rate": { "name": "Vitesse ascensionnelle de la dernière séance" },

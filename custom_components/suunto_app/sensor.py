@@ -45,6 +45,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
     "last_feeling": 0, "days_since_last_workout": 0, "training_records": 0,
+    "training_records_month": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -211,26 +212,49 @@ def _pr_dict(
     }
 
 
-def _records_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
-    """All-time personal records - fastest pace, biggest climb, longest and
-    farthest single workout, highest single-session TSS - each with the
-    workout it happened in.
+def _records_attrs_for(section: str) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    """Build an attributes_fn reading a personal-records snapshot from ``section``.
 
-    Seeded once via a deep history scan then held forever in memory
-    (coordinator._async_seed_records / _merge_records), so these are true
-    lifetime bests, not bounded to the normal 90-day fetch window.
+    Shared by the all-time (``records``) and calendar-month (``records_month``)
+    sensors - same PR shape either way, just a different window behind it.
     """
-    records = data.get("records") or {}
-    out = {
-        "fastest_pace_min_km": _pr_dict(records.get("fastest_pace"), round_to=2),
-        "biggest_climb_m": _pr_dict(records.get("biggest_climb")),
-        "longest_workout_min": _pr_dict(records.get("longest_workout")),
-        "farthest_workout_km": _pr_dict(
-            records.get("farthest_workout"), divisor=1000, round_to=1
-        ),
-        "hardest_workout_tss": _pr_dict(records.get("hardest_workout"), round_to=1),
-    }
-    return {k: v for k, v in out.items() if v is not None} or None
+
+    def _attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+        records = data.get(section) or {}
+        out = {
+            "fastest_pace_min_km": _pr_dict(records.get("fastest_pace"), round_to=2),
+            "biggest_climb_m": _pr_dict(records.get("biggest_climb")),
+            "longest_workout_min": _pr_dict(records.get("longest_workout")),
+            "farthest_workout_km": _pr_dict(
+                records.get("farthest_workout"), divisor=1000, round_to=1
+            ),
+            "hardest_workout_tss": _pr_dict(records.get("hardest_workout"), round_to=1),
+        }
+        return {k: v for k, v in out.items() if v is not None} or None
+
+    return _attrs
+
+
+# All-time personal records - fastest pace, biggest climb, longest and farthest
+# single workout, highest single-session TSS - each with the workout it
+# happened in. Seeded once via a deep history scan then held forever in memory
+# (coordinator._async_seed_records / _merge_records), so these are true
+# lifetime bests, not bounded to the normal 90-day fetch window.
+_records_attrs = _records_attrs_for("records")
+
+# Same PR shape, but scoped to the current calendar month and recomputed fresh
+# every cycle (coordinator._workouts_since) - no seeding, it resets itself.
+_records_month_attrs = _records_attrs_for("records_month")
+
+
+def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Steps/min equivalent of the last workout's cadence, foot-based activities
+    only. The sensor's own state/unit deliberately stays rpm/cycle-rate for
+    every sport (see coordinator._normalize_workout) so history is never
+    rewritten - this rides alongside it as an attribute instead.
+    """
+    spm = (data.get("workout") or {}).get("cadence_spm")
+    return {"cadence_spm": spm} if spm is not None else None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -600,6 +624,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:rotate-right",
         value_fn=_section("workout", "cadence"),
+        attributes_fn=_cadence_attrs,
     ),
     SuuntoAppSensorDescription(
         key="last_tss",
@@ -737,6 +762,17 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:trophy-outline",
         value_fn=_section("records", "longest_streak_days"),
         attributes_fn=_records_attrs,
+    ),
+    # Same personal-records shape as above, scoped to the current calendar
+    # month - resets on the 1st, see coordinator._workouts_since.
+    SuuntoAppSensorDescription(
+        key="training_records_month",
+        translation_key="training_records_month",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:trophy",
+        value_fn=_section("records_month", "longest_streak_days"),
+        attributes_fn=_records_month_attrs,
     ),
     # --- Per-workout derived ---
     SuuntoAppSensorDescription(

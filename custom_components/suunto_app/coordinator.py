@@ -7,7 +7,7 @@ import logging
 import math
 from collections import defaultdict
 from collections.abc import Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -652,6 +652,18 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "avg_pace_min_km": _as_float(workout.get("avgPace")) or None,
         # Cadence: object {avg, max}; expose the average (rpm/spm).
         "cadence": _as_int(cadence.get("avg")),
+        # Steps/min equivalent, foot-based activities only. Suunto's own
+        # cadence.avg is cycles/min for EVERY sport (confirmed live, see the
+        # CADENCE QUESTION note in CLAUDE.md) - a cycle is 2 steps when
+        # running/walking, but stays one pedal revolution for cycling etc.
+        # Deliberately NOT changing last_cadence's own unit/state: that would
+        # rewrite how existing history reads. This rides as an attribute
+        # instead, same gating as stride_length_m below.
+        "cadence_spm": (
+            _as_int(cad_avg * 2)
+            if cad_avg and activity_id in FOOT_ACTIVITY_IDS
+            else None
+        ),
         # Training Stress Score.
         "tss": (
             round(_as_float(tss.get("trainingStressScore")), 1)
@@ -869,6 +881,22 @@ def _merge_records(
     ):
         merged[field] = _better_pr(a.get(field), b.get(field), prefer_max=prefer_max)
     return merged
+
+
+def _workouts_since(workouts: list[dict[str, Any]], since: date) -> list[dict[str, Any]]:
+    """Normalized workouts whose LOCAL start date is on/after ``since``.
+
+    Used for the calendar-month records snapshot: unlike the all-time records
+    (``_async_seed_records``), a month's worth of workouts is always well
+    inside the normal 90-day fetch window, so no deep scan/seeding is needed -
+    it is simply recomputed fresh from ``norm_workouts`` every cycle and
+    naturally resets itself on the 1st of the month.
+    """
+    return [
+        w
+        for w in workouts
+        if w.get("start_time") and dt_util.as_local(w["start_time"]).date() >= since
+    ]
 
 
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1256,6 +1284,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             self._last_records = _merge_records(self._last_records, current_records)
 
+        # This calendar month's personal records - same shape as the all-time
+        # ones above, but always derived fresh from the current window (no
+        # seeding/merging needed, see _workouts_since) so it quietly resets on
+        # the 1st of each month.
+        records_month = _records_snapshot(
+            _workouts_since(norm_workouts, today.replace(day=1))
+        )
+
         # Lap splits for the last workout only (from the cache
         # _async_update_statistics just populated). Built as a shallow copy
         # rather than mutated onto norm_workouts[0] directly, since that dict
@@ -1288,6 +1324,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "fitness": self._last_fitness,
             "device": self._last_device,
             "records": self._last_records,
+            "records_month": records_month,
             "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,

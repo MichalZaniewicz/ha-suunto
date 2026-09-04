@@ -100,6 +100,7 @@
       "lifetime_days": { "name": "Aktywne dni życiowe" },
       "lifetime_by_activity": { "name": "Statystyki życiowe wg dyscypliny" },
       "training_records": { "name": "Rekordy treningowe" },
+      "training_records_month": { "name": "Rekordy treningowe (ten miesiąc)" },
       "last_pct_hrmax": { "name": "% maks. tętna ostatniego treningu" },
       "last_cal_per_km": { "name": "Kalorie na km ostatniego treningu" },
       "last_ascent_rate": { "name": "Tempo podejścia ostatniego treningu" },
