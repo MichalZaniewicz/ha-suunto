@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.23b1
+## 1.0.23
 - **Fixed a crash that could leave every entity showing "unknown" after
   updating to 1.0.22.** The device-registry fix in 1.0.22 switched to
   `async_get_device_by_identifier`, an API that only exists from Home
