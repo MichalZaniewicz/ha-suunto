@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.24b1
+## 1.0.24
 - **New `training_records_year` sensor.** The same personal-records shape as
   `training_records` / `training_records_month` - longest streak, fastest
   pace, biggest climb, longest and farthest single workout, highest
