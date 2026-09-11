@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.25b1
+## 1.0.25
 - **Five new "this year" sensors**: `year_distance`, `year_time`, `year_energy`,
   `year_workouts`, `year_active_days` - the same totals as the existing
   lifetime sensors, scoped to the current calendar year instead of your whole
