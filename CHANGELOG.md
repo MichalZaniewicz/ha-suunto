@@ -3,6 +3,32 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.25b1
+- **Five new "this year" sensors**: `year_distance`, `year_time`, `year_energy`,
+  `year_workouts`, `year_active_days` - the same totals as the existing
+  lifetime sensors, scoped to the current calendar year instead of your whole
+  history. A running "year in review" that resets on January 1st.
+  `year_workouts` also carries the year's single most-common activity in its
+  attributes (name, workout count, and % of this year's workouts). Like
+  `training_records_year`, a year doesn't fit inside the normal 90-day fetch
+  window, so this seeds itself with a one-off deep scan the first time it
+  runs each year - zero extra API calls beyond that.
+- **Five more "this month" sensors**: `month_distance`, `month_time`,
+  `month_energy`, `month_workouts`, `month_active_days` - the same shape as
+  the yearly ones above, scoped to the current calendar month. No seeding
+  needed (a month always fits inside the normal fetch window), so it's
+  always exactly in sync.
+- **New `best_efforts` sensor.** Your fastest continuous effort for 1K, 5K,
+  10K, half marathon and marathon, computed from the same detailed GPS/pace
+  data already fetched for the route and lap sensors - foot-based activities
+  only. State is how many distances have a recorded best so far (0-5); each
+  one's time and the workout it happened in ride in attributes. Unlike every
+  other PR sensor, this is tracked **from this update onward only** - a
+  best effort needs a per-workout detail fetch, so scanning your whole
+  history would cost one extra API call per past running workout instead of
+  the zero every other feature in this integration manages.
+  92 sensors now (was 81).
+
 ## 1.0.24
 - **New `training_records_year` sensor.** The same personal-records shape as
   `training_records` / `training_records_month` - longest streak, fastest

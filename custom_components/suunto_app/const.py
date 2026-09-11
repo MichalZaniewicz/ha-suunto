@@ -135,3 +135,15 @@ def activity_name(activity_id: int | None) -> str | None:
 FOOT_ACTIVITY_IDS: frozenset[int] = frozenset(
     {1, 11, 22, 24, 53, 59, 60, 65, 70, 77}
 )
+
+# Standard race distances (metres) for the best-effort sensor - foot-based
+# activities only, same gating as cadence_spm/stride_length above. Ordered
+# shortest-first purely for readable debug logging; dict iteration order
+# doesn't otherwise matter here.
+STANDARD_DISTANCES_M: dict[str, int] = {
+    "1k": 1000,
+    "5k": 5000,
+    "10k": 10000,
+    "half_marathon": 21097,
+    "marathon": 42195,
+}

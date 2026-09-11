@@ -38,7 +38,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 81 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 92 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 44 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -91,7 +91,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (81 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (92 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -146,6 +146,14 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Lifetime stats:** total distance (km), total time (h), total energy, number of
   workouts, active days, plus a **per-sport breakdown** (distance/time/count/energy
   for each activity type, in the sensor's attributes).
+- **This year:** the same five totals again (distance, time, energy, workouts,
+  active days) scoped to the current calendar year instead of your whole
+  history - a running "year in review". Resets on January 1st; the workouts
+  sensor's attributes also carry the year's single most-common activity
+  (e.g. "Cycling, 62% of this year's workouts").
+- **This month:** the same five totals once more, scoped to the current
+  calendar month - resets on the 1st. Same shape as the yearly version above,
+  including its own most-common-activity attribute.
 - **Training records:** state is your longest-ever workout streak (consecutive
   days); attributes carry four more all-time personal records - fastest pace,
   biggest single-workout climb, longest single workout, farthest single
@@ -162,6 +170,14 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   Resets on January 1st; like the all-time sensor above (and unlike the
   monthly one) it needs its own deep history scan to pick up January's
   workouts once they've aged out of the normal fetch window.
+- **Best efforts:** state is how many standard distances (1K, 5K, 10K, half
+  marathon, marathon) have a recorded personal best so far; each one's time
+  and the workout it happened in ride in attributes. Foot-based activities
+  only, computed from the same detailed GPS/pace data already fetched for
+  the route/lap sensors - the fastest continuous stretch covering at least
+  that distance within a single workout. **Tracked from when you install
+  this version onward, not retroactively** - a genuine best from before you
+  updated won't be found unless you happen to beat it again.
 - **Fitness:** **VO2max**, estimated VO2max and **fitness age**, as measured by the
   watch. Suunto derives these from **runs and walks only**, so they hold their last
   reading between such workouts - each sensor's `measured_at` attribute shows when
@@ -251,7 +267,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 81 live sensors, the integration imports **hourly long-term
+Beyond the 92 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

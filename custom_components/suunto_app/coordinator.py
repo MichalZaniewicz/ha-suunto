@@ -31,6 +31,7 @@ from .const import (
     RECENT_WORKOUTS_LIMIT,
     RECOVERY_LOOKBACK_DAYS,
     SLEEP_LOOKBACK_DAYS,
+    STANDARD_DISTANCES_M,
     STATS_LOOKBACK_DAYS,
     FITNESS_LOOKBACK_DAYS,
     WORKOUT_CACHE_GRACE_HOURS,
@@ -577,6 +578,52 @@ def _downsample_route(
     return [list(points[round(i * step)]) for i in range(limit)]
 
 
+def _best_efforts(locations: list[dict[str, Any]]) -> dict[str, float]:
+    """Fastest continuous-effort time (seconds) for each of ``STANDARD_
+    DISTANCES_M`` within a single workout, from the SAME ``locations`` rows
+    ``_normalize_route`` reads position/speed from - here reading ``t``
+    (elapsed seconds) and ``s`` (cumulative metres) instead, since a best
+    effort needs the full-resolution distance/time series, not the
+    downsampled/reprojected route points.
+
+    Classic O(n) two-pointer "shortest window covering >= target distance":
+    since cumulative distance only increases, as the right edge advances the
+    left edge only ever needs to advance too, never back up. Only distances
+    the workout is actually long enough to cover appear in the result - a
+    short interval session naturally has no 10K entry.
+
+    This is an approximation, not a precise split: GPS samples are sparse
+    (roughly one every ~10s on this watch), so the window that first reaches
+    a target distance typically overshoots it slightly, making the reported
+    time a touch slower than a perfectly-measured split would be. Strava's
+    own "best effort" feature has the exact same sampling-driven bias -
+    treated as an accepted approximation, not a bug to chase with
+    interpolation.
+    """
+    points: list[tuple[float, float]] = []
+    for row in locations:
+        t = _as_float(row.get("t"))
+        s = _as_float(row.get("s"))
+        if t is None or s is None:
+            continue
+        points.append((t, s))
+    points.sort(key=lambda p: p[0])
+
+    results: dict[str, float] = {}
+    for label, target in STANDARD_DISTANCES_M.items():
+        best: float | None = None
+        left = 0
+        for right in range(len(points)):
+            while left <= right and points[right][1] - points[left][1] >= target:
+                elapsed = points[right][0] - points[left][0]
+                if best is None or elapsed < best:
+                    best = elapsed
+                left += 1
+        if best is not None:
+            results[label] = round(best, 1)
+    return results
+
+
 def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     activity_id = _as_int(workout.get("activityId"))
     start = workout.get("startTime")
@@ -659,6 +706,7 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "start_lon": round(start_point[1], 6) if start_point else None,
         "duration_minutes": _sec_to_min(workout.get("totalTime")),
         "distance_meters": _as_int(workout.get("totalDistance")),
+        "energy_kcal": _as_int(energy),
         "ascent_meters": _as_int(workout.get("totalAscent")),
         "descent_meters": _as_int(workout.get("totalDescent")),
         # Time spent climbing / descending (SummaryExtension, seconds).
@@ -944,16 +992,65 @@ def _workouts_since(workouts: list[dict[str, Any]], since: date) -> list[dict[st
     inside the normal 90-day fetch window, so no deep scan/seeding is needed -
     it is simply recomputed fresh from ``norm_workouts`` every cycle and
     naturally resets itself on the 1st of the month. Also used to bound the
-    calendar-YEAR records snapshot to since Jan 1 - that one DOES still need a
+    calendar-YEAR records/totals to since Jan 1 - that one DOES still need a
     deep scan of its own (a year doesn't fit inside 90 days), this just filters
     whichever batch (normal window or deep scan) it's handed either way - see
-    ``_async_seed_records_year``.
+    ``_async_seed_year_workouts``.
     """
     return [
         w
         for w in workouts
         if w.get("start_time") and dt_util.as_local(w["start_time"]).date() >= since
     ]
+
+
+def _period_totals_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Plain totals over a window of workouts - distance, time, energy,
+    workout count, active days, and the single most-common activity. Used
+    for both the calendar-month and calendar-year "in review" sensors; the
+    only difference between them is which workouts the caller passes in.
+
+    For the YEAR window specifically: deliberately NOT merged the way
+    ``_merge_records`` merges two PR snapshots - a sum would double-count a
+    workout present in both the deep scan and the current window. That
+    caller de-duplicates by workout ``key`` first
+    (``self._year_workouts_cache``) and passes the already-deduplicated
+    list here. The MONTH window needs no such care - a month always fits
+    inside the normal 90-day fetch window, so it is simply recomputed fresh
+    from ``norm_workouts`` every cycle (see ``_workouts_since``), same as
+    ``records_month`` already does.
+    """
+    total_distance = sum(w.get("distance_meters") or 0 for w in workouts)
+    total_minutes = sum(w.get("duration_minutes") or 0 for w in workouts)
+    total_energy = sum(w.get("energy_kcal") or 0 for w in workouts)
+    active_days = len(
+        {
+            dt_util.as_local(w["start_time"]).date()
+            for w in workouts
+            if w.get("start_time")
+        }
+    )
+    activity_counts: dict[str, int] = {}
+    for w in workouts:
+        if activity := w.get("activity"):
+            activity_counts[activity] = activity_counts.get(activity, 0) + 1
+    main_activity, main_count = (
+        max(activity_counts.items(), key=lambda item: item[1])
+        if activity_counts
+        else (None, 0)
+    )
+    return {
+        "workouts": len(workouts),
+        "distance_km": round(total_distance / 1000, 1),
+        "time_hours": round(total_minutes / 60, 1),
+        "energy_kcal": total_energy,
+        "active_days": active_days,
+        "main_activity": main_activity,
+        "main_activity_workouts": main_count,
+        "main_activity_pct": (
+            round(main_count / len(workouts) * 100, 1) if workouts else None
+        ),
+    }
 
 
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1128,6 +1225,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_records_year: dict[str, Any] | None = None
         self._records_year_seeded = False
         self._records_year: int | None = None
+        # key -> normalized workout, for this calendar year only - a plain
+        # year-to-date totals snapshot (distance/time/energy/workout count,
+        # for a "year in review" card) needs the actual workouts, not just
+        # PRs, and a dict keyed by `key` is what lets the deep-scan seed and
+        # every cycle's fresh window coexist without double-counting an
+        # overlapping workout (see _async_update_data). Reset alongside the
+        # PR state above on a New Year's rollover.
+        self._year_workouts_cache: dict[str, dict[str, Any]] = {}
         # Last known watch model (SummaryExtension.gear), held the same way as
         # fitness above - not every workout has one (manual entries), and a fresh
         # install has none until its first fetch completes.
@@ -1154,6 +1259,16 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # _normalize_route). Only ever read for the most recent workout, but
         # cached for every fetched key here, same as HR/laps above.
         self._workout_route_cache: dict[str, list[list[float]]] = {}
+        # label ("1k"/"5k"/...) -> {value: seconds, key, activity, start_time}
+        # personal best from the SAME /data fetch above. Deliberately NOT
+        # seeded via a deep scan (unlike the all-time/year records) - a best
+        # effort needs a per-workout /data fetch, not just the already-bulk-
+        # fetched workout list, so scanning the whole history would cost one
+        # extra API call per past running workout. Checked ONLY the first
+        # time a workout's /data is ever fetched (i.e. when its key is new to
+        # _workout_hr_cache), so this fills in "from now on", not
+        # retroactively - see the fetch loop in _async_update_statistics.
+        self._best_efforts: dict[str, dict[str, Any]] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
         # show exactly why sleep_duration/nap_duration bucketed the way they
@@ -1361,9 +1476,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # ones above, but always derived fresh from the current window (no
         # seeding/merging needed, see _workouts_since) so it quietly resets on
         # the 1st of each month.
-        records_month = _records_snapshot(
-            _workouts_since(norm_workouts, today.replace(day=1))
-        )
+        this_months_window = _workouts_since(norm_workouts, today.replace(day=1))
+        records_month = _records_snapshot(this_months_window)
+        # Plain month-to-date totals - same shape/purpose as year_totals below,
+        # but no seeding needed (a month always fits inside the 90-day window).
+        month_totals = _period_totals_snapshot(this_months_window)
 
         # This calendar year's personal records. A year does NOT fit inside
         # the normal 90-day window the way a month does, so - like the
@@ -1377,19 +1494,33 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._records_year = today.year
             self._records_year_seeded = False
             self._last_records_year = None
-        current_records_year = _records_snapshot(
-            _workouts_since(norm_workouts, year_start)
-        )
+            self._year_workouts_cache = {}
+        this_years_window = _workouts_since(norm_workouts, year_start)
+        current_records_year = _records_snapshot(this_years_window)
         if not self._records_year_seeded:
             self._records_year_seeded = True
+            seed_workouts = await self._async_seed_year_workouts(now, year_start)
+            for w in seed_workouts or []:
+                if key := w.get("key"):
+                    self._year_workouts_cache[key] = w
             self._last_records_year = _merge_records(
-                await self._async_seed_records_year(now, year_start),
-                current_records_year,
+                _records_snapshot(seed_workouts or []), current_records_year
             )
         else:
             self._last_records_year = _merge_records(
                 self._last_records_year, current_records_year
             )
+        # Plain year-to-date totals (distance/time/energy/workout count) - a
+        # different shape from the PRs above, since a SUM can't be merged the
+        # way "keep the better PR" can: two overlapping sources would double-
+        # count a workout present in both. Keying this cache by workout `key`
+        # sidesteps that - the one-off deep scan seeds it, and every cycle's
+        # current window just overwrites/adds by key, so a workout counted in
+        # both never contributes twice.
+        for w in this_years_window:
+            if key := w.get("key"):
+                self._year_workouts_cache[key] = w
+        year_totals = _period_totals_snapshot(list(self._year_workouts_cache.values()))
 
         # Lap splits for the last workout only (from the cache
         # _async_update_statistics just populated). Built as a shallow copy
@@ -1428,7 +1559,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "device": self._last_device,
             "records": self._last_records,
             "records_month": records_month,
+            "month_totals": month_totals,
+            "best_efforts": self._best_efforts,
             "records_year": self._last_records_year,
+            "year_totals": year_totals,
             "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
@@ -1529,10 +1663,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         return records
 
-    async def _async_seed_records_year(
+    async def _async_seed_year_workouts(
         self, now: datetime, year_start: date
-    ) -> dict[str, Any] | None:
-        """One-off deep scan for this calendar year's personal records.
+    ) -> list[dict[str, Any]] | None:
+        """One-off deep scan for this calendar year's workouts.
 
         Same idea as ``_async_seed_records``, but bounded to since ``year_start``
         instead of the full ``FITNESS_LOOKBACK_DAYS`` - a mid-year HA restart
@@ -1540,8 +1674,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         aged out of the normal 90-day window, but nothing before this January
         is ever relevant here (re-seeded fresh at each year rollover, see
         ``_async_update_data`` - a new year starts with nothing to seed from
-        anyway). Best-effort: a failure here must never disturb the data
-        update.
+        anyway). Returns the normalized workout list itself (not just a PR
+        snapshot) - the caller derives BOTH this year's personal records and
+        its plain totals (distance/time/workout count) from the same scan,
+        one API call either way. Best-effort: a failure here must never
+        disturb the data update.
         """
         days_into_year = (now.date() - year_start).days + 1
         try:
@@ -1549,16 +1686,16 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _since_ms(now, days_into_year), max_pages=12
             )
         except SuuntoAppError as err:
-            _LOGGER.debug("Year records seed scan failed (non-fatal): %s", err)
+            _LOGGER.debug("Year workouts seed scan failed (non-fatal): %s", err)
             return None
-        records = _records_snapshot(
-            _workouts_since([_normalize_workout(w) for w in deep], year_start)
+        workouts = _workouts_since(
+            [_normalize_workout(w) for w in deep], year_start
         )
         _LOGGER.debug(
-            "Seeded %d records from %d days of history: streak=%d",
-            year_start.year, days_into_year, records["longest_streak_days"]
+            "Seeded %d workouts for %d from %d days of history",
+            len(workouts), year_start.year, days_into_year
         )
-        return records
+        return workouts
 
     def _normalize_workouts(
         self, workouts: list[dict[str, Any]]
@@ -1779,6 +1916,22 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 *(self._client.async_get_workout_data(k) for k in to_fetch),
                 return_exceptions=True,
             )
+            # Only for the best-effort check below - keyed lookup back to each
+            # raw workout's activity/start, built once rather than scanning
+            # `workouts` again per key.
+            workout_meta = {
+                w["key"]: {
+                    "activity_id": (activity_id := _as_int(w.get("activityId"))),
+                    "activity": activity_name(activity_id),
+                    "start_time": (
+                        datetime.fromtimestamp(int(start) / 1000, tz=timezone.utc)
+                        if (start := w.get("startTime"))
+                        else None
+                    ),
+                }
+                for w in workouts
+                if w.get("key")
+            }
             for key, result in zip(to_fetch, results):
                 if isinstance(result, SuuntoAppAuthError):
                     raise result
@@ -1802,9 +1955,24 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._workout_laps_cache[key] = _normalize_laps(
                     result.get("eventlaps") or []
                 )
+                locations = result.get("locations") or []
                 self._workout_route_cache[key] = _downsample_route(
-                    _normalize_route(result.get("locations") or [])
+                    _normalize_route(locations)
                 )
+                # Standard-distance PRs - foot activities only (same gating as
+                # cadence_spm/stride_length), checked once per workout the
+                # first time its /data is fetched. See self._best_efforts.
+                meta = workout_meta.get(key) or {}
+                if meta.get("activity_id") in FOOT_ACTIVITY_IDS:
+                    for label, seconds in _best_efforts(locations).items():
+                        current = self._best_efforts.get(label)
+                        if current is None or seconds < current["value"]:
+                            self._best_efforts[label] = {
+                                "value": seconds,
+                                "key": key,
+                                "activity": meta.get("activity"),
+                                "start_time": meta.get("start_time"),
+                            }
         # Drop cached workouts that have aged out of the window (bound memory).
         self._workout_hr_cache = {
             k: v for k, v in self._workout_hr_cache.items() if k in recent_keys

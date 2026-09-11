@@ -46,6 +46,9 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
     "last_feeling": 0, "days_since_last_workout": 0, "training_records": 0,
     "training_records_month": 0, "training_records_year": 0,
+    "year_workouts": 0, "year_active_days": 0, "year_energy": 0,
+    "month_workouts": 0, "month_active_days": 0, "month_energy": 0,
+    "best_efforts": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -54,7 +57,8 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_avg_speed": 1, "last_tss": 1, "last_stride": 1, "last_zone0": 1,
     "last_zone1": 1, "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
-    "last_workout_weather": 1,
+    "last_workout_weather": 1, "year_distance": 1, "year_time": 1,
+    "month_distance": 1, "month_time": 1,
     # two decimals
     "acwr": 2, "last_avg_pace": 2,
 }
@@ -260,9 +264,25 @@ _records_month_attrs = _records_attrs_for("records_month")
 
 # Same PR shape, scoped to the current calendar year. Unlike the month version,
 # this DOES need a one-off deep scan (a year doesn't fit inside the normal
-# 90-day window) - see coordinator._async_seed_records_year - and resets on
+# 90-day window) - see coordinator._async_seed_year_workouts - and resets on
 # every New Year's rollover instead of the 1st of each month.
 _records_year_attrs = _records_attrs_for("records_year")
+
+
+def _best_effort_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Per-standard-distance PR times (seconds), each with the workout it
+    happened in - see coordinator._best_efforts / STANDARD_DISTANCES_M.
+    Tracked going forward only (no deep scan - a best effort needs a
+    per-workout /data fetch, unlike the other PR sensors above), so a fresh
+    install/update starts with nothing here and fills in as new runs sync.
+    """
+    efforts = data.get("best_efforts") or {}
+    out = {
+        f"{label}_seconds": pr
+        for label in ("1k", "5k", "10k", "half_marathon", "marathon")
+        if (pr := _pr_dict(efforts.get(label), round_to=1)) is not None
+    }
+    return out or None
 
 
 def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -772,6 +792,119 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
             "activities": (d.get("stats") or {}).get("by_activity") or []
         },
     ),
+    # --- This year's totals (a "year in review" snapshot) ---
+    # Same shape as the lifetime stats above, scoped to the current calendar
+    # year - resets on Jan 1, see coordinator._year_totals_snapshot /
+    # _async_seed_year_workouts. TOTAL_INCREASING is still correct here (like
+    # daily_steps/daily_energy): HA reads the Jan 1 drop as a legitimate meter
+    # reset, not a bad reading, same as any other periodically-resetting total.
+    SuuntoAppSensorDescription(
+        key="year_distance",
+        translation_key="year_distance",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:map-marker-distance",
+        value_fn=_section("year_totals", "distance_km"),
+    ),
+    SuuntoAppSensorDescription(
+        key="year_time",
+        translation_key="year_time",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:timer",
+        value_fn=_section("year_totals", "time_hours"),
+    ),
+    SuuntoAppSensorDescription(
+        key="year_energy",
+        translation_key="year_energy",
+        native_unit_of_measurement=UNIT_KCAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:fire",
+        value_fn=_section("year_totals", "energy_kcal"),
+    ),
+    # State is workout count; the year's single most-common activity rides in
+    # attributes (e.g. "Cycling, 62% of this year's workouts") - same pattern
+    # as putting secondary narrative info alongside the stat it's most tied
+    # to, rather than a 6th sensor just for "main activity".
+    SuuntoAppSensorDescription(
+        key="year_workouts",
+        translation_key="year_workouts",
+        native_unit_of_measurement=UNIT_WORKOUTS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:counter",
+        value_fn=_section("year_totals", "workouts"),
+        attributes_fn=lambda d: (
+            {
+                "main_activity": totals.get("main_activity"),
+                "main_activity_workouts": totals.get("main_activity_workouts"),
+                "main_activity_pct": totals.get("main_activity_pct"),
+            }
+            if (totals := d.get("year_totals") or {}).get("main_activity")
+            else None
+        ),
+    ),
+    SuuntoAppSensorDescription(
+        key="year_active_days",
+        translation_key="year_active_days",
+        native_unit_of_measurement="d",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:calendar-check",
+        value_fn=_section("year_totals", "active_days"),
+    ),
+    # --- This month's totals (same idea as "this year" above, shorter window) ---
+    SuuntoAppSensorDescription(
+        key="month_distance",
+        translation_key="month_distance",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:map-marker-distance",
+        value_fn=_section("month_totals", "distance_km"),
+    ),
+    SuuntoAppSensorDescription(
+        key="month_time",
+        translation_key="month_time",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:timer",
+        value_fn=_section("month_totals", "time_hours"),
+    ),
+    SuuntoAppSensorDescription(
+        key="month_energy",
+        translation_key="month_energy",
+        native_unit_of_measurement=UNIT_KCAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:fire",
+        value_fn=_section("month_totals", "energy_kcal"),
+    ),
+    SuuntoAppSensorDescription(
+        key="month_workouts",
+        translation_key="month_workouts",
+        native_unit_of_measurement=UNIT_WORKOUTS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:counter",
+        value_fn=_section("month_totals", "workouts"),
+        attributes_fn=lambda d: (
+            {
+                "main_activity": totals.get("main_activity"),
+                "main_activity_workouts": totals.get("main_activity_workouts"),
+                "main_activity_pct": totals.get("main_activity_pct"),
+            }
+            if (totals := d.get("month_totals") or {}).get("main_activity")
+            else None
+        ),
+    ),
+    SuuntoAppSensorDescription(
+        key="month_active_days",
+        translation_key="month_active_days",
+        native_unit_of_measurement="d",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:calendar-check",
+        value_fn=_section("month_totals", "active_days"),
+    ),
     # All-time personal records - state is the longest streak (days); the
     # individual PRs (fastest pace, biggest climb, longest/farthest/hardest
     # single workout) ride in attributes, each with the workout it happened
@@ -808,6 +941,17 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:trophy-variant",
         value_fn=_section("records_year", "longest_streak_days"),
         attributes_fn=_records_year_attrs,
+    ),
+    # Standard-distance personal bests (1K/5K/10K/half/full marathon), foot
+    # activities only - state is how many distances have a recorded best so
+    # far (0-5); each one's time (seconds) + workout rides in attributes.
+    # Tracked from install/update onward only, see coordinator._best_efforts.
+    SuuntoAppSensorDescription(
+        key="best_efforts",
+        translation_key="best_efforts",
+        icon="mdi:speedometer",
+        value_fn=lambda d: len(d.get("best_efforts") or {}),
+        attributes_fn=_best_effort_attrs,
     ),
     # --- Per-workout derived ---
     SuuntoAppSensorDescription(
