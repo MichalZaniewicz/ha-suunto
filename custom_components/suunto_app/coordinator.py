@@ -1345,13 +1345,27 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         (unofficial)" model forever. The device is looked up by its existing
         identifier rather than assumed to exist, since this can run before any
         entity has registered it (e.g. right after the very first fetch).
+
+        ``async_get_device_by_identifier`` only exists from HA 2026.8.0
+        onward; the manifest supports much older cores, and this runs on
+        (virtually) every startup for any account with gear-tagged workout
+        history, since ``_last_device`` resets to None each time the
+        coordinator is recreated. On an older core this attribute simply
+        isn't there - fall back to the deprecated ``async_get_device``
+        (works fine until its removal in 2027.8.0) instead of raising
+        AttributeError and taking the whole update down with it. Real-world
+        bug: this crashed the daily coordinator on every refresh for anyone
+        not yet on 2026.8.0, reported as "all entities unknown" (GitHub #4).
         """
         if self.config_entry is None:
             return
         registry = dr.async_get(self.hass)
-        entry = registry.async_get_device_by_identifier(
-            (DOMAIN, self.config_entry.entry_id), self.config_entry.entry_id
-        )
+        entry_id = self.config_entry.entry_id
+        get_by_identifier = getattr(registry, "async_get_device_by_identifier", None)
+        if get_by_identifier is not None:
+            entry = get_by_identifier((DOMAIN, entry_id), entry_id)
+        else:
+            entry = registry.async_get_device(identifiers={(DOMAIN, entry_id)})
         if entry is None:
             return
         registry.async_update_device(

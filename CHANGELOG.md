@@ -3,6 +3,20 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.23b1
+- **Fixed a crash that could leave every entity showing "unknown" after
+  updating to 1.0.22.** The device-registry fix in 1.0.22 switched to
+  `async_get_device_by_identifier`, an API that only exists from Home
+  Assistant 2026.8.0 onward. On any older core, calling it raised an
+  `AttributeError` - and since it runs on essentially every startup for any
+  account with gear-tagged workout history, it took the entire daily
+  coordinator down with it (everything except `current_hr`, `daily_steps`
+  and `daily_energy`, which live on the separate fast coordinator).
+  Reported as GitHub #4. Now falls back to the older (deprecated but still
+  functional) `async_get_device` when the newer method isn't available, so
+  the integration works correctly across the whole HA range it always
+  supported.
+
 ## 1.0.22
 - **New `training_records_month` sensor.** The same personal-records shape as
   `training_records` - longest streak, fastest pace, biggest climb, longest
