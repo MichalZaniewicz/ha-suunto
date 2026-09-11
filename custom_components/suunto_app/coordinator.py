@@ -26,6 +26,7 @@ from .const import (
     EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
+    MAX_ROUTE_POINTS,
     NEW_WORKOUT_MAX_AGE_DAYS,
     RECENT_WORKOUTS_LIMIT,
     RECOVERY_LOOKBACK_DAYS,
@@ -524,6 +525,58 @@ def _first_polyline_point(polyline: Any) -> tuple[float, float] | None:
     return lat, lon
 
 
+def _normalize_route(locations: list[dict[str, Any]]) -> list[list[float]]:
+    """Build ``[[lat, lon, speed_kmh], ...]`` from a workout's dense GPS track.
+
+    Source is ``workouts/{key}/data``'s ``locations`` rows (``{t, la, ln, s,
+    h, v, d}`` - see CLAUDE.md's "Data units" notes), the SAME response
+    already fetched for HR samples and lap splits (see the fetch loop in
+    ``_async_update_statistics``) - not the workout LIST response's encoded
+    ``polyline`` that ``_first_polyline_point`` decodes for just the start
+    marker. ``locations`` is the better source for a full route: each row
+    already carries its own position AND speed (``v``, cm/s) together, so
+    there is no separate track to reconcile against - one pass, zero extra
+    API calls either way.
+
+    A row that decodes to "null island" (0, 0) - the same GPS-no-fix
+    sentinel ``_first_polyline_point`` already screens out for the start
+    point - or outside the valid lat/lon range is dropped. A missing or
+    zero speed becomes 0.0 (stationary), never null, so a card can use the
+    third element directly without a None-check.
+    """
+    points: list[list[float]] = []
+    for row in locations:
+        lat, lon = _as_float(row.get("la")), _as_float(row.get("ln"))
+        if lat is None or lon is None:
+            continue
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            continue
+        if abs(lat) < 1e-4 and abs(lon) < 1e-4:
+            continue
+        speed_cms = _as_float(row.get("v"))
+        speed_kmh = round(speed_cms * 0.036, 1) if speed_cms and speed_cms > 0 else 0.0
+        points.append([round(lat, 6), round(lon, 6), speed_kmh])
+    return points
+
+
+def _downsample_route(
+    points: list[list[float]], limit: int = MAX_ROUTE_POINTS
+) -> list[list[float]]:
+    """Evenly thin a GPS track down to at most ``limit`` vertices.
+
+    See ``MAX_ROUTE_POINTS`` (const.py) for why this matters even though the
+    attribute is excluded from the recorder: it is still sent to every
+    connected frontend on each state update. Keeps the first and last vertex
+    (start/finish) and strides evenly through the rest.
+    """
+    if not points:
+        return []
+    if len(points) <= limit:
+        return [list(p) for p in points]
+    step = (len(points) - 1) / (limit - 1)
+    return [list(points[round(i * step)]) for i in range(limit)]
+
+
 def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     activity_id = _as_int(workout.get("activityId"))
     start = workout.get("startTime")
@@ -890,7 +943,11 @@ def _workouts_since(workouts: list[dict[str, Any]], since: date) -> list[dict[st
     (``_async_seed_records``), a month's worth of workouts is always well
     inside the normal 90-day fetch window, so no deep scan/seeding is needed -
     it is simply recomputed fresh from ``norm_workouts`` every cycle and
-    naturally resets itself on the 1st of the month.
+    naturally resets itself on the 1st of the month. Also used to bound the
+    calendar-YEAR records snapshot to since Jan 1 - that one DOES still need a
+    deep scan of its own (a year doesn't fit inside 90 days), this just filters
+    whichever batch (normal window or deep scan) it's handed either way - see
+    ``_async_seed_records_year``.
     """
     return [
         w
@@ -1060,6 +1117,17 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # comes up empty) - see _async_seed_records / _merge_records.
         self._last_records: dict[str, Any] | None = None
         self._records_seeded = False
+        # Same personal-records shape, scoped to the current calendar year.
+        # Unlike the calendar-month version (records_month, no seeding needed -
+        # a month always fits inside the normal 90-day window), a year does
+        # not, so this needs its own one-off deep scan too - just bounded to
+        # since Jan 1 instead of the full FITNESS_LOOKBACK_DAYS. _records_year
+        # tracks which calendar year the current seed/snapshot covers, so a
+        # New Year's rollover resets and reseeds instead of quietly carrying
+        # last year's records forward.
+        self._last_records_year: dict[str, Any] | None = None
+        self._records_year_seeded = False
+        self._records_year: int | None = None
         # Last known watch model (SummaryExtension.gear), held the same way as
         # fitness above - not every workout has one (manual entries), and a fresh
         # install has none until its first fetch completes.
@@ -1081,6 +1149,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # key -> normalized lap splits, fetched from the same /data response as
         # the HR cache above (same immutability reasoning).
         self._workout_laps_cache: dict[str, list[dict[str, Any]]] = {}
+        # key -> downsampled [[lat, lon, speed_kmh], ...] route, from the same
+        # /data response's ``locations`` rows (position + speed together - see
+        # _normalize_route). Only ever read for the most recent workout, but
+        # cached for every fetched key here, same as HR/laps above.
+        self._workout_route_cache: dict[str, list[list[float]]] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
         # show exactly why sleep_duration/nap_duration bucketed the way they
@@ -1292,6 +1365,32 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _workouts_since(norm_workouts, today.replace(day=1))
         )
 
+        # This calendar year's personal records. A year does NOT fit inside
+        # the normal 90-day window the way a month does, so - like the
+        # all-time records above - this needs its own one-off deep scan to
+        # pick up January through the window's edge, then merges the current
+        # window on top every cycle after that. A New Year's rollover resets
+        # both the seed flag and the held snapshot: last year's PRs must not
+        # bleed into the new year's count.
+        year_start = today.replace(month=1, day=1)
+        if self._records_year != today.year:
+            self._records_year = today.year
+            self._records_year_seeded = False
+            self._last_records_year = None
+        current_records_year = _records_snapshot(
+            _workouts_since(norm_workouts, year_start)
+        )
+        if not self._records_year_seeded:
+            self._records_year_seeded = True
+            self._last_records_year = _merge_records(
+                await self._async_seed_records_year(now, year_start),
+                current_records_year,
+            )
+        else:
+            self._last_records_year = _merge_records(
+                self._last_records_year, current_records_year
+            )
+
         # Lap splits for the last workout only (from the cache
         # _async_update_statistics just populated). Built as a shallow copy
         # rather than mutated onto norm_workouts[0] directly, since that dict
@@ -1315,6 +1414,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if start
                     else None
                 ),
+                # Full GPS track (with per-point speed) for a route card,
+                # from the SAME /data fetch "laps" above already reads -
+                # see _workout_route_cache / _normalize_route.
+                "route": self._workout_route_cache.get(last_workout.get("key"), []),
             }
 
         return {
@@ -1325,6 +1428,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "device": self._last_device,
             "records": self._last_records,
             "records_month": records_month,
+            "records_year": self._last_records_year,
             "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
@@ -1422,6 +1526,37 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug(
             "Seeded records from %d days of history: streak=%d",
             FITNESS_LOOKBACK_DAYS, records["longest_streak_days"]
+        )
+        return records
+
+    async def _async_seed_records_year(
+        self, now: datetime, year_start: date
+    ) -> dict[str, Any] | None:
+        """One-off deep scan for this calendar year's personal records.
+
+        Same idea as ``_async_seed_records``, but bounded to since ``year_start``
+        instead of the full ``FITNESS_LOOKBACK_DAYS`` - a mid-year HA restart
+        still needs January's workouts even though they may have long since
+        aged out of the normal 90-day window, but nothing before this January
+        is ever relevant here (re-seeded fresh at each year rollover, see
+        ``_async_update_data`` - a new year starts with nothing to seed from
+        anyway). Best-effort: a failure here must never disturb the data
+        update.
+        """
+        days_into_year = (now.date() - year_start).days + 1
+        try:
+            deep = await self._client.async_get_workouts(
+                _since_ms(now, days_into_year), max_pages=12
+            )
+        except SuuntoAppError as err:
+            _LOGGER.debug("Year records seed scan failed (non-fatal): %s", err)
+            return None
+        records = _records_snapshot(
+            _workouts_since([_normalize_workout(w) for w in deep], year_start)
+        )
+        _LOGGER.debug(
+            "Seeded %d records from %d days of history: streak=%d",
+            year_start.year, days_into_year, records["longest_streak_days"]
         )
         return records
 
@@ -1667,12 +1802,18 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._workout_laps_cache[key] = _normalize_laps(
                     result.get("eventlaps") or []
                 )
+                self._workout_route_cache[key] = _downsample_route(
+                    _normalize_route(result.get("locations") or [])
+                )
         # Drop cached workouts that have aged out of the window (bound memory).
         self._workout_hr_cache = {
             k: v for k, v in self._workout_hr_cache.items() if k in recent_keys
         }
         self._workout_laps_cache = {
             k: v for k, v in self._workout_laps_cache.items() if k in recent_keys
+        }
+        self._workout_route_cache = {
+            k: v for k, v in self._workout_route_cache.items() if k in recent_keys
         }
         for key in recent_keys:
             hr.extend(self._workout_hr_cache.get(key, []))

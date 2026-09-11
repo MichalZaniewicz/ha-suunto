@@ -45,7 +45,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
     "last_feeling": 0, "days_since_last_workout": 0, "training_records": 0,
-    "training_records_month": 0,
+    "training_records_month": 0, "training_records_year": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -79,12 +79,24 @@ def _workout_location_state(data: dict[str, Any]) -> str | None:
 
 
 def _workout_location_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
-    """Expose latitude/longitude so the entity plots on a Map card."""
+    """Expose latitude/longitude so the entity plots on a Map card, plus the
+    full route as a ``[[lat, lon, speed_kmh], ...]`` list for a custom route
+    card - each vertex carries its own speed so the card can color the track
+    by pace without a second data source.
+
+    ``route`` is listed in this description's ``unrecorded_attributes`` (see
+    SuuntoAppSensor.__init__) - a GPS track is only useful to a dashboard
+    reading the live state, never worth keeping in the recorder's history on
+    every hourly update.
+    """
     workout = data.get("workout") or {}
     lat, lon = workout.get("start_lat"), workout.get("start_lon")
     if lat is None or lon is None:
         return None
-    return {"latitude": lat, "longitude": lon}
+    attrs: dict[str, Any] = {"latitude": lat, "longitude": lon}
+    if route := workout.get("route"):
+        attrs["route"] = route
+    return attrs
 
 
 def _zone_attrs(number: int) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
@@ -246,6 +258,12 @@ _records_attrs = _records_attrs_for("records")
 # every cycle (coordinator._workouts_since) - no seeding, it resets itself.
 _records_month_attrs = _records_attrs_for("records_month")
 
+# Same PR shape, scoped to the current calendar year. Unlike the month version,
+# this DOES need a one-off deep scan (a year doesn't fit inside the normal
+# 90-day window) - see coordinator._async_seed_records_year - and resets on
+# every New Year's rollover instead of the 1st of each month.
+_records_year_attrs = _records_attrs_for("records_year")
+
 
 def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     """Steps/min equivalent of the last workout's cadence, foot-based activities
@@ -264,6 +282,9 @@ class SuuntoAppSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], Any]
     source: str = SOURCE_DAILY
     attributes_fn: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None
+    # Attribute keys to exclude from the recorder (see Entity._unrecorded_attributes) -
+    # for an attribute that only ever matters to a dashboard reading the live state.
+    unrecorded_attributes: frozenset[str] | None = None
 
 
 SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
@@ -440,6 +461,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:map-marker",
         value_fn=_workout_location_state,
         attributes_fn=_workout_location_attrs,
+        unrecorded_attributes=frozenset({"route"}),
     ),
     SuuntoAppSensorDescription(
         key="last_distance",
@@ -774,6 +796,19 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         value_fn=_section("records_month", "longest_streak_days"),
         attributes_fn=_records_month_attrs,
     ),
+    # Same personal-records shape again, scoped to the current calendar year -
+    # a "training year in review" snapshot. Resets on Jan 1, see
+    # coordinator._async_seed_records_year for why this one (unlike the
+    # month version) needs its own deep-scan seed.
+    SuuntoAppSensorDescription(
+        key="training_records_year",
+        translation_key="training_records_year",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:trophy-variant",
+        value_fn=_section("records_year", "longest_streak_days"),
+        attributes_fn=_records_year_attrs,
+    ),
     # --- Per-workout derived ---
     SuuntoAppSensorDescription(
         key="last_pct_hrmax",
@@ -999,6 +1034,8 @@ class SuuntoAppSensor(
             self._attr_suggested_display_precision = precision
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = suunto_device_info(entry)
+        if description.unrecorded_attributes:
+            self._unrecorded_attributes = description.unrecorded_attributes
 
     @property
     def native_value(self) -> Any:

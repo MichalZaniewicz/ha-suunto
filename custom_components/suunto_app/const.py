@@ -53,6 +53,14 @@ FITNESS_LOOKBACK_DAYS = 730
 # the missed hours retroactively. Re-imported idempotently every daily cycle.
 STATS_LOOKBACK_DAYS = 5
 
+# Cap on the number of GPS vertices exposed in the last workout's decoded route
+# (see coordinator._downsample_route). A long workout's polyline can carry well
+# over a thousand points - far more precision than a dashboard card needs to
+# draw a recognizable route shape, and this attribute is excluded from the
+# recorder (SuuntoAppSensorDescription.unrecorded_attributes) but still sent to
+# every connected frontend on each state update, so it stays deliberately small.
+MAX_ROUTE_POINTS = 300
+
 # The Sports Tracker workouts list is occasionally eventually-consistent: a whole
 # workout can vanish from one response and reappear the next cycle, which wobbles
 # every workout-derived sensor (counts, weekly volume, CTL/ATL/TSB, statistics).

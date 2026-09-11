@@ -3,6 +3,24 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.24b1
+- **New `training_records_year` sensor.** The same personal-records shape as
+  `training_records` / `training_records_month` - longest streak, fastest
+  pace, biggest climb, longest and farthest single workout, highest
+  single-session TSS - scoped to the current calendar year, a running
+  "training year in review". Resets on January 1st; like the all-time sensor
+  (and unlike the monthly one), it needs its own one-off deep history scan to
+  pick up January's workouts once they've aged out of the normal 90-day fetch
+  window.
+- **`route` attribute on `last_workout_location`.** The last workout's full
+  GPS track with per-point speed, from the same `/data` fetch already used
+  for HR samples and lap splits, downsampled to at most 300 points and
+  exposed as `[[lat, lon, speed_kmh], ...]` for a future custom route card
+  that colors the track by pace. Deliberately excluded from the recorder
+  (only the live state matters here), so it won't bloat your history
+  database. Absent on indoor workouts with no GPS track, same as
+  `latitude`/`longitude`.
+
 ## 1.0.23
 - **Fixed a crash that could leave every entity showing "unknown" after
   updating to 1.0.22.** The device-registry fix in 1.0.22 switched to

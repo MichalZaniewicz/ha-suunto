@@ -38,9 +38,9 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 80 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 81 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
-HACS repo with 43 purpose-built cards - last workout, HR zones, sleep & readiness,
+HACS repo with 44 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
 calendar, workout-to-workout comparisons, fun lifetime-distance equivalents, a
 computed training personality, a FIFA-style player card, 20 unlockable
@@ -91,7 +91,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (80 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (81 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -109,8 +109,10 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Daily activity:** steps, active energy (kcal), current heart rate.
 - **Last workout:** type, start, **days since** (a rest-day counter - 0 means
   you trained today, handy as an automation trigger), **start location**
-  (latitude/longitude - plots on a Map card), distance, duration, recovery
-  time, average/max heart rate, average speed (km/h) and pace (min/km),
+  (latitude/longitude - plots on a Map card, plus a downsampled `route` attribute
+  with the full GPS track and per-point speed for a custom, pace-colored route
+  card), distance, duration, recovery time, average/max heart rate, average
+  speed (km/h) and pace (min/km),
   **cadence** (rpm - Suunto reports it as cycles/min for every sport; on foot-based
   activities the sensor also carries a `cadence_spm` attribute, the steps/min
   equivalent, so the state itself never changes and your history isn't rewritten),
@@ -155,6 +157,11 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   the current calendar month instead of your whole history - quietly resets on
   the 1st. No deep scan needed (a month always fits inside the normal fetch
   window), so it's always exactly in sync with this month's workouts.
+- **Training records - this year:** the same five personal records again,
+  scoped to the current calendar year - a running "training year in review".
+  Resets on January 1st; like the all-time sensor above (and unlike the
+  monthly one) it needs its own deep history scan to pick up January's
+  workouts once they've aged out of the normal fetch window.
 - **Fitness:** **VO2max**, estimated VO2max and **fitness age**, as measured by the
   watch. Suunto derives these from **runs and walks only**, so they hold their last
   reading between such workouts - each sensor's `measured_at` attribute shows when
@@ -219,17 +226,12 @@ Four ready-to-import blueprints under
 patterns above so you don't have to write the YAML yourself - each just asks for
 an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
 
-| Blueprint | What it does |
-| --- | --- |
-| [New Workout Notification](blueprints/automation/suunto_app/new_workout_notification.yaml) | Runs your action with a one-line workout summary whenever `suunto_app_new_workout` fires. |
-| [Low Readiness Alert](blueprints/automation/suunto_app/low_readiness_alert.yaml) | Runs your action once when the Readiness sensor drops below a threshold you set. |
-| [Unusual Recovery Alert](blueprints/automation/suunto_app/unusual_recovery_alert.yaml) | Runs your action the moment the Unusual recovery sensor turns on. |
-| [Weekly Training Digest](blueprints/automation/suunto_app/weekly_digest.yaml) | Runs your action with a weekly summary (workouts, distance, time, form) on the day(s)/time you pick. |
-
-[![Open your Home Assistant instance and show the blueprint import dialog with the new-workout-notification blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fnew_workout_notification.yaml)
-[![Open your Home Assistant instance and show the blueprint import dialog with the low-readiness-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Flow_readiness_alert.yaml)
-[![Open your Home Assistant instance and show the blueprint import dialog with the unusual-recovery-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Funusual_recovery_alert.yaml)
-[![Open your Home Assistant instance and show the blueprint import dialog with the weekly-digest blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fweekly_digest.yaml)
+| Blueprint | What it does | Import |
+| --- | --- | --- |
+| [New Workout Notification](blueprints/automation/suunto_app/new_workout_notification.yaml) | Runs your action with a one-line workout summary whenever `suunto_app_new_workout` fires. | [![Open your Home Assistant instance and show the blueprint import dialog with the new-workout-notification blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fnew_workout_notification.yaml) |
+| [Low Readiness Alert](blueprints/automation/suunto_app/low_readiness_alert.yaml) | Runs your action once when the Readiness sensor drops below a threshold you set. | [![Open your Home Assistant instance and show the blueprint import dialog with the low-readiness-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Flow_readiness_alert.yaml) |
+| [Unusual Recovery Alert](blueprints/automation/suunto_app/unusual_recovery_alert.yaml) | Runs your action the moment the Unusual recovery sensor turns on. | [![Open your Home Assistant instance and show the blueprint import dialog with the unusual-recovery-alert blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Funusual_recovery_alert.yaml) |
+| [Weekly Training Digest](blueprints/automation/suunto_app/weekly_digest.yaml) | Runs your action with a weekly summary (workouts, distance, time, form) on the day(s)/time you pick. | [![Open your Home Assistant instance and show the blueprint import dialog with the weekly-digest blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fweekly_digest.yaml) |
 
 Or import manually: Settings -> Automations & Scenes -> Blueprints -> Import
 Blueprint, and paste a blueprint's GitHub URL.
@@ -249,7 +251,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 80 live sensors, the integration imports **hourly long-term
+Beyond the 81 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
@@ -295,6 +297,13 @@ Indoor workouts with no GPS track show as *unknown* (no marker). The same
 `start_lat` / `start_lon` are also present on every entry of the **Recent workouts**
 sensor's attributes, if you'd like to plot more than just the latest one (e.g. with
 a template sensor or a custom card).
+
+The same sensor also carries a `route` attribute: the last workout's full GPS
+track as a downsampled `[[lat, lon, speed_kmh], ...]` list (up to 300 points),
+each vertex carrying its own speed so a custom card can color the route by pace
+without a second data source. It's deliberately excluded from Home Assistant's
+recorder (only the live state matters for this), so it won't bloat your history
+database. `route` is absent on indoor workouts, same as `latitude`/`longitude`.
 
 ## Lifetime totals per sport
 
