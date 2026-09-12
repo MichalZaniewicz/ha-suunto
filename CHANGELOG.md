@@ -3,6 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.26
+- **`cadence_spm` and `stride_length_m` added to the Recent workouts sensor's
+  per-workout attributes** - the same running-dynamics figures already
+  computed for the Cadence/Stride sensors, present only for foot-based
+  activities. Powers a Running Dynamics trend card in the companion
+  [ha-suunto-cards](https://github.com/MichalZaniewicz/ha-suunto-cards)
+  repo; zero extra API calls, no new sensor.
+
 ## 1.0.25
 - **Five new "this year" sensors**: `year_distance`, `year_time`, `year_energy`,
   `year_workouts`, `year_active_days` - the same totals as the existing

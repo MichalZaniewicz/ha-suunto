@@ -1433,6 +1433,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Start GPS (None for indoor workouts) - for a map/marker template.
                 "start_lat": w.get("start_lat"),
                 "start_lon": w.get("start_lon"),
+                # Running dynamics - already computed per-workout for
+                # last_cadence/last_stride, None outside FOOT_ACTIVITY_IDS.
+                "cadence_spm": w.get("cadence_spm"),
+                "stride_length_m": w.get("stride_length_m"),
             }
             for w in norm_workouts[:RECENT_WORKOUTS_LIMIT]
         ]

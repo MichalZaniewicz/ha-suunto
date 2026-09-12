@@ -40,7 +40,7 @@ statistics and troubleshooting.
 
 Want a dashboard without wiring 92 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
-HACS repo with 44 purpose-built cards - last workout, HR zones, sleep & readiness,
+HACS repo with 53 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
 calendar, workout-to-workout comparisons, fun lifetime-distance equivalents, a
 computed training personality, a FIFA-style player card, 20 unlockable
@@ -297,6 +297,12 @@ whole training history in a Calendar card, each event showing the activity,
 distance and key stats (duration, HR, TSS). A companion **Recent workouts** sensor
 keeps the last 60 sessions in its attributes for a compact list/table card. Both
 reuse the workout history already fetched - no extra requests.
+
+Each entry in **Recent workouts** also carries `cadence_spm` and
+`stride_length_m` - the same running-dynamics figures behind the Cadence/Stride
+sensors below, present only for foot-based activities (running, walking,
+trekking), `null` otherwise - so a custom card can chart cadence or stride
+trend across your recent runs.
 
 ## Workout start on a map
 
