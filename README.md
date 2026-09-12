@@ -38,7 +38,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 92 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 94 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 53 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -91,7 +91,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (92 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (94 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -116,12 +116,14 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   **cadence** (rpm - Suunto reports it as cycles/min for every sport; on foot-based
   activities the sensor also carries a `cadence_spm` attribute, the steps/min
   equivalent, so the state itself never changes and your history isn't rewritten),
-  **TSS**, **time in 6 heart-rate zones (0-5)**, **Peak Training
+  **TSS** (an alternative MET-based figure rides alongside it in the `tss_met`
+  attribute, when Suunto computed one), **time in 6 heart-rate zones (0-5)**, **Peak Training
   Effect** (Suunto's own 1-5 rating of the session), **peak EPOC**, your own
   **feeling** rating (1-5, when you set it on the watch), the workout **type**
   as Suunto classifies it (commute, strength, long aerobic base ...; the raw
-  list is in the sensor's `tags` attribute), and **recovered-at** (when the
-  recovery countdown ends).
+  list is in the sensor's `tags` attribute, alongside `is_manually_added` -
+  whether you typed the workout in rather than synced it from the watch), and
+  **recovered-at** (when the recovery countdown ends).
   Each heart-rate zone sensor also carries its **bpm range** in the
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
   an actual effort. Zone 0 is everything below zone 1, zone 1 is everything below
@@ -170,6 +172,10 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   Resets on January 1st; like the all-time sensor above (and unlike the
   monthly one) it needs its own deep history scan to pick up January's
   workouts once they've aged out of the normal fetch window.
+- **Current streak:** how many days in a row you've trained, right now -
+  resets to 0 the moment a day is skipped. A different question from
+  *Training records*' all-time longest streak above: that one only ever goes
+  up, this one tracks whether you're on one today.
 - **Best efforts:** state is how many standard distances (1K, 5K, 10K, half
   marathon, marathon) have a recorded personal best so far; each one's time
   and the workout it happened in ride in attributes. Foot-based activities
@@ -181,7 +187,9 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Fitness:** **VO2max**, estimated VO2max and **fitness age**, as measured by the
   watch. Suunto derives these from **runs and walks only**, so they hold their last
   reading between such workouts - each sensor's `measured_at` attribute shows when
-  (and from which activity) it was taken.
+  (and from which activity) it was taken. The same three numbers are also
+  imported as a **long-term statistics trend** (see below), so you can chart
+  them over time instead of only seeing today's held value.
 - **Derived - training load:** Fitness (CTL), Fatigue (ATL), Form (TSB) from TSS
   history, plus the acute:chronic workload ratio (ACWR; safe zone ~0.8-1.3), and
   a **training suggestion** (rest/easy/moderate/hard) for today, derived from
@@ -191,7 +199,9 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   rate + baseline, and **Readiness** (0-100, a heuristic blending sleep, HRV,
   resting HR and recovery balance).
 - **Derived - per workout:** % of max HR, calories per km, ascent rate, stride length.
-- **Weekly volume:** workout distance and time over the last 7 days.
+- **Weekly volume:** workout distance, time and **steps** over the last 7 days
+  (steps are read back from the hourly step statistics below, since they come
+  from the 24/7 stream rather than the workout list).
 - **Counts:** workouts in the last 7 / 30 days.
 - **Workouts calendar & recent list:** a `calendar` entity with every past workout
   as a browsable event, plus a *Recent workouts* sensor whose attribute holds the
@@ -267,7 +277,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 92 live sensors, the integration imports **hourly long-term
+Beyond the 94 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
@@ -280,8 +290,11 @@ These are external statistics (`suunto_app:...`), **not entities** - view them i
   ~25 s heart-rate samples from workouts, so workout peaks show up), steps, energy,
   recovery balance, stress.
 - **Daily:** sleep duration, HRV, resting heart rate, quality, SpO₂; Readiness;
-  the Fitness / Fatigue / Form (CTL/ATL/TSB) trend; and peak Training Effect /
-  peak EPOC (the day's hardest session, when there was more than one).
+  the Fitness / Fatigue / Form (CTL/ATL/TSB) trend; peak Training Effect /
+  peak EPOC (the day's hardest session, when there was more than one); and
+  VO2max / estimated VO2max / fitness age - sparse, since Suunto only computes
+  these from runs and walks, but every reading you get is charted as a point
+  in the trend rather than only living in the live sensors' held state.
 
 The backfill window is ~5 days - a sync delayed beyond that won't fill the part
 older than the window. The hourly **heart-rate** statistic is the way to see a

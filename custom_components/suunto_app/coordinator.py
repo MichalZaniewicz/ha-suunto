@@ -771,6 +771,16 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
             if tss.get("trainingStressScore")
             else None
         ),
+        # Alternative TSS calculated from MET instead of HR (see _tss_met).
+        "tss_met": _tss_met(workout),
+        # Whether the rider typed this workout in manually rather than syncing
+        # it from the watch - lets automations exclude manual entries from
+        # anything that assumes real sensor data (HR, GPS, cadence, ...).
+        "is_manually_added": (
+            bool(manually_added)
+            if (manually_added := workout.get("isManuallyAdded")) is not None
+            else None
+        ),
         # Zone thresholds in bpm, so the times below have a scale (may be empty).
         "hr_zone_limits": _hr_zone_limits(workout),
         # Time in each HR zone (centiseconds -> minutes). Zone 0 is "below
@@ -877,6 +887,51 @@ def _longest_streak(workouts: list[dict[str, Any]]) -> int:
         elif gap > 1:
             current = 1
     return best
+
+
+def _current_streak(workouts: list[dict[str, Any]], today: date) -> int:
+    """Consecutive LOCAL calendar days with >=1 workout, counted backward from
+    today (or from yesterday if today has no workout yet - a day not yet
+    trained doesn't break the streak until it's fully elapsed).
+
+    Unlike ``_longest_streak`` (a pure historical extremum, safe to merge with
+    ``_merge_records``), this is a point-in-time state that must reset to 0
+    the moment a day is skipped - so it is always recomputed fresh from the
+    current window, never seeded or merged.
+    """
+    dates = {
+        dt_util.as_local(w["start_time"]).date() for w in workouts if w.get("start_time")
+    }
+    cursor = today if today in dates else today - timedelta(days=1)
+    streak = 0
+    while cursor in dates:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
+
+
+def _tss_met(workout: dict[str, Any]) -> float | None:
+    """MET-based Training Stress Score, an alternative to the HR-based ``tss``.
+
+    ``tssList`` carries one entry per calculation method (CLAUDE.md notes a
+    live example: HR 148.2 vs MET 189.9 on the same workout), but the exact
+    per-item key names were never confirmed live - scans defensively for a
+    MET-labeled entry instead of assuming a fixed shape, same precedent as the
+    raw ``achievements`` passthrough below.
+    """
+    for item in workout.get("tssList") or []:
+        if not isinstance(item, dict):
+            continue
+        method = str(
+            item.get("type") or item.get("calculationMethod") or item.get("method") or ""
+        ).upper()
+        if method != "MET":
+            continue
+        for value_key in ("trainingStressScore", "value", "tss"):
+            value = _as_float(item.get(value_key))
+            if value is not None:
+                return round(value, 1)
+    return None
 
 
 def _best_workout(
@@ -1413,6 +1468,15 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception:  # noqa: BLE001 - statistics are best-effort
             _LOGGER.exception("Hourly statistics import failed (non-fatal)")
 
+        # Rolling 7-day step total, read back from the "steps" statistic the
+        # import above just refreshed. Best-effort, same reasoning as the
+        # import itself: a read hiccup (e.g. recorder not ready right after
+        # startup) should leave this absent, not break the whole update.
+        try:
+            weekly["steps"] = await self._async_weekly_steps(now)
+        except Exception:  # noqa: BLE001 - enrichment only, never fatal
+            _LOGGER.debug("Weekly steps lookup failed (non-fatal)", exc_info=True)
+
         # Full normalized list (for the workouts calendar) + a compact recent
         # slice (for the recent-workouts sensor attribute). Both reuse the 90d
         # list already fetched - no extra requests.
@@ -1461,6 +1525,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if device != self._last_device:
                 self._sync_device_registry(device)
             self._last_device = device
+
+        # Current active streak - a different question from training_records'
+        # "longest streak ever": how many days in a row right now. Always
+        # recomputed fresh (never seeded/merged like the PRs below), since it
+        # must reset to 0 the moment a day is skipped. The 90-day window is
+        # far more than any realistic streak needs.
+        current_streak = _current_streak(norm_workouts, today)
 
         # All-time personal records. The normal 90-day window can only ever
         # improve a record (a genuinely new PR set today); anything a record
@@ -1562,6 +1633,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "fitness": self._last_fitness,
             "device": self._last_device,
             "records": self._last_records,
+            "current_streak": current_streak,
             "records_month": records_month,
             "month_totals": month_totals,
             "best_efforts": self._best_efforts,
@@ -2062,6 +2134,43 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for day, values in epoc_acc.items()
         ]
 
+        # VO2max / estimated VO2max / fitness age trend (one point per day
+        # that actually has a reading). Suunto only computes these from runs
+        # and walks (see _fitness_snapshot), so most days contribute nothing -
+        # that's fine, external statistics tolerate gaps, and the live
+        # vo2max/estimated_vo2max/fitness_age sensors already hold the value
+        # between readings. This just lets the same numbers be charted as a
+        # trend instead of a single point-in-time state.
+        vo2max_acc: dict[Any, list[float]] = defaultdict(list)
+        estimated_vo2max_acc: dict[Any, list[float]] = defaultdict(list)
+        fitness_age_acc: dict[Any, list[float]] = defaultdict(list)
+        for w in workouts:
+            start = w.get("startTime")
+            if not start:
+                continue
+            day = dt_util.as_local(
+                datetime.fromtimestamp(int(start) / 1000, tz=timezone.utc)
+            ).date()
+            for ext in _extensions(w, "FitnessExtension"):
+                if (vo2 := _as_float(ext.get("vo2Max"))) is not None:
+                    vo2max_acc[day].append(vo2)
+                if (est := _as_float(ext.get("estimatedVo2Max"))) is not None:
+                    estimated_vo2max_acc[day].append(est)
+                if (age := _as_float(ext.get("fitnessAge"))) is not None:
+                    fitness_age_acc[day].append(age)
+        vo2max_daily: list[tuple[datetime, float]] = [
+            (datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc), round(sum(values) / len(values), 1))
+            for day, values in vo2max_acc.items()
+        ]
+        estimated_vo2max_daily: list[tuple[datetime, float]] = [
+            (datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc), round(sum(values) / len(values), 1))
+            for day, values in estimated_vo2max_acc.items()
+        ]
+        fitness_age_daily: list[tuple[datetime, float]] = [
+            (datetime(day.year, day.month, day.day, 12, tzinfo=timezone.utc), round(sum(values) / len(values), 1))
+            for day, values in fitness_age_acc.items()
+        ]
+
         # CTL/ATL/TSB trend (one point per day), placed at noon UTC.
         ctl: list[tuple[datetime, float]] = []
         atl: list[tuple[datetime, float]] = []
@@ -2089,9 +2198,52 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ("form_tsb", "Suunto form (TSB)", None, tsb),
                 ("pte", "Suunto peak training effect", None, pte_daily),
                 ("epoc", "Suunto peak EPOC", "ml/kg", epoc_daily),
+                ("vo2max", "Suunto VO2max", "ml/kg/min", vo2max_daily),
+                ("estimated_vo2max", "Suunto estimated VO2max", "ml/kg/min", estimated_vo2max_daily),
+                ("fitness_age", "Suunto fitness age", "years", fitness_age_daily),
             ],
             sums=[
                 ("steps", "Suunto steps (hourly)", "steps", steps),
                 ("energy", "Suunto energy (hourly)", "kcal", energy),
             ],
         )
+
+    async def _async_weekly_steps(self, now: datetime) -> int | None:
+        """Total steps added to the ``suunto_app:steps`` statistic in the
+        trailing 7 days.
+
+        That statistic is a running cumulative sum (see statistics.py), so
+        the total added in any window is just the difference between its
+        value at the two ends - the same "look back a couple of days for the
+        latest known sum" trick the sums importer itself uses to find its own
+        continuation base. Returns None before the statistic has any data
+        yet (e.g. right after a fresh install).
+        """
+        from homeassistant.components.recorder import get_instance
+        from homeassistant.components.recorder.statistics import (
+            statistics_during_period,
+        )
+
+        statistic_id = f"{DOMAIN}:steps"
+
+        async def _sum_at(at: datetime) -> float | None:
+            rows = await get_instance(self.hass).async_add_executor_job(
+                statistics_during_period,
+                self.hass,
+                at - timedelta(days=2),
+                at,
+                {statistic_id},
+                "hour",
+                None,
+                {"sum"},
+            )
+            series = rows.get(statistic_id) if rows else None
+            if series and series[-1].get("sum") is not None:
+                return float(series[-1]["sum"])
+            return None
+
+        current = await _sum_at(now)
+        if current is None:
+            return None
+        baseline = await _sum_at(now - timedelta(days=7))
+        return round(current - (baseline or 0))

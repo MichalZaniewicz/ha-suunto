@@ -112,6 +112,7 @@
       "training_records": { "name": "Trainingsrekorde" },
       "training_records_month": { "name": "Trainingsrekorde (dieser Monat)" },
       "training_records_year": { "name": "Trainingsrekorde (dieses Jahr)" },
+      "current_streak": { "name": "Aktuelle Serie" },
       "best_efforts": { "name": "Bestleistungen" },
       "last_pct_hrmax": { "name": "% der max. Herzfrequenz des letzten Trainings" },
       "last_cal_per_km": { "name": "Kalorien pro km des letzten Trainings" },
@@ -139,6 +140,7 @@
       "workouts_recent": { "name": "Letzte Trainings" },
       "weekly_distance": { "name": "Distanz (7 Tage)" },
       "weekly_time": { "name": "Trainingszeit (7 Tage)" },
+      "weekly_steps": { "name": "Schritte (7 Tage)" },
       "workouts_7d": { "name": "Trainings (7 Tage)" },
       "workouts_30d": { "name": "Trainings (30 Tage)" }
     },

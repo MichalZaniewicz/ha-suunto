@@ -48,7 +48,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "training_records_month": 0, "training_records_year": 0,
     "year_workouts": 0, "year_active_days": 0, "year_energy": 0,
     "month_workouts": 0, "month_active_days": 0, "month_energy": 0,
-    "best_efforts": 0,
+    "best_efforts": 0, "weekly_steps": 0, "current_streak": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -283,6 +283,31 @@ def _best_effort_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
         if (pr := _pr_dict(efforts.get(label), round_to=1)) is not None
     }
     return out or None
+
+
+def _tags_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Suunto's raw classification tags, plus whether this workout was typed
+    in manually rather than synced from the watch (see
+    coordinator._normalize_workout's ``is_manually_added``).
+    """
+    workout = data.get("workout") or {}
+    out: dict[str, Any] = {}
+    if tags := workout.get("tags"):
+        out["tags"] = tags
+    if (manual := workout.get("is_manually_added")) is not None:
+        out["is_manually_added"] = manual
+    return out or None
+
+
+def _tss_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """MET-based TSS alongside the sensor's own HR-based state, when known.
+
+    See coordinator._tss_met - the exact ``tssList`` item shape was never
+    confirmed live, so this rides as an optional attribute rather than a
+    guaranteed field.
+    """
+    tss_met = (data.get("workout") or {}).get("tss_met")
+    return {"tss_met": tss_met} if tss_met is not None else None
 
 
 def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -585,9 +610,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_workout_tags",
         icon="mdi:tag-multiple",
         value_fn=_tags_state,
-        attributes_fn=lambda d: (
-            {"tags": tags} if (tags := (d.get("workout") or {}).get("tags")) else None
-        ),
+        attributes_fn=_tags_attrs,
     ),
     # On-site temperature at the last workout; humidity/wind/condition ride in
     # attributes. Outdoor workouts only - unknown on an indoor session.
@@ -674,6 +697,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:gauge",
         value_fn=_section("workout", "tss"),
+        attributes_fn=_tss_attrs,
     ),
     SuuntoAppSensorDescription(
         key="last_zone0",
@@ -942,6 +966,17 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         value_fn=_section("records_year", "longest_streak_days"),
         attributes_fn=_records_year_attrs,
     ),
+    # Current active streak (days), distinct from training_records' all-time
+    # "longest streak ever" - this one resets to 0 the moment a day is
+    # skipped, see coordinator._current_streak.
+    SuuntoAppSensorDescription(
+        key="current_streak",
+        translation_key="current_streak",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fire",
+        value_fn=lambda d: d.get("current_streak"),
+    ),
     # Standard-distance personal bests (1K/5K/10K/half/full marathon), foot
     # activities only - state is how many distances have a recorded best so
     # far (0-5); each one's time (seconds) + workout rides in attributes.
@@ -1112,6 +1147,19 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:timer",
         value_fn=_section("weekly", "time_hours"),
+    ),
+    # Rolling 7-day step total - read back from the "steps" long-term
+    # statistic (coordinator._async_weekly_steps), unlike distance/time above
+    # which are summed directly from the 90-day workout window: steps come
+    # from the 24/7 stream, not workouts, so there is no per-workout list to
+    # sum here.
+    SuuntoAppSensorDescription(
+        key="weekly_steps",
+        translation_key="weekly_steps",
+        native_unit_of_measurement=UNIT_STEPS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:walk",
+        value_fn=_section("weekly", "steps"),
     ),
     # --- Counts ---
     SuuntoAppSensorDescription(

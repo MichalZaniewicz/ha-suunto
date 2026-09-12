@@ -3,6 +3,29 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.27b1
+- **New `weekly_steps` sensor.** Rolling 7-day step total, alongside the
+  existing weekly distance/time sensors - read back from the hourly step
+  statistics rather than the workout list, since steps come from the 24/7
+  stream, not workouts.
+- **New `current_streak` sensor.** How many days in a row you've trained
+  right now - resets to 0 the moment a day is skipped. A different question
+  from `training_records`' all-time longest-streak-ever, which only ever
+  improves.
+- **VO2max, estimated VO2max and fitness age are now also imported as daily
+  long-term statistics** (`suunto_app:vo2max`, `:estimated_vo2max`,
+  `:fitness_age`), alongside the existing CTL/ATL/TSB and PTE/EPOC trends -
+  sparse (Suunto only computes these from runs/walks), but chartable over
+  time instead of only visible as the live sensors' held state. No new
+  sensor entity.
+- **Two small attribute additions, both free (already-fetched data):** the
+  last-workout TSS sensor now carries a `tss_met` attribute (Suunto's
+  MET-based TSS, alongside the HR-based one that's already the sensor's
+  state) when Suunto computed one; the workout-type sensor now carries an
+  `is_manually_added` attribute (whether the workout was typed in rather
+  than synced from the watch).
+  94 sensors now (was 92).
+
 ## 1.0.26
 - **`cadence_spm` and `stride_length_m` added to the Recent workouts sensor's
   per-workout attributes** - the same running-dynamics figures already
