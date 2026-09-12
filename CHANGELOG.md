@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.27b1
+## 1.0.27
 - **New `weekly_steps` sensor.** Rolling 7-day step total, alongside the
   existing weekly distance/time sensors - read back from the hourly step
   statistics rather than the workout list, since steps come from the 24/7
