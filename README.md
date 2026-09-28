@@ -4,13 +4,6 @@ A custom HACS integration that pulls your **Suunto** data into Home Assistant fr
 the Suunto app (Sports Tracker) - signing in with just your email and password,
 no Docker and no partner keys.
 
-[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MichalZaniewicz&repository=ha-suunto&category=integration)
-
-![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
-
-*Example dashboard - live sensors plus backfilled long-term statistics (heart
-rate, training load, sleep).*
-
 > [!TIP]
 > ⭐ **Enjoying this integration?** Every star is real motivation for me to keep
 > developing it :)
@@ -22,6 +15,13 @@ GitHub alert into <ha-alert> and drops every child whose textContent is empty,
 which silently removes any <img> placed inside it. -->
 
 [![Star this repo](https://img.shields.io/github/stars/MichalZaniewicz/ha-suunto?style=for-the-badge&logo=github&label=STAR%20THIS%20REPO&labelColor=555555&color=ffc107)](https://github.com/MichalZaniewicz/ha-suunto) [![Buy me a coffee](https://img.shields.io/badge/BUY%20ME%20A%20COFFEE-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/zanula)
+
+[![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MichalZaniewicz&repository=ha-suunto&category=integration)
+
+![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
+
+*Example dashboard - live sensors plus backfilled long-term statistics (heart
+rate, training load, sleep).*
 
 ```
 Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
