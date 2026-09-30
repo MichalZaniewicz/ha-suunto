@@ -108,7 +108,9 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   that had a nap, with `nap_count` and `date` attributes since naps are
   irregular and the value can be several days old).
 - **Recovery:** recovery balance, stress state.
-- **Daily activity:** steps, active energy (kcal), current heart rate.
+- **Daily activity:** steps, active energy (kcal), current heart rate (the newest
+  24/7 reading that has one, so it doesn't drop to unknown during a workout; its
+  `measured_at` attribute shows when it was taken).
 - **Last workout:** type, start, **days since** (a rest-day counter - 0 means
   you trained today, handy as an automation trigger), **start location**
   (latitude/longitude - plots on a Map card, plus a downsampled `route` attribute

@@ -75,6 +75,11 @@ WORKOUT_CACHE_GRACE_HOURS = 24
 # real intensity signal, so the capped value is not trusted for such workouts.
 RECOVERY_TIME_CAP_S = 432_000
 
+# current_hr falls back to the newest 24/7 record that carries a heart rate, but
+# only if it is at most this far behind the newest record overall. Longer gaps
+# (a long workout, watch off the wrist) read as unknown rather than stale.
+CURRENT_HR_MAX_GAP_MINUTES = 60
+
 # The 24/7 activity stream reports `energyConsumption` in JOULES, not calories.
 # Confirmed live 2026-07-21: every per-interval value is an exact multiple of
 # 4186.8 (4186.75, 8373.5, 12560.25, 16747.25, 20934.0, 46054.75, ...), i.e. the

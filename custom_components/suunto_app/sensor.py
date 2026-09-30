@@ -341,6 +341,14 @@ def _sleep_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     return {"night": night.isoformat(), "stale": sleep.get("stale")}
 
 
+def _current_hr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """When the shown heart rate was measured - not always the newest 10-min
+    record, see coordinator._current_hr.
+    """
+    at = (data.get("activity") or {}).get("current_hr_at")
+    return {"measured_at": at.isoformat()} if at is not None else None
+
+
 def _readiness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     """The sleep night readiness would use, and whether it was left out as stale."""
     baseline = data.get("baseline") or {}
@@ -515,6 +523,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:heart-pulse",
         source=SOURCE_FAST,
         value_fn=_section("activity", "current_hr_bpm"),
+        attributes_fn=_current_hr_attrs,
     ),
     # --- Last workout ---
     SuuntoAppSensorDescription(

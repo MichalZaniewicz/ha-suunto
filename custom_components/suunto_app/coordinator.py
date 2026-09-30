@@ -22,6 +22,7 @@ from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
+    CURRENT_HR_MAX_GAP_MINUTES,
     DOMAIN,
     EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
@@ -314,9 +315,7 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
         steps += _as_float(ed.get("stepCount")) or 0.0
         energy += _as_float(ed.get("energyConsumption")) or 0.0
 
-    latest = _latest(records)
-    latest_ed = (latest or {}).get("entryData") or {}
-    current_hr = _hz_to_bpm(latest_ed.get("hr"))
+    current_hr, hr_at = _current_hr(records)
 
     # energyConsumption is in joules (see JOULES_PER_KCAL) -> kcal.
     return {
@@ -326,7 +325,37 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
             _as_int(energy / JOULES_PER_KCAL) if saw_today else None
         ),
         "current_hr_bpm": current_hr,
+        "current_hr_at": hr_at,
     }
+
+
+def _current_hr(records: list[dict[str, Any]]) -> tuple[int | None, datetime | None]:
+    """Newest 24/7 heart rate, and when it was measured.
+
+    The newest 10-min record often has no ``hr`` at all: during a workout the
+    24/7 stream carries none (the workout records it instead), and a sync
+    batch can end on an HR-less record. Taking the newest record blindly made
+    the sensor flip to unknown every time. Instead take the newest record that
+    HAS a heart rate, as long as it is within CURRENT_HR_MAX_GAP_MINUTES of the
+    newest record overall - relative to the data, not to now, since the whole
+    stream always lags by however long ago the watch last synced.
+    """
+    newest: datetime | None = None
+    best: tuple[datetime, int] | None = None
+    for rec in records:
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None:
+            continue
+        if newest is None or ts > newest:
+            newest = ts
+        bpm = _hz_to_bpm((rec.get("entryData") or {}).get("hr"))
+        if bpm is not None and (best is None or ts > best[0]):
+            best = (ts, bpm)
+    if best is None or newest is None:
+        return None, None
+    if newest - best[0] > timedelta(minutes=CURRENT_HR_MAX_GAP_MINUTES):
+        return None, None
+    return best[1], best[0]
 
 
 def _sec_to_min_zero(value: Any) -> int | None:

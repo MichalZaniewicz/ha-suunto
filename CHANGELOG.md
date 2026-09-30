@@ -3,6 +3,13 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.28b2
+- **Current heart rate no longer drops to unknown.** The newest 10-min
+  record often carries no heart rate (always during a workout, sometimes at
+  the end of a sync). The sensor now shows the newest reading that has one,
+  if it is at most 60 min behind the newest record, with a new `measured_at`
+  attribute.
+
 ## 1.0.28b1
 Reliability fixes, all found by auditing a real account. No new sensors, no
 extra API calls.
