@@ -59,6 +59,8 @@
       "stress_state": { "name": "Estado de estrés" },
       "daily_steps": { "name": "Pasos diarios" },
       "daily_energy": { "name": "Energía diaria" },
+      "daily_total_energy": { "name": "Energía total diaria" },
+      "bmr": { "name": "Tasa metabólica basal" },
       "current_hr": { "name": "Frecuencia cardíaca actual" },
       "last_activity": { "name": "Última actividad" },
       "last_workout_start": { "name": "Inicio del último entrenamiento" },

@@ -14,7 +14,7 @@ from . import SuuntoAppConfigEntry
 # nested dicts/lists). Raw sleep records carry only duration/isNap/HR/etc, no
 # PII, so they need no redaction, but sit behind the same helper for safety if
 # a field is ever added there.
-TO_REDACT = {"email", "session_key", "start_lat", "start_lon"}
+TO_REDACT = {"email", "session_key", "start_lat", "start_lon", "weight_kg", "height_cm", "age"}
 
 
 async def async_get_config_entry_diagnostics(

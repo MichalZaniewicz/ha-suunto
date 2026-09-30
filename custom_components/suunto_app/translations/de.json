@@ -59,6 +59,8 @@
       "stress_state": { "name": "Stresszustand" },
       "daily_steps": { "name": "Tägliche Schritte" },
       "daily_energy": { "name": "Tägliche Energie" },
+      "daily_total_energy": { "name": "Tägliche Gesamtenergie" },
+      "bmr": { "name": "Grundumsatz" },
       "current_hr": { "name": "Aktueller Puls" },
       "last_activity": { "name": "Letzte Aktivität" },
       "last_workout_start": { "name": "Start des letzten Trainings" },

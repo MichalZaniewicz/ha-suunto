@@ -4,6 +4,14 @@ Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
 ## 1.0.28b2
+- **New `daily_total_energy` and `bmr` sensors.** `daily_energy` has always
+  been ACTIVE energy, which is why it read far below the "calories" figure in
+  the Suunto app. That figure is active energy plus your basal metabolic rate
+  accrued so far today, and it is now its own sensor. BMR comes from the weight,
+  height, age and sex in your Suunto profile with the Mifflin-St Jeor formula
+  (matches the app to within 1 kcal on a real account); the inputs are in the
+  BMR sensor's attributes. The profile is fetched once a day, one extra request.
+  96 sensors now (was 94).
 - **Current heart rate no longer drops to unknown.** The newest 10-min
   record often carries no heart rate (always during a workout, sometimes at
   the end of a sync). The sensor now shows the newest reading that has one,

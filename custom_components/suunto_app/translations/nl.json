@@ -59,6 +59,8 @@
       "stress_state": { "name": "Stresstoestand" },
       "daily_steps": { "name": "Dagelijkse stappen" },
       "daily_energy": { "name": "Dagelijkse energie" },
+      "daily_total_energy": { "name": "Dagelijkse totale energie" },
+      "bmr": { "name": "Basaal metabolisme" },
       "current_hr": { "name": "Huidige hartslag" },
       "last_activity": { "name": "Laatste activiteit" },
       "last_workout_start": { "name": "Start van laatste training" },

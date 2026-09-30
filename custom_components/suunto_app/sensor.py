@@ -30,12 +30,13 @@ UNIT_WORKOUTS = "workouts"
 UNIT_LAPS = "laps"
 UNIT_VO2MAX = "ml/kg/min"
 UNIT_YEARS = "years"
+UNIT_KCAL_PER_DAY = "kcal/d"
 
 # Decimal places to display per sensor (HA rounds state, history and tooltips).
 # Without this, rounded floats show artifacts like -11.199999999999998.
 _DISPLAY_PRECISION: dict[str, int] = {
     # whole numbers
-    "current_hr": 0, "daily_steps": 0, "daily_energy": 0, "sleep_deep": 0,
+    "current_hr": 0, "daily_steps": 0, "daily_energy": 0, "daily_total_energy": 0, "bmr": 0, "sleep_deep": 0,
     "nap_duration": 0,
     "sleep_avg_hr": 0, "sleep_min_hr": 0, "last_avg_hr": 0, "last_max_hr": 0,
     "last_distance": 0, "last_duration": 0, "last_pct_hrmax": 0, "last_cadence": 0,
@@ -341,6 +342,21 @@ def _sleep_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     return {"night": night.isoformat(), "stale": sleep.get("stale")}
 
 
+def _bmr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The profile inputs behind the BMR, so a wrong value can be traced to a
+    wrong weight/height/birthdate in the Suunto app rather than guessed at.
+    """
+    profile = data.get("profile") or {}
+    if profile.get("bmr_kcal") is None:
+        return None
+    return {
+        "formula": "Mifflin-St Jeor",
+        "weight_kg": profile.get("weight_kg"),
+        "height_cm": profile.get("height_cm"),
+        "age": profile.get("age"),
+    }
+
+
 def _current_hr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     """When the shown heart rate was measured - not always the newest 10-min
     record, see coordinator._current_hr.
@@ -514,6 +530,26 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:fire",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_energy_kcal"),
+    ),
+    # Active energy plus BMR accrued so far today - the app's "calories" figure.
+    SuuntoAppSensorDescription(
+        key="daily_total_energy",
+        translation_key="daily_total_energy",
+        native_unit_of_measurement=UNIT_KCAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:fire-circle",
+        source=SOURCE_FAST,
+        value_fn=_section("activity", "daily_total_energy_kcal"),
+    ),
+    SuuntoAppSensorDescription(
+        key="bmr",
+        translation_key="bmr",
+        native_unit_of_measurement=UNIT_KCAL_PER_DAY,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:human",
+        source=SOURCE_FAST,
+        value_fn=_section("profile", "bmr_kcal"),
+        attributes_fn=_bmr_attrs,
     ),
     SuuntoAppSensorDescription(
         key="current_hr",

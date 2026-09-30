@@ -40,7 +40,7 @@ statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 94 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 96 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 57 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -93,7 +93,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (94 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (96 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -108,7 +108,11 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   that had a nap, with `nap_count` and `date` attributes since naps are
   irregular and the value can be several days old).
 - **Recovery:** recovery balance, stress state.
-- **Daily activity:** steps, active energy (kcal), current heart rate (the newest
+- **Daily activity:** steps, active energy (kcal), **total energy** (active plus
+  your basal metabolic rate accrued so far today - the same "calories" figure the
+  Suunto app shows), **BMR** (kcal/day, from the weight, height, age and sex in
+  your Suunto profile, Mifflin-St Jeor formula, the one the app uses; the inputs
+  ride in its attributes), current heart rate (the newest
   24/7 reading that has one, so it doesn't drop to unknown during a workout; its
   `measured_at` attribute shows when it was taken).
 - **Last workout:** type, start, **days since** (a rest-day counter - 0 means
@@ -289,7 +293,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 94 live sensors, the integration imports **hourly long-term
+Beyond the 96 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,

@@ -175,6 +175,20 @@ class SportsTrackerClient:
         payload = envelope.get("payload") if isinstance(envelope, dict) else None
         return payload if isinstance(payload, dict) else {}
 
+    async def async_get_user_settings(self) -> dict[str, Any]:
+        """Return the account's profile settings (weight, height, birthdate, ...).
+
+        Confirmed live 2026-09-30: ``weight`` in GRAMS, ``height`` in cm,
+        ``birthdate`` as epoch ms, ``gender`` "MALE"/"FEMALE".
+        """
+        body = await self._request(API_BASE, "user/settings")
+        try:
+            envelope = json.loads(body)
+        except (ValueError, json.JSONDecodeError) as err:
+            raise SuuntoAppError(f"Bad settings response: {err}") from err
+        payload = envelope.get("payload") if isinstance(envelope, dict) else None
+        return payload if isinstance(payload, dict) else {}
+
     async def async_get_stats(self, username: str) -> dict[str, Any]:
         """Return lifetime aggregate workout stats for ``username``."""
         body = await self._request(API_BASE, f"workouts/{username}/stats")

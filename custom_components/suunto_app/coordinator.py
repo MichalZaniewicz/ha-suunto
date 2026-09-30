@@ -24,6 +24,7 @@ from .const import (
     ACTIVITY_LOOKBACK_DAYS,
     CURRENT_HR_MAX_GAP_MINUTES,
     DOMAIN,
+    PROFILE_REFRESH_HOURS,
     EVENT_NEW_WORKOUT,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
@@ -327,6 +328,48 @@ def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
         "current_hr_bpm": current_hr,
         "current_hr_at": hr_at,
     }
+
+
+def _profile_bmr(settings: dict[str, Any], today: Any) -> dict[str, Any] | None:
+    """Basal metabolic rate (kcal/day) from the account profile, Mifflin-St Jeor.
+
+    That formula reproduces the Suunto app's own BMR: verified live 2026-09-30,
+    80 kg / 181 cm / 41 y / male -> 1731 here vs 1732 in the app. ``weight``
+    arrives in GRAMS, ``height`` in cm, ``birthdate`` as epoch ms. Returns None
+    when any input is missing, so a sparse profile never yields a made-up BMR.
+    """
+    weight_g = _as_float(settings.get("weight"))
+    height_cm = _as_float(settings.get("height"))
+    birth_ms = _as_float(settings.get("birthdate"))
+    gender = str(settings.get("gender") or "").upper()
+    if not weight_g or not height_cm or birth_ms is None or gender not in ("MALE", "FEMALE"):
+        return None
+    birth = datetime.fromtimestamp(birth_ms / 1000, tz=timezone.utc).date()
+    age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+    weight_kg = weight_g / 1000
+    bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + (5 if gender == "MALE" else -161)
+    if bmr <= 0:
+        return None
+    return {
+        "bmr_kcal": round(bmr),
+        "weight_kg": round(weight_kg, 1),
+        "height_cm": round(height_cm),
+        "age": age,
+    }
+
+
+def _total_energy(active_kcal: int | None, bmr_kcal: int | None, now_local: datetime) -> int | None:
+    """Today's total energy the way the Suunto app counts it.
+
+    The app's "calories" figure is active energy plus BMR accrued so far today
+    (checked live 2026-09-30: 689 active + 1732 x 0.89 of the day = 2228), so
+    the BMR part grows through the day instead of landing all at midnight.
+    """
+    if active_kcal is None or bmr_kcal is None:
+        return None
+    midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    fraction = min(max((now_local - midnight).total_seconds() / 86400, 0.0), 1.0)
+    return round(active_kcal + bmr_kcal * fraction)
 
 
 def _current_hr(records: list[dict[str, Any]]) -> tuple[int | None, datetime | None]:
@@ -1253,6 +1296,32 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Highest steps/energy seen so far today, keyed by the local date they
         # belong to. See _apply_daily_floor.
         self._day_peak: dict[str, Any] = {}
+        # BMR from the account profile (see _profile_bmr) and when it was
+        # last fetched; refreshed every PROFILE_REFRESH_HOURS.
+        self._profile: dict[str, Any] | None = None
+        self._profile_fetched_at: datetime | None = None
+
+    async def _async_refresh_profile(self) -> None:
+        """Fetch the profile for BMR at most once per PROFILE_REFRESH_HOURS.
+
+        Non-fatal: a failed fetch keeps the previous BMR (or none), so the
+        activity sensors never go unavailable because of it. A real auth
+        failure still surfaces for the reauth flow.
+        """
+        now = dt_util.utcnow()
+        if self._profile_fetched_at and now - self._profile_fetched_at < timedelta(
+            hours=PROFILE_REFRESH_HOURS
+        ):
+            return
+        try:
+            settings = await self._client.async_get_user_settings()
+        except SuuntoAppAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        except SuuntoAppError as err:
+            _LOGGER.debug("Profile fetch failed (non-fatal): %s", err)
+            return
+        self._profile_fetched_at = now
+        self._profile = _profile_bmr(settings, dt_util.now().date())
 
     def _apply_daily_floor(self, activity: dict[str, Any] | None) -> None:
         """Never let today's running totals go backwards (in place).
@@ -1275,7 +1344,7 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         if self._day_peak.get("date") != date:
             self._day_peak = {"date": date}
-        for field in ("daily_steps", "daily_energy_kcal"):
+        for field in ("daily_steps", "daily_energy_kcal", "daily_total_energy_kcal"):
             value = activity.get(field)
             peak = self._day_peak.get(field)
             if value is None:
@@ -1298,9 +1367,16 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except SuuntoAppError as err:
             raise UpdateFailed(str(err)) from err
+        await self._async_refresh_profile()
         normalized = _normalize_activity(activity)
+        if normalized is not None:
+            normalized["daily_total_energy_kcal"] = _total_energy(
+                normalized.get("daily_energy_kcal"),
+                (self._profile or {}).get("bmr_kcal"),
+                dt_util.now(),
+            )
         self._apply_daily_floor(normalized)
-        return {"activity": normalized}
+        return {"activity": normalized, "profile": self._profile}
 
 
 class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):

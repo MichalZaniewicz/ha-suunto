@@ -80,6 +80,10 @@ RECOVERY_TIME_CAP_S = 432_000
 # (a long workout, watch off the wrist) read as unknown rather than stale.
 CURRENT_HR_MAX_GAP_MINUTES = 60
 
+# The profile (weight/height/birthdate for BMR) barely changes, so it is fetched
+# once a day on the fast coordinator instead of on every 15-min poll.
+PROFILE_REFRESH_HOURS = 24
+
 # The 24/7 activity stream reports `energyConsumption` in JOULES, not calories.
 # Confirmed live 2026-07-21: every per-interval value is an exact multiple of
 # 4186.8 (4186.75, 8373.5, 12560.25, 16747.25, 20934.0, 46054.75, ...), i.e. the
