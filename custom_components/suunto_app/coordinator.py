@@ -30,6 +30,7 @@ from .const import (
     NEW_WORKOUT_MAX_AGE_DAYS,
     RECENT_WORKOUTS_LIMIT,
     RECOVERY_LOOKBACK_DAYS,
+    RECOVERY_TIME_CAP_S,
     SLEEP_LOOKBACK_DAYS,
     STANDARD_DISTANCES_M,
     STATS_LOOKBACK_DAYS,
@@ -201,7 +202,23 @@ def _normalize_sleep(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     groups = _group_sleep_nights(records)
     if not groups:
         return None
-    return _aggregate_night(groups[max(groups)])
+    key = max(groups)
+    agg = _aggregate_night(groups[key])
+    agg["night"] = key
+    return agg
+
+
+def _sleep_is_current(night: Any, now: datetime) -> bool:
+    """Whether a night (noon-to-noon key) still counts as "last night".
+
+    Example: the Saturday-to-Sunday night (key Saturday) stays current until
+    Monday noon. The grace period covers a late-morning sync of the Sunday-to-
+    Monday night, so readiness does not flicker every morning. If that newer
+    night has still not arrived by Monday noon (watch not worn, wrong watch
+    clock, not synced), Saturday's night must not be passed off as last night.
+    """
+    current_key = (dt_util.as_local(now) - timedelta(hours=12)).date()
+    return night >= current_key - timedelta(days=1)
 
 
 def _group_naps(
@@ -634,16 +651,20 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
     stop_dt = (
         datetime.fromtimestamp(int(stop) / 1000, tz=timezone.utc) if stop else None
     )
-    # When Suunto considers you recovered = workout end + its recovery time (s).
-    recovery_s = _as_float(workout.get("recoveryTime"))
-    recovered_at = (
-        stop_dt + timedelta(seconds=recovery_s) if stop_dt and recovery_s else None
-    )
     hrdata = workout.get("hrdata") or {}
     cadence = workout.get("cadence") or {}
     tss = workout.get("tss") or {}
     avg_speed = _as_float(workout.get("avgSpeed"))  # m/s
     avg_hr = _as_float(hrdata.get("workoutAvgHR"))
+    # Recorded without heart rate (strap off, optical HR disabled): Suunto sends
+    # 0 bpm and empty zones, and falls back to MET for TSS.
+    has_hr = bool(avg_hr and avg_hr > 0)
+    # When Suunto considers you recovered = workout end + its recovery time (s).
+    reported_recovery_s = _as_float(workout.get("recoveryTime"))
+    recovery_s = _recovery_seconds(workout, has_hr)
+    recovered_at = (
+        stop_dt + timedelta(seconds=recovery_s) if stop_dt and recovery_s else None
+    )
     user_max_hr = _as_float(hrdata.get("userMaxHR"))
     distance = _as_float(workout.get("totalDistance"))
     energy = _as_float(workout.get("energyConsumption"))
@@ -741,10 +762,15 @@ def _normalize_workout(workout: dict[str, Any]) -> dict[str, Any]:
         "route_ranking": route_ranking,
         "step_count": _as_int(workout.get("stepCount")),
         "recovery_time_hours": (
-            round(total_recovery / 3600, 1)
-            if (total_recovery := _as_float(workout.get("recoveryTime"))) is not None
+            round(recovery_s / 3600, 1) if recovery_s is not None else None
+        ),
+        # Suunto's own top-level value, set only when it was replaced above.
+        "reported_recovery_time_hours": (
+            round(reported_recovery_s / 3600, 1)
+            if reported_recovery_s is not None and recovery_s != reported_recovery_s
             else None
         ),
+        "has_hr": has_hr,
         # Heart rate (already in bpm).
         "avg_hr_bpm": _as_int(hrdata.get("workoutAvgHR")),
         "max_hr_bpm": _as_int(hrdata.get("workoutMaxHR")),
@@ -908,6 +934,21 @@ def _current_streak(workouts: list[dict[str, Any]], today: date) -> int:
         streak += 1
         cursor -= timedelta(days=1)
     return streak
+
+
+def _recovery_seconds(workout: dict[str, Any], has_hr: bool) -> float | None:
+    """Recovery time (s) for a workout, not trusting the 5-day cap without HR.
+
+    The top-level ``recoveryTime`` is what we always used. On a workout with
+    no heart rate it can sit at exactly RECOVERY_TIME_CAP_S (5 days) - the
+    watch had no intensity signal, so that reads as a ceiling, not a verdict.
+    There SummaryExtension.recoveryTime is used instead, if it has one.
+    """
+    reported = _as_float(workout.get("recoveryTime"))
+    if has_hr or reported is None or reported < RECOVERY_TIME_CAP_S:
+        return reported
+    fallback = _as_float(_extension(workout, "SummaryExtension").get("recoveryTime"))
+    return fallback if fallback and fallback > 0 else reported
 
 
 def _tss_met(workout: dict[str, Any]) -> float | None:
@@ -1329,6 +1370,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # show exactly why sleep_duration/nap_duration bucketed the way they
         # did, without needing another live account to reproduce a report.
         self.last_sleep_raw: list[dict[str, Any]] = []
+        # Last non-empty sleep/recovery exports. The 24/7 backend throws the
+        # odd transient 500 (seen live 2026-09-21), and an empty 60-day sleep
+        # or 5-day recovery window is never a real answer for an account that
+        # had data an hour ago - hold the previous one instead of blanking every
+        # sleep/recovery/readiness sensor for a cycle. In-memory only.
+        self._last_good_sleep: list[dict[str, Any]] = []
+        self._last_good_recovery: list[dict[str, Any]] = []
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -1366,6 +1414,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("All Suunto endpoints failed this cycle")
 
         sleep, recovery, workouts = data["sleep"], data["recovery"], data["workouts"]
+        if sleep:
+            self._last_good_sleep = sleep
+        else:
+            sleep = self._last_good_sleep
+        if recovery:
+            self._last_good_recovery = recovery
+        else:
+            recovery = self._last_good_recovery
         self.last_sleep_raw = sleep
 
         # Smooth the eventually-consistent workouts list: re-add any workout that
@@ -1393,6 +1449,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         count_30d = sum(1 for w in workouts if (w.get("startTime") or 0) >= month_ago)
 
         sleep_norm = _normalize_sleep(sleep)
+        if sleep_norm:
+            sleep_norm["stale"] = not _sleep_is_current(sleep_norm["night"], now)
+        # Only a current night may speak for "today" (readiness, unusual
+        # recovery). The sleep sensors themselves keep showing the newest night
+        # they have, with its date and the stale flag as attributes.
+        fresh_sleep = sleep_norm if sleep_norm and not sleep_norm["stale"] else None
         nap_norm = _normalize_nap(sleep)
         recovery_norm = _normalize_recovery(recovery)
 
@@ -1417,27 +1479,34 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rhr_mean, rhr_sd = metrics.baseline_stats([n["rhr"] for n in nights])
         latest_hrv = sleep_norm["avg_hrv_ms"] if sleep_norm else None
         latest_rhr = sleep_norm["min_hr_bpm"] if sleep_norm else None
+        fresh_hrv = fresh_sleep["avg_hrv_ms"] if fresh_sleep else None
+        fresh_rhr = fresh_sleep["min_hr_bpm"] if fresh_sleep else None
         baseline = {
             "hrv_baseline": hrv_mean,
             "hrv_status": metrics.hrv_status(latest_hrv, hrv_mean, hrv_sd),
             "resting_hr": latest_rhr,
             "resting_hr_baseline": rhr_mean,
+            # With a stale night, readiness reweights onto recovery balance alone
+            # (metrics.readiness skips missing parts) instead of scoring today
+            # on an old night.
             "readiness": metrics.readiness(
-                latest_hrv=latest_hrv,
+                latest_hrv=fresh_hrv,
                 baseline_hrv=hrv_mean,
-                latest_rhr=latest_rhr,
+                latest_rhr=fresh_rhr,
                 baseline_rhr=rhr_mean,
-                sleep_hours=sleep_norm["duration_hours"] if sleep_norm else None,
+                sleep_hours=fresh_sleep["duration_hours"] if fresh_sleep else None,
                 balance_pct=recovery_norm["balance_pct"] if recovery_norm else None,
             ),
             "unusual_recovery": metrics.unusual_recovery(
-                latest_hrv=latest_hrv,
+                latest_hrv=fresh_hrv,
                 baseline_hrv=hrv_mean,
                 hrv_sd=hrv_sd,
-                latest_rhr=latest_rhr,
+                latest_rhr=fresh_rhr,
                 baseline_rhr=rhr_mean,
                 rhr_sd=rhr_sd,
             ),
+            "sleep_night": sleep_norm["night"] if sleep_norm else None,
+            "sleep_stale": sleep_norm["stale"] if sleep_norm else None,
         }
 
         # --- Weekly volume ---

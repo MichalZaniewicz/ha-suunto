@@ -3,6 +3,25 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.28b1
+Reliability fixes, all found by auditing a real account. No new sensors, no
+extra API calls.
+- **Sleep and recovery survive a flaky cycle.** The 24/7 backend occasionally
+  answers with a transient error. Sleep and recovery now hold the last good
+  data through it (workouts already did), instead of every sleep, recovery and
+  readiness sensor going unknown for an hour.
+- **Readiness no longer scores today on an old night.** When last night's
+  sleep is missing (watch not worn, wrong watch clock, not synced by noon),
+  readiness uses recovery balance alone, and the unusual-recovery sensor reads
+  unknown instead of judging an old night. New attributes: `sleep_night` /
+  `sleep_stale` on readiness, `night` / `stale` on sleep duration.
+- **Workouts without heart rate.** Flagged with `has_hr: false` on the TSS,
+  recovery time and recovery-until sensors. For such a workout Suunto can
+  report exactly 5 days of recovery, which looks like a cap rather than a
+  verdict (seen on a 7.5 h hike, which kept `is_recovering` on for 5 days); the
+  watch's own summary value is used instead, and the original is kept in
+  `reported_recovery_time_hours`.
+
 ## 1.0.27
 - **New `weekly_steps` sensor.** Rolling 7-day step total, alongside the
   existing weekly distance/time sensors - read back from the hourly step

@@ -69,6 +69,12 @@ MAX_ROUTE_POINTS = 300
 # out once it has been absent longer than this.
 WORKOUT_CACHE_GRACE_HOURS = 24
 
+# A workout's top-level `recoveryTime` tops out at exactly 5 days. Seen live
+# (2026-09-21) on a 7.5 h hike recorded without heart rate: top-level 432000 s,
+# while SummaryExtension.recoveryTime said 10200 s. Without HR the watch has no
+# real intensity signal, so the capped value is not trusted for such workouts.
+RECOVERY_TIME_CAP_S = 432_000
+
 # The 24/7 activity stream reports `energyConsumption` in JOULES, not calories.
 # Confirmed live 2026-07-21: every per-interval value is an exact multiple of
 # 4186.8 (4186.75, 8373.5, 12560.25, 16747.25, 20934.0, 46054.75, ...), i.e. the

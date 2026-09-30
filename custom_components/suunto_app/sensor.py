@@ -304,10 +304,50 @@ def _tss_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
 
     See coordinator._tss_met - the exact ``tssList`` item shape was never
     confirmed live, so this rides as an optional attribute rather than a
-    guaranteed field.
+    guaranteed field. ``has_hr`` false means the state itself is MET-based
+    too (Suunto's fallback on a workout recorded without heart rate).
     """
-    tss_met = (data.get("workout") or {}).get("tss_met")
-    return {"tss_met": tss_met} if tss_met is not None else None
+    workout = data.get("workout") or {}
+    out: dict[str, Any] = {}
+    if (tss_met := workout.get("tss_met")) is not None:
+        out["tss_met"] = tss_met
+    if (has_hr := workout.get("has_hr")) is not None:
+        out["has_hr"] = has_hr
+    return out or None
+
+
+def _recovery_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Whether the last workout had heart rate, and Suunto's own recovery time
+    when it was replaced (see coordinator._recovery_seconds).
+    """
+    workout = data.get("workout") or {}
+    out: dict[str, Any] = {}
+    if (has_hr := workout.get("has_hr")) is not None:
+        out["has_hr"] = has_hr
+    if (reported := workout.get("reported_recovery_time_hours")) is not None:
+        out["reported_recovery_time_hours"] = reported
+    return out or None
+
+
+def _sleep_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The night the sleep sensors describe, and whether it is out of date
+    (coordinator._sleep_is_current) - a missing night otherwise looks exactly
+    like the previous one.
+    """
+    sleep = data.get("sleep") or {}
+    night = sleep.get("night")
+    if night is None:
+        return None
+    return {"night": night.isoformat(), "stale": sleep.get("stale")}
+
+
+def _readiness_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The sleep night readiness would use, and whether it was left out as stale."""
+    baseline = data.get("baseline") or {}
+    night = baseline.get("sleep_night")
+    if night is None:
+        return None
+    return {"sleep_night": night.isoformat(), "sleep_stale": baseline.get("sleep_stale")}
 
 
 def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -342,6 +382,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sleep",
         value_fn=_section("sleep", "duration_hours"),
+        attributes_fn=_sleep_attrs,
     ),
     SuuntoAppSensorDescription(
         key="sleep_deep",
@@ -641,6 +682,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:timer-sand",
         value_fn=_section("workout", "recovery_time_hours"),
+        attributes_fn=_recovery_attrs,
     ),
     # When Suunto's recovery countdown from the last workout finishes.
     SuuntoAppSensorDescription(
@@ -649,6 +691,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:bed-clock",
         value_fn=_section("workout", "recovered_at"),
+        attributes_fn=_recovery_attrs,
     ),
     SuuntoAppSensorDescription(
         key="last_avg_hr",
@@ -1066,6 +1109,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:gauge",
         value_fn=_section("baseline", "readiness"),
+        attributes_fn=_readiness_attrs,
     ),
     SuuntoAppSensorDescription(
         key="hrv_baseline",

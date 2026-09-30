@@ -125,7 +125,11 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   as Suunto classifies it (commute, strength, long aerobic base ...; the raw
   list is in the sensor's `tags` attribute, alongside `is_manually_added` -
   whether you typed the workout in rather than synced it from the watch), and
-  **recovered-at** (when the recovery countdown ends).
+  **recovered-at** (when the recovery countdown ends). A workout recorded
+  **without heart rate** is flagged with `has_hr: false` on the TSS and
+  recovery sensors (its TSS is then Suunto's MET-based estimate); if Suunto
+  capped its recovery time at exactly 5 days, the watch's own summary value is
+  used instead and the original rides in `reported_recovery_time_hours`.
   Each heart-rate zone sensor also carries its **bpm range** in the
   `lower_limit_bpm` / `upper_limit_bpm` attributes, so "38 min in zone 3" reads as
   an actual effort. Zone 0 is everything below zone 1, zone 1 is everything below
@@ -199,7 +203,11 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   regardless of how fresh your form looks.
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
   rate + baseline, and **Readiness** (0-100, a heuristic blending sleep, HRV,
-  resting HR and recovery balance).
+  resting HR and recovery balance). If last night's sleep hasn't arrived by
+  noon (watch not worn, wrong watch clock, not synced), readiness is scored on
+  recovery balance alone instead of on an older night; its `sleep_night` /
+  `sleep_stale` attributes (and `night` / `stale` on the sleep-duration sensor)
+  show which night is being used.
 - **Derived - per workout:** % of max HR, calories per km, ascent rate, stride length.
 - **Weekly volume:** workout distance, time and **steps** over the last 7 days
   (steps are read back from the hourly step statistics below, since they come
