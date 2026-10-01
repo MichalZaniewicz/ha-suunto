@@ -42,13 +42,14 @@ statistics and troubleshooting.
 
 Want a dashboard without wiring 96 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
-HACS repo with 57 purpose-built cards - last workout, HR zones, sleep & readiness,
+HACS repo with 61 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
 calendar, workout-to-workout comparisons, fun lifetime-distance equivalents, a
 computed training personality, a FIFA-style player card, 20 unlockable
 achievements, a game-style level/XP bar, an RPG training class, a next-milestone
 countdown, a lifetime story card, a 24h sleep clock, a sleep-regularity chart, a
-single-night sleep deep-dive with sleep efficiency, and more. Each card auto-detects your Suunto
+single-night sleep deep-dive with sleep efficiency, commute savings, gear
+service tracking, a form forecast, a one-sentence daily brief, and more. Each card auto-detects your Suunto
 device (zero YAML for the common case), themes with your Home Assistant theme
 automatically, and follows your HA language (English, Polish, German,
 Portuguese, French, Spanish, Italian, Dutch).
