@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.28b2
+## 1.0.28
 - **New `daily_total_energy` and `bmr` sensors.** `daily_energy` has always
   been ACTIVE energy, which is why it read far below the "calories" figure in
   the Suunto app. That figure is active energy plus your basal metabolic rate
@@ -17,10 +17,6 @@ beta pre-releases are tagged `X.Y.ZbN`.
   the end of a sync). The sensor now shows the newest reading that has one,
   if it is at most 60 min behind the newest record, with a new `measured_at`
   attribute.
-
-## 1.0.28b1
-Reliability fixes, all found by auditing a real account. No new sensors, no
-extra API calls.
 - **Sleep and recovery survive a flaky cycle.** The 24/7 backend occasionally
   answers with a transient error. Sleep and recovery now hold the last good
   data through it (workouts already did), instead of every sleep, recovery and
