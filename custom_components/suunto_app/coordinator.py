@@ -368,6 +368,29 @@ def _profile_bmr(settings: dict[str, Any], today: Any) -> dict[str, Any] | None:
     }
 
 
+def _profile_goals(settings: dict[str, Any]) -> dict[str, Any] | None:
+    """The user's own targets from the Suunto app profile (``goals`` block).
+
+    Confirmed live 2026-09-30: ``dailySteps`` (steps), ``dailyCalorieConsumption``
+    (ACTIVE kcal, the same quantity as daily_energy), ``weeklyTrainingDuration``
+    (seconds) and ``dailySleepGoal.duration`` (seconds). Each is optional;
+    a missing or zero goal is left out rather than reported as 0.
+    """
+    goals = settings.get("goals")
+    if not isinstance(goals, dict):
+        return None
+    sleep = goals.get("dailySleepGoal")
+    training_s = _as_float(goals.get("weeklyTrainingDuration"))
+    sleep_s = _as_float(sleep.get("duration")) if isinstance(sleep, dict) else None
+    out = {
+        "daily_steps": _as_int(goals.get("dailySteps")) or None,
+        "daily_energy_kcal": _as_int(goals.get("dailyCalorieConsumption")) or None,
+        "weekly_training_hours": round(training_s / 3600, 1) if training_s else None,
+        "sleep_hours": round(sleep_s / 3600, 1) if sleep_s else None,
+    }
+    return out if any(value is not None for value in out.values()) else None
+
+
 def _total_energy(active_kcal: int | None, bmr_kcal: int | None, now_local: datetime) -> int | None:
     """Today's total energy the way the Suunto app counts it.
 
@@ -1260,6 +1283,10 @@ def _commute_snapshot(
         "fuel_saved_l": round(fuel_l, 1),
         "money_saved": round(fuel_l * price_per_litre, 2),
         "co2_saved_kg": round(fuel_l * CO2_KG_PER_LITRE, 1),
+        # The figures the savings above were computed with (integration options),
+        # so a card can show them or recompute with its own.
+        "fuel_l_per_100km": litres_per_100km,
+        "fuel_price_per_litre": price_per_litre,
     }
 
 
@@ -1390,6 +1417,8 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # last fetched; refreshed every PROFILE_REFRESH_HOURS.
         self._profile: dict[str, Any] | None = None
         self._profile_fetched_at: datetime | None = None
+        # Targets set in the Suunto app (see _profile_goals), from the same fetch.
+        self._goals: dict[str, Any] | None = None
 
     async def _async_refresh_profile(self) -> None:
         """Fetch the profile for BMR at most once per PROFILE_REFRESH_HOURS.
@@ -1412,6 +1441,7 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         self._profile_fetched_at = now
         self._profile = _profile_bmr(settings, dt_util.now().date())
+        self._goals = _profile_goals(settings)
 
     def _apply_daily_floor(self, activity: dict[str, Any] | None) -> None:
         """Never let today's running totals go backwards (in place).
@@ -1466,7 +1496,7 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 dt_util.now(),
             )
         self._apply_daily_floor(normalized)
-        return {"activity": normalized, "profile": self._profile}
+        return {"activity": normalized, "profile": self._profile, "goals": self._goals}
 
 
 class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):

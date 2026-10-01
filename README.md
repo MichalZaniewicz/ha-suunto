@@ -113,7 +113,8 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   that had a nap, with `nap_count` and `date` attributes since naps are
   irregular and the value can be several days old).
 - **Recovery:** recovery balance, stress state.
-- **Daily activity:** steps, active energy (kcal), **total energy** (active plus
+- **Daily activity:** steps and active energy (kcal), each with a `goal`
+  attribute holding the target you set in the Suunto app, **total energy** (active plus
   your basal metabolic rate accrued so far today - the same "calories" figure the
   Suunto app shows), **BMR** (kcal/day, from the weight, height, age and sex in
   your Suunto profile, Mifflin-St Jeor formula, the one the app uses; the inputs
@@ -225,7 +226,8 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Commutes:** distance commuted **this month** and **this year**, counting
   whatever Suunto itself tagged as a commute. Attributes carry `rides`,
   `days`, `avg_duration_min`, and what the car left at home would have cost:
-  `fuel_saved_l`, `money_saved` (your currency) and `co2_saved_kg` (tailpipe).
+  `fuel_saved_l`, `money_saved` (your currency) and `co2_saved_kg` (tailpipe),
+  plus the `fuel_l_per_100km` / `fuel_price_per_litre` they were computed with.
 - **Gear:** one distance sensor per piece of gear you define (chain, tyres,
   shoes...), with `interval_km`, `remaining_km` and `service_due` attributes -
   see [Gear tracking](#gear-tracking-and-service-reminders). These are on top

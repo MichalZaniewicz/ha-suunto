@@ -369,6 +369,19 @@ def _forecast_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     return {key: value for key, value in forecast.items() if key != "tomorrow_tsb"}
 
 
+def _goal_attrs_for(goal_key: str) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    """The target the user set in the Suunto app for this metric, as a `goal`
+    attribute (see coordinator._profile_goals) - so a goal card can follow the
+    app instead of a number typed into the card.
+    """
+
+    def _attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+        goal = (data.get("goals") or {}).get(goal_key)
+        return {"goal": goal} if goal is not None else None
+
+    return _attrs
+
+
 def _bmr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     """The profile inputs behind the BMR, so a wrong value can be traced to a
     wrong weight/height/birthdate in the Suunto app rather than guessed at.
@@ -376,7 +389,12 @@ def _bmr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     profile = data.get("profile") or {}
     if profile.get("bmr_kcal") is None:
         return None
+    goals = data.get("goals") or {}
     return {
+        # Weekly training-time and sleep targets from the same profile; the
+        # step and calorie targets ride on their own sensors as `goal`.
+        "goal_weekly_training_hours": goals.get("weekly_training_hours"),
+        "goal_sleep_hours": goals.get("sleep_hours"),
         "formula": "Mifflin-St Jeor",
         "weight_kg": profile.get("weight_kg"),
         "height_cm": profile.get("height_cm"),
@@ -548,6 +566,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:walk",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_steps"),
+        attributes_fn=_goal_attrs_for("daily_steps"),
     ),
     SuuntoAppSensorDescription(
         key="daily_energy",
@@ -557,6 +576,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:fire",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_energy_kcal"),
+        attributes_fn=_goal_attrs_for("daily_energy_kcal"),
     ),
     # Active energy plus BMR accrued so far today - the app's "calories" figure.
     SuuntoAppSensorDescription(
