@@ -3,6 +3,27 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.29b1
+- **Commute sensors.** `commute_month` and `commute_year`: distance on the
+  workouts Suunto tagged as a commute, with rides, days, average duration and
+  the fuel, money and CO2 the car would have cost in attributes. Fuel
+  consumption and price are set under Configure.
+- **Gear tracking.** Add a chain, tyres, shoes or anything else under
+  Configure; each becomes a distance sensor counting one sport's kilometres
+  from then on, with a service interval, `remaining_km` and `service_due`.
+  "Mark as serviced" resets it.
+- **Form forecast sensor.** Form (TSB) tomorrow if you rest today, plus when
+  form would peak, how high, the weekly load that holds fitness steady, and a
+  28-day rest projection for charts.
+- **Daily brief sensor.** One sentence for today in your Home Assistant
+  language, built from sleep, HRV, readiness, form and the training suggestion.
+- **New `suunto_app_woke_up` event** when a new sleep night first arrives,
+  with sleep hours, HRV status and readiness.
+- **Three new blueprints:** Good Morning Routine, After a Long Workout, Gear
+  Service Reminder.
+- The Configure screen is now a menu (intervals and fuel figures, gear).
+  100 sensors now (was 96), plus one per piece of gear. No extra API calls.
+
 ## 1.0.28
 - **New `daily_total_energy` and `bmr` sensors.** `daily_energy` has always
   been ACTIVE energy, which is why it read far below the "calories" figure in

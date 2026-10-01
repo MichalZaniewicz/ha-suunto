@@ -30,15 +30,57 @@
     "step": {
       "init": {
         "title": "Opciones de Suunto App",
+        "menu_options": {
+          "settings": "Intervalos y datos de combustible",
+          "gear_add": "Añadir equipo a seguir",
+          "gear_service": "Marcar equipo como revisado (volver a 0 km)",
+          "gear_remove": "Quitar equipo"
+        }
+      },
+      "settings": {
+        "title": "Intervalos y datos de combustible",
         "data": {
           "fast_scan_interval": "Intervalo de datos en vivo (minutos)",
-          "scan_interval": "Intervalo de historial (minutos)"
+          "scan_interval": "Intervalo de datos históricos (minutos)",
+          "fuel_l_per_100km": "Consumo del coche",
+          "fuel_price_per_litre": "Precio del combustible por litro"
         },
         "data_description": {
-          "fast_scan_interval": "Con qué frecuencia se actualizan los datos en vivo (frecuencia cardíaca actual, pasos/energía diarios).",
-          "scan_interval": "Con qué frecuencia se actualizan los datos basados en el historial (sueño, entrenamientos, carga de entrenamiento, valores de referencia). Mantén esto moderado - es una API no oficial."
+          "fast_scan_interval": "Cada cuánto actualizar los datos en vivo (frecuencia cardiaca, pasos y energía del día).",
+          "scan_interval": "Cada cuánto actualizar los datos históricos (sueño, entrenamientos, carga, líneas base). Mantenlo moderado, es una API no oficial.",
+          "fuel_l_per_100km": "Para el ahorro de los trayectos: el combustible que habría gastado tu coche en la misma distancia.",
+          "fuel_price_per_litre": "En tu moneda. Para el dinero ahorrado en los trayectos."
+        }
+      },
+      "gear_add": {
+        "title": "Añadir equipo",
+        "description": "Sigue la distancia de una cadena, neumáticos, zapatillas u otra cosa según un deporte. Cuenta cada kilómetro de ese deporte desde ahora.",
+        "data": {
+          "name": "Nombre",
+          "activity": "Deporte",
+          "start_km": "Distancia ya acumulada",
+          "interval_km": "Intervalo de revisión"
+        },
+        "data_description": {
+          "interval_km": "El sensor avisa de la revisión al alcanzar esta distancia. 0 para ningún intervalo."
+        }
+      },
+      "gear_service": {
+        "title": "Marcar como revisado",
+        "description": "Pone el equipo elegido a 0 km y vuelve a contar desde ahora.",
+        "data": {
+          "gear": "Equipo"
+        }
+      },
+      "gear_remove": {
+        "title": "Quitar equipo",
+        "data": {
+          "gear": "Equipo"
         }
       }
+    },
+    "abort": {
+      "no_activities": "Aún no hay estadísticas totales. Espera a la primera actualización de datos e inténtalo de nuevo."
     }
   },
   "entity": {
@@ -126,13 +168,22 @@
       "acwr": { "name": "Ratio de carga aguda:crónica" },
       "training_suggestion": {
         "name": "Sugerencia de entrenamiento",
-        "state": { "rest": "Descanso", "easy": "Suave", "moderate": "Moderado", "hard": "Intenso" }
+        "state": {
+          "rest": "Descanso",
+          "easy": "Suave",
+          "moderate": "Moderado",
+          "hard": "Intenso"
+        }
       },
       "readiness": { "name": "Preparación" },
       "hrv_baseline": { "name": "Valor de referencia de HRV" },
       "hrv_status": {
         "name": "Estado de HRV",
-        "state": { "low": "Bajo", "balanced": "Equilibrado", "high": "Alto" }
+        "state": {
+          "low": "Bajo",
+          "balanced": "Equilibrado",
+          "high": "Alto"
+        }
       },
       "resting_hr": { "name": "Frecuencia cardíaca en reposo" },
       "resting_hr_baseline": { "name": "Valor de referencia de FC en reposo" },
@@ -144,7 +195,11 @@
       "weekly_time": { "name": "Tiempo de entrenamiento (7 días)" },
       "weekly_steps": { "name": "Pasos (7 días)" },
       "workouts_7d": { "name": "Entrenamientos (7 días)" },
-      "workouts_30d": { "name": "Entrenamientos (30 días)" }
+      "workouts_30d": { "name": "Entrenamientos (30 días)" },
+      "form_forecast": { "name": "Previsión de forma" },
+      "daily_brief": { "name": "Resumen diario" },
+      "commute_month": { "name": "Trayectos al trabajo este mes" },
+      "commute_year": { "name": "Trayectos al trabajo este año" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recuperando" },

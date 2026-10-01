@@ -219,3 +219,59 @@ def readiness(
         return None
     total_weight = sum(w for _, w in parts)
     return round(sum(score * w for score, w in parts) / total_weight)
+
+
+def form_forecast(
+    daily_tss: dict[date, float],
+    today: date,
+    days: int = 28,
+    window_days: int = 90,
+) -> dict[str, object] | None:
+    """Project CTL/ATL/TSB forward under ZERO load, from today's state.
+
+    Same EWMA model and seed as ``training_load``: each rest day decays
+    fitness (tc 42) slowly and fatigue (tc 7) fast, so form rises, peaks, and
+    then sinks as fitness keeps eroding. The answer to "if I rest, when am I
+    freshest, and how fresh?" - a what-if, not a prediction of what the rider
+    will actually do.
+
+    ``maintenance_tss_week`` is the weekly load that holds fitness where it
+    is: an EWMA is stationary when the daily input equals its value, i.e.
+    CTL per day.
+    """
+    if not daily_tss:
+        return None
+    total = sum(daily_tss.get(today - timedelta(days=i), 0.0) for i in range(window_days + 1))
+    ctl = atl = total / (window_days + 1)
+    day = today - timedelta(days=window_days)
+    while day <= today:
+        tss = daily_tss.get(day, 0.0)
+        ctl += (tss - ctl) / CTL_TIME_CONSTANT
+        atl += (tss - atl) / ATL_TIME_CONSTANT
+        day += timedelta(days=1)
+
+    maintenance = round(ctl * 7)
+    series: list[dict[str, object]] = []
+    for offset in range(1, days + 1):
+        # TSB is "yesterday's fitness minus yesterday's fatigue", as in
+        # training_load - so tomorrow's form is today's CTL - ATL.
+        tsb = ctl - atl
+        ctl -= ctl / CTL_TIME_CONSTANT
+        atl -= atl / ATL_TIME_CONSTANT
+        series.append(
+            {
+                "date": (today + timedelta(days=offset)).isoformat(),
+                "ctl": round(ctl, 1),
+                "atl": round(atl, 1),
+                "tsb": round(tsb, 1),
+            }
+        )
+    peak = max(series, key=lambda point: point["tsb"])
+    return {
+        "tomorrow_tsb": series[0]["tsb"],
+        "peak_tsb": peak["tsb"],
+        "peak_date": peak["date"],
+        "days_to_peak": series.index(peak) + 1,
+        "maintenance_tss_week": maintenance,
+        "series": series,
+    }

@@ -29,16 +29,58 @@
   "options": {
     "step": {
       "init": {
-        "title": "Suunto App-opties",
+        "title": "Suunto App opties",
+        "menu_options": {
+          "settings": "Intervallen en brandstofgegevens",
+          "gear_add": "Materiaal toevoegen om te volgen",
+          "gear_service": "Materiaal als onderhouden markeren (terug naar 0 km)",
+          "gear_remove": "Materiaal verwijderen"
+        }
+      },
+      "settings": {
+        "title": "Intervallen en brandstofgegevens",
         "data": {
-          "fast_scan_interval": "Interval voor live gegevens (minuten)",
-          "scan_interval": "Interval voor geschiedenis (minuten)"
+          "fast_scan_interval": "Interval live gegevens (minuten)",
+          "scan_interval": "Interval historische gegevens (minuten)",
+          "fuel_l_per_100km": "Brandstofverbruik van de auto",
+          "fuel_price_per_litre": "Brandstofprijs per liter"
         },
         "data_description": {
-          "fast_scan_interval": "Hoe vaak live gegevens worden vernieuwd (huidige hartslag, dagelijkse stappen/energie).",
-          "scan_interval": "Hoe vaak op geschiedenis gebaseerde gegevens worden vernieuwd (slaap, trainingen, trainingsbelasting, basiswaarden). Houd dit bescheiden - het is een niet-officiële API."
+          "fast_scan_interval": "Hoe vaak live gegevens worden vernieuwd (hartslag, stappen en energie van vandaag).",
+          "scan_interval": "Hoe vaak historische gegevens worden vernieuwd (slaap, trainingen, belasting, basiswaarden). Houd dit bescheiden, het is een onofficiële API.",
+          "fuel_l_per_100km": "Voor de woon-werkbesparing: de brandstof die je auto op dezelfde afstand zou verbruiken.",
+          "fuel_price_per_litre": "In je eigen valuta. Voor het geld dat je met woon-werkritten bespaart."
+        }
+      },
+      "gear_add": {
+        "title": "Materiaal toevoegen",
+        "description": "Volg de afstand van een ketting, banden, schoenen of iets anders op basis van één sport. Elke kilometer van die sport telt vanaf nu.",
+        "data": {
+          "name": "Naam",
+          "activity": "Sport",
+          "start_km": "Al afgelegde afstand",
+          "interval_km": "Onderhoudsinterval"
+        },
+        "data_description": {
+          "interval_km": "De sensor meldt onderhoud zodra deze afstand is bereikt. 0 voor geen interval."
+        }
+      },
+      "gear_service": {
+        "title": "Als onderhouden markeren",
+        "description": "Zet het gekozen materiaal op 0 km en telt opnieuw vanaf nu.",
+        "data": {
+          "gear": "Materiaal"
+        }
+      },
+      "gear_remove": {
+        "title": "Materiaal verwijderen",
+        "data": {
+          "gear": "Materiaal"
         }
       }
+    },
+    "abort": {
+      "no_activities": "Nog geen totaalstatistieken. Wacht op de eerste gegevensupdate en probeer het opnieuw."
     }
   },
   "entity": {
@@ -126,13 +168,22 @@
       "acwr": { "name": "Acute:chronische belastingsratio" },
       "training_suggestion": {
         "name": "Trainingsadvies",
-        "state": { "rest": "Rust", "easy": "Licht", "moderate": "Matig", "hard": "Intensief" }
+        "state": {
+          "rest": "Rust",
+          "easy": "Licht",
+          "moderate": "Matig",
+          "hard": "Intensief"
+        }
       },
       "readiness": { "name": "Gereedheid" },
       "hrv_baseline": { "name": "HRV-basiswaarde" },
       "hrv_status": {
         "name": "HRV-status",
-        "state": { "low": "Laag", "balanced": "In balans", "high": "Hoog" }
+        "state": {
+          "low": "Laag",
+          "balanced": "In balans",
+          "high": "Hoog"
+        }
       },
       "resting_hr": { "name": "Rusthartslag" },
       "resting_hr_baseline": { "name": "Rusthartslag-basiswaarde" },
@@ -144,7 +195,11 @@
       "weekly_time": { "name": "Trainingstijd (7 dagen)" },
       "weekly_steps": { "name": "Stappen (7 dagen)" },
       "workouts_7d": { "name": "Trainingen (7 dagen)" },
-      "workouts_30d": { "name": "Trainingen (30 dagen)" }
+      "workouts_30d": { "name": "Trainingen (30 dagen)" },
+      "form_forecast": { "name": "Vormprognose" },
+      "daily_brief": { "name": "Dagbriefing" },
+      "commute_month": { "name": "Woon-werkafstand deze maand" },
+      "commute_year": { "name": "Woon-werkafstand dit jaar" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Aan het herstellen" },

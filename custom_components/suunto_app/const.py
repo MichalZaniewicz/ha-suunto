@@ -14,6 +14,18 @@ CONF_PASSWORD = "password"
 CONF_SESSION_KEY = "session_key"
 CONF_SCAN_INTERVAL = "scan_interval"  # daily/history coordinator
 CONF_FAST_SCAN_INTERVAL = "fast_scan_interval"  # live coordinator
+# Commute savings: what the car you did NOT take would have burned.
+CONF_FUEL_CONSUMPTION = "fuel_l_per_100km"
+CONF_FUEL_PRICE = "fuel_price_per_litre"
+DEFAULT_FUEL_CONSUMPTION = 7.0
+DEFAULT_FUEL_PRICE = 6.5
+# Tailpipe CO2 of a litre of petrol (kg) - the standard combustion figure.
+CO2_KG_PER_LITRE = 2.31
+# Suunto's own tag for a ride/run/walk it classified as a commute.
+COMMUTE_TAG = "COMMUTE"
+# User-defined gear (chain, tyres, shoes...) tracked by distance; a list of
+# dicts in entry.options, managed by the options flow.
+CONF_GEAR = "gear"
 
 # Defaults - two cadences: live data (HR/steps) refreshes often; heavy history
 # (sleep, workouts, derived metrics) refreshes infrequently.
@@ -75,6 +87,11 @@ WORKOUT_CACHE_GRACE_HOURS = 24
 # real intensity signal, so the capped value is not trusted for such workouts.
 RECOVERY_TIME_CAP_S = 432_000
 
+# How far ahead the form forecast projects CTL/ATL/TSB under zero load. With
+# time constants of 42/7 days, form peaks roughly two weeks into a full rest,
+# so four weeks always contains the peak.
+FORECAST_DAYS = 28
+
 # current_hr falls back to the newest 24/7 record that carries a heart rate, but
 # only if it is at most this far behind the newest record overall. Longer gaps
 # (a long workout, watch off the wrist) read as unknown rather than stale.
@@ -100,6 +117,9 @@ PLATFORMS = ["sensor", "binary_sensor", "calendar"]
 # SEEDS the known-key set (the fetch window holds ~90 days of history, and
 # replaying all of it as "new" would fire a burst of bogus events).
 EVENT_NEW_WORKOUT = f"{DOMAIN}_new_workout"
+# Fired once when a new sleep night first reaches us (i.e. after the morning
+# watch sync), so a "good morning" automation can react to last night's sleep.
+EVENT_WOKE_UP = f"{DOMAIN}_woke_up"
 
 # ...and even then, only a workout that STARTED this recently is announced. A
 # genuinely old record can still surface for the first time (pagination cut it

@@ -30,15 +30,57 @@
     "step": {
       "init": {
         "title": "Opcje Suunto App",
+        "menu_options": {
+          "settings": "Interwały i dane paliwa",
+          "gear_add": "Dodaj sprzęt do śledzenia",
+          "gear_service": "Oznacz sprzęt jako serwisowany (reset do 0 km)",
+          "gear_remove": "Usuń sprzęt"
+        }
+      },
+      "settings": {
+        "title": "Interwały i dane paliwa",
         "data": {
           "fast_scan_interval": "Interwał danych na żywo (minuty)",
-          "scan_interval": "Interwał historii (minuty)"
+          "scan_interval": "Interwał danych historycznych (minuty)",
+          "fuel_l_per_100km": "Spalanie samochodu",
+          "fuel_price_per_litre": "Cena paliwa za litr"
         },
         "data_description": {
-          "fast_scan_interval": "Jak często odświeżać dane na żywo (aktualne tętno, dzienne kroki/energia).",
-          "scan_interval": "Jak często odświeżać dane historyczne (sen, treningi, obciążenie treningowe, poziomy bazowe). Zachowaj umiar - to nieoficjalne API."
+          "fast_scan_interval": "Jak często odświeżać dane na żywo (aktualne tętno, dzienne kroki i energia).",
+          "scan_interval": "Jak często odświeżać dane historyczne (sen, treningi, obciążenie, poziomy bazowe). Nie ustawiaj zbyt często, to nieoficjalne API.",
+          "fuel_l_per_100km": "Do oszczędności z dojazdów: paliwo, które spaliłby samochód na tym samym dystansie.",
+          "fuel_price_per_litre": "W Twojej walucie. Do wyliczenia pieniędzy zaoszczędzonych na dojazdach."
+        }
+      },
+      "gear_add": {
+        "title": "Dodaj sprzęt",
+        "description": "Śledź przebieg łańcucha, opon, butów lub czegokolwiek innego według jednego sportu. Liczy każdy kilometr tego sportu od teraz.",
+        "data": {
+          "name": "Nazwa",
+          "activity": "Sport",
+          "start_km": "Dotychczasowy przebieg",
+          "interval_km": "Interwał serwisowy"
+        },
+        "data_description": {
+          "interval_km": "Po osiągnięciu tego dystansu sensor zgłasza potrzebę serwisu. 0 oznacza brak interwału."
+        }
+      },
+      "gear_service": {
+        "title": "Oznacz jako serwisowany",
+        "description": "Zeruje przebieg wybranego sprzętu i liczy od nowa.",
+        "data": {
+          "gear": "Sprzęt"
+        }
+      },
+      "gear_remove": {
+        "title": "Usuń sprzęt",
+        "data": {
+          "gear": "Sprzęt"
         }
       }
+    },
+    "abort": {
+      "no_activities": "Brak jeszcze statystyk życiowych. Poczekaj na pierwszą aktualizację danych i spróbuj ponownie."
     }
   },
   "entity": {
@@ -126,13 +168,22 @@
       "acwr": { "name": "Wskaźnik obciążenia ostrego do przewlekłego" },
       "training_suggestion": {
         "name": "Sugestia treningowa",
-        "state": { "rest": "Odpoczynek", "easy": "Lekki", "moderate": "Umiarkowany", "hard": "Intensywny" }
+        "state": {
+          "rest": "Odpoczynek",
+          "easy": "Lekki",
+          "moderate": "Umiarkowany",
+          "hard": "Intensywny"
+        }
       },
       "readiness": { "name": "Gotowość" },
       "hrv_baseline": { "name": "Poziom bazowy HRV" },
       "hrv_status": {
         "name": "Status HRV",
-        "state": { "low": "Niski", "balanced": "Wyrównany", "high": "Wysoki" }
+        "state": {
+          "low": "Niski",
+          "balanced": "Wyrównany",
+          "high": "Wysoki"
+        }
       },
       "resting_hr": { "name": "Tętno spoczynkowe" },
       "resting_hr_baseline": { "name": "Poziom bazowy tętna spoczynkowego" },
@@ -144,7 +195,11 @@
       "weekly_time": { "name": "Czas treningowy (7 dni)" },
       "weekly_steps": { "name": "Kroki (7 dni)" },
       "workouts_7d": { "name": "Treningi (7 dni)" },
-      "workouts_30d": { "name": "Treningi (30 dni)" }
+      "workouts_30d": { "name": "Treningi (30 dni)" },
+      "form_forecast": { "name": "Prognoza formy" },
+      "daily_brief": { "name": "Dzienny brief" },
+      "commute_month": { "name": "Dojazdy w tym miesiącu" },
+      "commute_year": { "name": "Dojazdy w tym roku" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Regeneracja" },

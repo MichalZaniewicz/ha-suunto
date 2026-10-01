@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -21,6 +22,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from . import SuuntoAppConfigEntry, suunto_device_info
+from .const import CONF_GEAR
 
 UNIT_BPM = "bpm"
 UNIT_KCAL = "kcal"
@@ -340,6 +342,31 @@ def _sleep_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     if night is None:
         return None
     return {"night": night.isoformat(), "stale": sleep.get("stale")}
+
+
+def _commute_attrs_for(period: str) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    """Rides, days, average duration and the fuel/money/CO2 saved for one
+    commute window ("month" or "year") - see coordinator._commute_snapshot.
+    The sensor's own state is the distance.
+    """
+
+    def _attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+        commute = (data.get("commute") or {}).get(period)
+        if not commute:
+            return None
+        return {key: value for key, value in commute.items() if key != "distance_km"}
+
+    return _attrs
+
+
+def _forecast_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """When form peaks if you rest from today, how high, the weekly load that
+    holds fitness steady, and the day-by-day projection for a chart card.
+    """
+    forecast = data.get("forecast")
+    if not forecast:
+        return None
+    return {key: value for key, value in forecast.items() if key != "tomorrow_tsb"}
 
 
 def _bmr_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -1146,6 +1173,45 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:compass-outline",
         value_fn=_section("load", "suggestion"),
     ),
+    # Form (TSB) tomorrow if today is the last load, with the full rest
+    # projection in attributes. `series` is chart data, kept out of the recorder.
+    SuuntoAppSensorDescription(
+        key="form_forecast",
+        translation_key="form_forecast",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:chart-timeline-variant-shimmer",
+        value_fn=_section("forecast", "tomorrow_tsb"),
+        attributes_fn=_forecast_attrs,
+        unrecorded_attributes=frozenset({"series"}),
+    ),
+    # One-sentence summary of today, in the Home Assistant language.
+    SuuntoAppSensorDescription(
+        key="daily_brief",
+        translation_key="daily_brief",
+        icon="mdi:text-box-check-outline",
+        value_fn=lambda d: d.get("brief"),
+    ),
+    # --- Commutes (Suunto's COMMUTE tag) ---
+    SuuntoAppSensorDescription(
+        key="commute_month",
+        translation_key="commute_month",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:bike-fast",
+        value_fn=lambda d: ((d.get("commute") or {}).get("month") or {}).get("distance_km"),
+        attributes_fn=_commute_attrs_for("month"),
+    ),
+    SuuntoAppSensorDescription(
+        key="commute_year",
+        translation_key="commute_year",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:bike-fast",
+        value_fn=lambda d: ((d.get("commute") or {}).get("year") or {}).get("distance_km"),
+        attributes_fn=_commute_attrs_for("year"),
+    ),
     # --- Recovery baselines & readiness ---
     SuuntoAppSensorDescription(
         key="readiness",
@@ -1292,6 +1358,18 @@ async def async_setup_entry(
         SuuntoAppSensor(coordinators[description.source], entry, description)
         for description in SENSORS
     )
+    # One distance sensor per piece of gear the user defined in the options
+    # (chain, tyres, shoes...). Changing the options reloads the entry, so
+    # this list is always current.
+    gear_items = [g for g in entry.options.get(CONF_GEAR) or [] if g.get("id")]
+    async_add_entities(SuuntoGearSensor(runtime.daily, entry, gear) for gear in gear_items)
+    # A removed piece of gear would otherwise linger as a dead entity.
+    prefix = f"{entry.entry_id}_gear_"
+    wanted = {f"{prefix}{gear['id']}" for gear in gear_items}
+    registry = er.async_get(hass)
+    for registered in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if registered.unique_id.startswith(prefix) and registered.unique_id not in wanted:
+            registry.async_remove(registered.entity_id)
 
 
 class SuuntoAppSensor(
@@ -1331,3 +1409,52 @@ class SuuntoAppSensor(
         if self.coordinator.data is None or self.entity_description.attributes_fn is None:
             return None
         return self.entity_description.attributes_fn(self.coordinator.data)
+
+
+
+class SuuntoGearSensor(
+    CoordinatorEntity[DataUpdateCoordinator[dict[str, Any]]], SensorEntity
+):
+    """Distance on one user-defined piece of gear (see coordinator._gear_snapshot)."""
+
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = UnitOfLength.KILOMETERS
+    _attr_device_class = SensorDeviceClass.DISTANCE
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 0
+    _attr_icon = "mdi:wrench-clock"
+
+    def __init__(
+        self,
+        coordinator: DataUpdateCoordinator[dict[str, Any]],
+        entry: SuuntoAppConfigEntry,
+        gear: dict[str, Any],
+    ) -> None:
+        """Initialize the gear sensor."""
+        super().__init__(coordinator)
+        self._gear_id = gear["id"]
+        # The user's own name for it ("Chain", "Road tyres"), not a translation.
+        self._attr_name = gear.get("name") or "Gear"
+        self._attr_unique_id = f"{entry.entry_id}_gear_{self._gear_id}"
+        self._attr_device_info = suunto_device_info(entry)
+
+    def _gear(self) -> dict[str, Any]:
+        return ((self.coordinator.data or {}).get("gear") or {}).get(self._gear_id) or {}
+
+    @property
+    def native_value(self) -> Any:
+        """Return the distance on this gear."""
+        return self._gear().get("distance_km")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the service interval, what is left of it, and the sport."""
+        gear = self._gear()
+        if not gear:
+            return None
+        return {
+            "activity": gear.get("activity"),
+            "interval_km": gear.get("interval_km"),
+            "remaining_km": gear.get("remaining_km"),
+            "service_due": gear.get("service_due"),
+        }

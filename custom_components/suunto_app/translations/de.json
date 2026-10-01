@@ -30,15 +30,57 @@
     "step": {
       "init": {
         "title": "Suunto App Optionen",
+        "menu_options": {
+          "settings": "Intervalle und Kraftstoffwerte",
+          "gear_add": "Ausrüstung hinzufügen",
+          "gear_service": "Ausrüstung als gewartet markieren (auf 0 km)",
+          "gear_remove": "Ausrüstung entfernen"
+        }
+      },
+      "settings": {
+        "title": "Intervalle und Kraftstoffwerte",
         "data": {
           "fast_scan_interval": "Intervall für Live-Daten (Minuten)",
-          "scan_interval": "Intervall für Verlaufsdaten (Minuten)"
+          "scan_interval": "Intervall für Verlaufsdaten (Minuten)",
+          "fuel_l_per_100km": "Kraftstoffverbrauch des Autos",
+          "fuel_price_per_litre": "Kraftstoffpreis pro Liter"
         },
         "data_description": {
-          "fast_scan_interval": "Wie oft Live-Daten aktualisiert werden (aktueller Puls, tägliche Schritte/Energie).",
-          "scan_interval": "Wie oft verlaufsbasierte Daten aktualisiert werden (Schlaf, Trainings, Trainingsbelastung, Basiswerte). Halte dies moderat - es ist eine inoffizielle API."
+          "fast_scan_interval": "Wie oft Live-Daten aktualisiert werden (aktuelle Herzfrequenz, Schritte und Energie des Tages).",
+          "scan_interval": "Wie oft Verlaufsdaten aktualisiert werden (Schlaf, Workouts, Trainingslast, Basiswerte). Maßvoll halten, es ist eine inoffizielle API.",
+          "fuel_l_per_100km": "Für die Pendel-Ersparnis: der Kraftstoff, den dein Auto auf derselben Strecke verbraucht hätte.",
+          "fuel_price_per_litre": "In deiner Währung. Für das beim Pendeln gesparte Geld."
+        }
+      },
+      "gear_add": {
+        "title": "Ausrüstung hinzufügen",
+        "description": "Verfolge die Strecke von Kette, Reifen, Schuhen oder anderem anhand einer Sportart. Ab jetzt zählt jeder Kilometer dieser Sportart.",
+        "data": {
+          "name": "Name",
+          "activity": "Sportart",
+          "start_km": "Bereits gefahrene Strecke",
+          "interval_km": "Wartungsintervall"
+        },
+        "data_description": {
+          "interval_km": "Der Sensor meldet fällige Wartung, sobald diese Strecke erreicht ist. 0 für kein Intervall."
+        }
+      },
+      "gear_service": {
+        "title": "Als gewartet markieren",
+        "description": "Setzt die gewählte Ausrüstung auf 0 km und zählt neu.",
+        "data": {
+          "gear": "Ausrüstung"
+        }
+      },
+      "gear_remove": {
+        "title": "Ausrüstung entfernen",
+        "data": {
+          "gear": "Ausrüstung"
         }
       }
+    },
+    "abort": {
+      "no_activities": "Noch keine Lebenszeit-Statistiken. Warte auf die erste Datenaktualisierung und versuche es erneut."
     }
   },
   "entity": {
@@ -126,13 +168,22 @@
       "acwr": { "name": "Akut-zu-chronisch-Belastungsverhältnis" },
       "training_suggestion": {
         "name": "Trainingsempfehlung",
-        "state": { "rest": "Ruhe", "easy": "Leicht", "moderate": "Moderat", "hard": "Intensiv" }
+        "state": {
+          "rest": "Ruhe",
+          "easy": "Leicht",
+          "moderate": "Moderat",
+          "hard": "Intensiv"
+        }
       },
       "readiness": { "name": "Bereitschaft" },
       "hrv_baseline": { "name": "HRV-Basiswert" },
       "hrv_status": {
         "name": "HRV-Status",
-        "state": { "low": "Niedrig", "balanced": "Ausgeglichen", "high": "Hoch" }
+        "state": {
+          "low": "Niedrig",
+          "balanced": "Ausgeglichen",
+          "high": "Hoch"
+        }
       },
       "resting_hr": { "name": "Ruhepuls" },
       "resting_hr_baseline": { "name": "Ruhepuls-Basiswert" },
@@ -144,7 +195,11 @@
       "weekly_time": { "name": "Trainingszeit (7 Tage)" },
       "weekly_steps": { "name": "Schritte (7 Tage)" },
       "workouts_7d": { "name": "Trainings (7 Tage)" },
-      "workouts_30d": { "name": "Trainings (30 Tage)" }
+      "workouts_30d": { "name": "Trainings (30 Tage)" },
+      "form_forecast": { "name": "Formprognose" },
+      "daily_brief": { "name": "Tagesbriefing" },
+      "commute_month": { "name": "Pendelstrecke diesen Monat" },
+      "commute_year": { "name": "Pendelstrecke dieses Jahr" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Erholung" },

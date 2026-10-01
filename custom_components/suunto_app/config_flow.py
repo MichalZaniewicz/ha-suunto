@@ -8,6 +8,7 @@ persisted to the config entry.
 from __future__ import annotations
 
 import logging
+import uuid
 from collections.abc import Mapping
 from typing import Any
 
@@ -24,6 +25,10 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -33,10 +38,15 @@ from .api import SuuntoAppAuthError, SuuntoAppError, async_login
 from .const import (
     CONF_EMAIL,
     CONF_FAST_SCAN_INTERVAL,
+    CONF_FUEL_CONSUMPTION,
+    CONF_FUEL_PRICE,
+    CONF_GEAR,
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
+    DEFAULT_FUEL_CONSUMPTION,
+    DEFAULT_FUEL_PRICE,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
     MIN_FAST_SCAN_INTERVAL_MINUTES,
@@ -150,14 +160,47 @@ class SuuntoAppConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class SuuntoAppOptionsFlow(OptionsFlow):
-    """Handle the polling-interval option."""
+    """Options: polling intervals, commute fuel figures, and tracked gear."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage the options."""
+        """Show the options menu."""
+        menu = ["settings", "gear_add"]
+        if self.config_entry.options.get(CONF_GEAR):
+            menu += ["gear_service", "gear_remove"]
+        return self.async_show_menu(step_id="init", menu_options=menu)
+
+    def _save(self, **changes: Any) -> ConfigFlowResult:
+        """Store the options with ``changes`` applied, keeping everything else."""
+        return self.async_create_entry(data={**self.config_entry.options, **changes})
+
+    def _gear(self) -> list[dict[str, Any]]:
+        return list(self.config_entry.options.get(CONF_GEAR) or [])
+
+    def _lifetime_by_activity(self) -> list[dict[str, Any]]:
+        """Per-sport lifetime totals from the last daily update (may be empty)."""
+        runtime = getattr(self.config_entry, "runtime_data", None)
+        data = runtime.daily.data if runtime else None
+        return ((data or {}).get("stats") or {}).get("by_activity") or []
+
+    def _gear_selector(self) -> SelectSelector:
+        return SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    SelectOptionDict(value=g["id"], label=g.get("name") or g["id"])
+                    for g in self._gear()
+                ],
+                mode=SelectSelectorMode.LIST,
+            )
+        )
+
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Polling intervals and the fuel figures behind the commute savings."""
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self._save(**user_input)
 
         opts = self.config_entry.options
         fast_default = opts.get(
@@ -188,6 +231,137 @@ class SuuntoAppOptionsFlow(OptionsFlow):
                         mode=NumberSelectorMode.BOX,
                     )
                 ),
+                vol.Required(
+                    CONF_FUEL_CONSUMPTION,
+                    default=opts.get(CONF_FUEL_CONSUMPTION, DEFAULT_FUEL_CONSUMPTION),
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=1,
+                        max=30,
+                        step=0.1,
+                        unit_of_measurement="l/100 km",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_FUEL_PRICE,
+                    default=opts.get(CONF_FUEL_PRICE, DEFAULT_FUEL_PRICE),
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0, max=100, step=0.01, mode=NumberSelectorMode.BOX
+                    )
+                ),
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="settings", data_schema=schema)
+
+    async def async_step_gear_add(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Start tracking a piece of gear by one sport's distance."""
+        activities = [
+            a for a in self._lifetime_by_activity() if a.get("activity_id") is not None
+        ]
+        if not activities:
+            # No lifetime stats yet (fresh install, or the last update failed),
+            # so there is no baseline to count from.
+            return self.async_abort(reason="no_activities")
+
+        if user_input is not None:
+            activity_id = int(user_input["activity"])
+            baseline = next(
+                (
+                    a.get("distance_km") or 0.0
+                    for a in activities
+                    if a["activity_id"] == activity_id
+                ),
+                0.0,
+            )
+            gear = self._gear()
+            gear.append(
+                {
+                    "id": uuid.uuid4().hex[:8],
+                    "name": user_input["name"].strip() or "Gear",
+                    "activity_id": activity_id,
+                    # Lifetime distance of that sport right now: everything
+                    # ridden from here on counts toward this gear.
+                    "baseline_km": baseline,
+                    "start_km": user_input["start_km"],
+                    "interval_km": user_input["interval_km"],
+                }
+            )
+            return self._save(**{CONF_GEAR: gear})
+
+        schema = vol.Schema(
+            {
+                vol.Required("name"): TextSelector(),
+                vol.Required(
+                    "activity", default=str(activities[0]["activity_id"])
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=str(a["activity_id"]),
+                                label=str(a.get("activity") or a["activity_id"]),
+                            )
+                            for a in activities
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required("start_km", default=0): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0,
+                        max=200000,
+                        step=1,
+                        unit_of_measurement="km",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required("interval_km", default=3000): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0,
+                        max=200000,
+                        step=1,
+                        unit_of_measurement="km",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="gear_add", data_schema=schema)
+
+    async def async_step_gear_service(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reset a piece of gear to 0 km after replacing or servicing it."""
+        if user_input is not None:
+            lifetime = {
+                a.get("activity_id"): a.get("distance_km") or 0.0
+                for a in self._lifetime_by_activity()
+            }
+            gear = self._gear()
+            for item in gear:
+                if item["id"] == user_input["gear"]:
+                    item["start_km"] = 0
+                    item["baseline_km"] = lifetime.get(
+                        item.get("activity_id"), item.get("baseline_km", 0.0)
+                    )
+            return self._save(**{CONF_GEAR: gear})
+        return self.async_show_form(
+            step_id="gear_service",
+            data_schema=vol.Schema({vol.Required("gear"): self._gear_selector()}),
+        )
+
+    async def async_step_gear_remove(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Stop tracking a piece of gear."""
+        if user_input is not None:
+            return self._save(
+                **{CONF_GEAR: [g for g in self._gear() if g["id"] != user_input["gear"]]}
+            )
+        return self.async_show_form(
+            step_id="gear_remove",
+            data_schema=vol.Schema({vol.Required("gear"): self._gear_selector()}),
+        )

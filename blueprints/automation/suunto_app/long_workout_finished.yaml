@@ -1,0 +1,47 @@
+blueprint:
+  name: "Suunto: After a Long Workout"
+  description: >
+    Runs an action when a new Suunto workout at least as long as your
+    threshold syncs in via the `suunto_app_new_workout` event - for example
+    to heat water, start a recovery scene, or send a "well done" message.
+
+
+    This fires when the workout reaches Home Assistant (after the watch
+    syncs), not the moment you stop the watch. Inside your action, use
+    `{{ trigger.event.data.activity }}`, `{{ trigger.event.data.duration_minutes }}`,
+    `{{ trigger.event.data.distance_meters }}` or `{{ trigger.event.data.tss }}`.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/long_workout_finished.yaml
+  input:
+    min_duration:
+      name: Minimum duration
+      description: Only workouts at least this long run the action.
+      default: 120
+      selector:
+        number:
+          min: 10
+          max: 720
+          step: 5
+          unit_of_measurement: min
+    workout_action:
+      name: Action
+      description: The action to run after a long workout.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: event
+    event_type: suunto_app_new_workout
+
+variables:
+  min_duration: !input min_duration
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.event.data.duration_minutes | float(0) >= min_duration | float(0) }}
+
+actions:
+  - !input workout_action
+
+mode: queued

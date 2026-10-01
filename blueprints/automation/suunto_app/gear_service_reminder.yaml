@@ -1,0 +1,39 @@
+blueprint:
+  name: "Suunto: Gear Service Reminder"
+  description: >
+    Runs an action - typically a notification - once when a piece of gear you
+    track in the Suunto integration (chain, tyres, shoes...) reaches its
+    service interval. Add gear under the integration's Configure menu first;
+    each one becomes its own distance sensor.
+
+
+    Inside your action, use `{{ gear_name }}` and `{{ gear_km }}`.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/gear_service_reminder.yaml
+  input:
+    gear_entity:
+      name: Gear sensor
+      description: The gear distance sensor to watch.
+      selector:
+        entity:
+          domain: sensor
+          integration: suunto_app
+    notify_action:
+      name: Notification action
+      description: The action to run when the service interval is reached.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: state
+    entity_id: !input gear_entity
+    attribute: service_due
+    to: true
+
+actions:
+  - variables:
+      gear_name: "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
+      gear_km: "{{ states(trigger.entity_id) | float(0) | round(0) }}"
+  - !input notify_action
+
+mode: single

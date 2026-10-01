@@ -18,14 +18,24 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from . import metrics
+from .brief import daily_brief
 from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
     ACTIVITY_LOOKBACK_DAYS,
+    CO2_KG_PER_LITRE,
+    COMMUTE_TAG,
+    CONF_FUEL_CONSUMPTION,
+    CONF_FUEL_PRICE,
+    CONF_GEAR,
+    DEFAULT_FUEL_CONSUMPTION,
+    DEFAULT_FUEL_PRICE,
     CURRENT_HR_MAX_GAP_MINUTES,
     DOMAIN,
     PROFILE_REFRESH_HOURS,
     EVENT_NEW_WORKOUT,
+    EVENT_WOKE_UP,
+    FORECAST_DAYS,
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     MAX_ROUTE_POINTS,
@@ -1221,6 +1231,86 @@ def _period_totals_snapshot(workouts: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _commute_snapshot(
+    workouts: list[dict[str, Any]], litres_per_100km: float, price_per_litre: float
+) -> dict[str, Any]:
+    """Commute totals over a window of normalized workouts, plus what the car
+    left at home would have cost.
+
+    A commute is whatever Suunto itself tagged COMMUTE (``suuntoTags``) - no
+    guessing from routes or times of day here. Savings assume every commuted
+    kilometre replaced a car kilometre at the configured consumption and fuel
+    price; CO2 is tailpipe only.
+    """
+    commutes = [w for w in workouts if COMMUTE_TAG in (w.get("tags") or [])]
+    distance_km = sum(w.get("distance_meters") or 0 for w in commutes) / 1000
+    minutes = [w["duration_minutes"] for w in commutes if w.get("duration_minutes")]
+    fuel_l = distance_km * litres_per_100km / 100
+    return {
+        "rides": len(commutes),
+        "distance_km": round(distance_km, 1),
+        "days": len(
+            {
+                dt_util.as_local(w["start_time"]).date()
+                for w in commutes
+                if w.get("start_time")
+            }
+        ),
+        "avg_duration_min": round(sum(minutes) / len(minutes), 1) if minutes else None,
+        "fuel_saved_l": round(fuel_l, 1),
+        "money_saved": round(fuel_l * price_per_litre, 2),
+        "co2_saved_kg": round(fuel_l * CO2_KG_PER_LITRE, 1),
+    }
+
+
+def _gear_snapshot(
+    gear: list[dict[str, Any]], by_activity: list[dict[str, Any]] | None
+) -> dict[str, dict[str, Any]]:
+    """Distance on each user-defined piece of gear, keyed by its id.
+
+    Gear km = what the user said it already had when they added it, plus the
+    growth of that sport's LIFETIME distance since then (``baseline_km`` is
+    the lifetime figure captured at that moment). Lifetime totals come with
+    every cycle, so this needs no history scan and survives restarts. When
+    the lifetime stats are missing this cycle, the distance is None rather
+    than a guess.
+    """
+    lifetime = {
+        a.get("activity_id"): a.get("distance_km") or 0.0 for a in by_activity or []
+    }
+    out: dict[str, dict[str, Any]] = {}
+    for item in gear:
+        gear_id = item.get("id")
+        if not gear_id:
+            continue
+        now_km = lifetime.get(item.get("activity_id"), 0.0) if by_activity else None
+        interval = _as_float(item.get("interval_km"))
+        distance = (
+            round(
+                (_as_float(item.get("start_km")) or 0.0)
+                + max(now_km - (_as_float(item.get("baseline_km")) or 0.0), 0.0),
+                1,
+            )
+            if now_km is not None
+            else None
+        )
+        out[gear_id] = {
+            "name": item.get("name"),
+            "activity": activity_name(item.get("activity_id")),
+            "distance_km": distance,
+            "interval_km": interval,
+            "remaining_km": (
+                round(interval - distance, 1)
+                if interval and distance is not None
+                else None
+            ),
+            "service_due": (
+                distance >= interval if interval and distance is not None else None
+            ),
+        }
+    return out
+
+
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
     """Per-activity lifetime totals from the stats payload's ``allStats`` list.
 
@@ -1443,6 +1533,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # window is 90 days, so firing on first run would replay months of
         # history as "new". In memory only, so a restart re-seeds and stays quiet.
         self._known_workout_keys: set[str] | None = None
+        # Newest sleep night already announced via EVENT_WOKE_UP, seeded on the
+        # first cycle after a restart (same reasoning as the workout keys).
+        self._known_night: Any = None
+        self._night_seeded = False
         # "key:lastModified" -> normalized workout. The raw records are immutable
         # unless the user edits the workout, and `lastModified` changes when they
         # do, so an unchanged record is normalized once instead of on every
@@ -1681,6 +1775,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Let automations react to a finished workout without polling a sensor.
         self._fire_new_workout_events(norm_workouts)
+        self._fire_woke_up_event(sleep_norm, baseline)
 
         if (fitness := _fitness_snapshot(workouts)) is not None:
             self._last_fitness = fitness
@@ -1800,7 +1895,36 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "route": self._workout_route_cache.get(last_workout.get("key"), []),
             }
 
+        options = self.config_entry.options if self.config_entry else {}
+        litres = _as_float(options.get(CONF_FUEL_CONSUMPTION)) or DEFAULT_FUEL_CONSUMPTION
+        price = _as_float(options.get(CONF_FUEL_PRICE))
+        if price is None:
+            price = DEFAULT_FUEL_PRICE
+        stats_norm = _normalize_stats(stats)
+
         return {
+            # Commutes (Suunto's COMMUTE tag) this month / this year, with the
+            # fuel, money and CO2 the car would have cost.
+            "commute": {
+                "month": _commute_snapshot(this_months_window, litres, price),
+                "year": _commute_snapshot(
+                    list(self._year_workouts_cache.values()), litres, price
+                ),
+            },
+            "gear": _gear_snapshot(
+                options.get(CONF_GEAR) or [],
+                (stats_norm or {}).get("by_activity"),
+            ),
+            "forecast": metrics.form_forecast(daily_tss, today, FORECAST_DAYS),
+            "brief": daily_brief(
+                language=self.hass.config.language,
+                sleep_hours=sleep_norm["duration_hours"] if sleep_norm else None,
+                sleep_stale=sleep_norm["stale"] if sleep_norm else None,
+                hrv_status=baseline["hrv_status"],
+                readiness=baseline["readiness"],
+                tsb=load["tsb"],
+                suggestion=load["suggestion"],
+            ),
             "sleep": sleep_norm,
             "nap": nap_norm,
             "recovery": recovery_norm,
@@ -1816,7 +1940,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "workout": last_workout,
             "workouts": norm_workouts,
             "recent_workouts": recent_workouts,
-            "stats": _normalize_stats(stats),
+            "stats": stats_norm,
             "load": load,
             "baseline": baseline,
             "weekly": weekly,
@@ -2048,6 +2172,45 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "Fired %d new-workout event(s) out of %d newly-seen workout(s)",
             announced,
             len(new_keys),
+        )
+
+    def _fire_woke_up_event(
+        self, sleep: dict[str, Any] | None, baseline: dict[str, Any]
+    ) -> None:
+        """Fire ``suunto_app_woke_up`` once when a new sleep night first arrives.
+
+        Like the workout event, this fires when the night REACHES US - after
+        the morning watch sync plus up to one poll - not at the actual wake-up.
+        The first cycle after a restart only records the newest night, and a
+        stale night (see _sleep_is_current) is never announced: an old night
+        surfacing late is not "this morning".
+        """
+        if not sleep or sleep.get("night") is None:
+            return
+        night = sleep["night"]
+        if not self._night_seeded:
+            self._night_seeded = True
+            self._known_night = night
+            return
+        if self._known_night is not None and night <= self._known_night:
+            return
+        self._known_night = night
+        if sleep.get("stale"):
+            return
+        wake = sleep.get("wake_time")
+        self.hass.bus.async_fire(
+            EVENT_WOKE_UP,
+            {
+                "entry_id": self.config_entry.entry_id if self.config_entry else None,
+                "night": night.isoformat(),
+                "wake_time": wake.isoformat() if wake else None,
+                "sleep_hours": sleep.get("duration_hours"),
+                "sleep_quality_pct": sleep.get("quality_pct"),
+                "hrv_ms": sleep.get("avg_hrv_ms"),
+                "hrv_status": baseline.get("hrv_status"),
+                "resting_hr_bpm": sleep.get("min_hr_bpm"),
+                "readiness": baseline.get("readiness"),
+            },
         )
 
     def _merge_workouts(

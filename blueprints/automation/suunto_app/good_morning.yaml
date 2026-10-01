@@ -1,0 +1,59 @@
+blueprint:
+  name: "Suunto: Good Morning Routine"
+  description: >
+    Runs one of two actions when last night's sleep first syncs in via the
+    `suunto_app_woke_up` event: one for a good night (readiness at or above
+    your threshold), one for a rough night. Use it for a morning notification,
+    a spoken summary, or to pick a scene.
+
+
+    This fires after your watch has synced and the integration has polled, not
+    at the moment you wake up. Inside either action, use `{{ morning_summary }}`
+    for a ready-made one-line summary, or the individual fields, e.g.
+    `{{ trigger.event.data.sleep_hours }}` or `{{ trigger.event.data.readiness }}`.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/good_morning.yaml
+  input:
+    readiness_threshold:
+      name: Readiness threshold
+      description: Readiness at or above this runs the "good night" action.
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    good_action:
+      name: Good night action
+      description: Runs when readiness is at or above the threshold.
+      default: []
+      selector:
+        action: {}
+    rough_action:
+      name: Rough night action
+      description: Runs when readiness is below the threshold (or unknown).
+      default: []
+      selector:
+        action: {}
+
+triggers:
+  - trigger: event
+    event_type: suunto_app_woke_up
+
+actions:
+  - variables:
+      threshold: !input readiness_threshold
+      morning_summary: >-
+        Slept {{ trigger.event.data.sleep_hours }} h, HRV
+        {{ trigger.event.data.hrv_status }}, readiness
+        {{ trigger.event.data.readiness }}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ trigger.event.data.readiness is not none
+                 and trigger.event.data.readiness | float(0) >= threshold | float(0) }}
+        sequence: !input good_action
+    default: !input rough_action
+
+mode: single

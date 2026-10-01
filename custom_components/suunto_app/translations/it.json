@@ -30,15 +30,57 @@
     "step": {
       "init": {
         "title": "Opzioni Suunto App",
+        "menu_options": {
+          "settings": "Intervalli e dati carburante",
+          "gear_add": "Aggiungi attrezzatura da monitorare",
+          "gear_service": "Segna attrezzatura come revisionata (azzera a 0 km)",
+          "gear_remove": "Rimuovi attrezzatura"
+        }
+      },
+      "settings": {
+        "title": "Intervalli e dati carburante",
         "data": {
           "fast_scan_interval": "Intervallo dati in tempo reale (minuti)",
-          "scan_interval": "Intervallo storico (minuti)"
+          "scan_interval": "Intervallo dati storici (minuti)",
+          "fuel_l_per_100km": "Consumo dell'auto",
+          "fuel_price_per_litre": "Prezzo del carburante al litro"
         },
         "data_description": {
-          "fast_scan_interval": "Con quale frequenza aggiornare i dati in tempo reale (frequenza cardiaca attuale, passi/energia giornalieri).",
-          "scan_interval": "Con quale frequenza aggiornare i dati storici (sonno, allenamenti, carico di allenamento, valori di riferimento). Mantienilo moderato - è un'API non ufficiale."
+          "fast_scan_interval": "Ogni quanto aggiornare i dati in tempo reale (frequenza cardiaca, passi ed energia del giorno).",
+          "scan_interval": "Ogni quanto aggiornare i dati storici (sonno, allenamenti, carico, valori di base). Tienilo moderato, è un'API non ufficiale.",
+          "fuel_l_per_100km": "Per il risparmio dei tragitti: il carburante che l'auto avrebbe consumato sulla stessa distanza.",
+          "fuel_price_per_litre": "Nella tua valuta. Per il denaro risparmiato nei tragitti."
+        }
+      },
+      "gear_add": {
+        "title": "Aggiungi attrezzatura",
+        "description": "Monitora la distanza di catena, pneumatici, scarpe o altro in base a uno sport. Conta ogni chilometro di quello sport da ora in poi.",
+        "data": {
+          "name": "Nome",
+          "activity": "Sport",
+          "start_km": "Distanza già percorsa",
+          "interval_km": "Intervallo di manutenzione"
+        },
+        "data_description": {
+          "interval_km": "Il sensore segnala la manutenzione al raggiungimento di questa distanza. 0 per nessun intervallo."
+        }
+      },
+      "gear_service": {
+        "title": "Segna come revisionata",
+        "description": "Azzera l'attrezzatura scelta a 0 km e ricomincia a contare.",
+        "data": {
+          "gear": "Attrezzatura"
+        }
+      },
+      "gear_remove": {
+        "title": "Rimuovi attrezzatura",
+        "data": {
+          "gear": "Attrezzatura"
         }
       }
+    },
+    "abort": {
+      "no_activities": "Nessuna statistica totale ancora. Attendi il primo aggiornamento dei dati e riprova."
     }
   },
   "entity": {
@@ -126,13 +168,22 @@
       "acwr": { "name": "Rapporto carico acuto:cronico" },
       "training_suggestion": {
         "name": "Suggerimento di allenamento",
-        "state": { "rest": "Riposo", "easy": "Leggero", "moderate": "Moderato", "hard": "Intenso" }
+        "state": {
+          "rest": "Riposo",
+          "easy": "Leggero",
+          "moderate": "Moderato",
+          "hard": "Intenso"
+        }
       },
       "readiness": { "name": "Prontezza" },
       "hrv_baseline": { "name": "Valore di riferimento HRV" },
       "hrv_status": {
         "name": "Stato HRV",
-        "state": { "low": "Basso", "balanced": "Bilanciato", "high": "Alto" }
+        "state": {
+          "low": "Basso",
+          "balanced": "Bilanciato",
+          "high": "Alto"
+        }
       },
       "resting_hr": { "name": "Frequenza cardiaca a riposo" },
       "resting_hr_baseline": { "name": "Valore di riferimento FC a riposo" },
@@ -144,7 +195,11 @@
       "weekly_time": { "name": "Tempo di allenamento (7 giorni)" },
       "weekly_steps": { "name": "Passi (7 giorni)" },
       "workouts_7d": { "name": "Allenamenti (7 giorni)" },
-      "workouts_30d": { "name": "Allenamenti (30 giorni)" }
+      "workouts_30d": { "name": "Allenamenti (30 giorni)" },
+      "form_forecast": { "name": "Previsione di forma" },
+      "daily_brief": { "name": "Riepilogo giornaliero" },
+      "commute_month": { "name": "Tragitti casa-lavoro questo mese" },
+      "commute_year": { "name": "Tragitti casa-lavoro quest'anno" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "In recupero" },
