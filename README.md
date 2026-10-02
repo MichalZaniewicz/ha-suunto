@@ -42,7 +42,7 @@ statistics and troubleshooting.
 
 Want a dashboard without wiring 100 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
-HACS repo with 61 purpose-built cards - last workout, HR zones, sleep & readiness,
+HACS repo with 62 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
 calendar, workout-to-workout comparisons, fun lifetime-distance equivalents, a
 computed training personality, a FIFA-style player card, 20 unlockable
