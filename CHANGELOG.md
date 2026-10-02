@@ -3,16 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.29b2
-- **Your Suunto app goals are now exposed.** `daily_steps` and `daily_energy`
-  carry a `goal` attribute (the step and active-calorie targets set in the
-  Suunto app), and the BMR sensor carries `goal_weekly_training_hours` and
-  `goal_sleep_hours`. From the profile already fetched once a day, no extra
-  request. Goal cards can follow the app instead of a number typed into them.
-- The commute sensors also report the `fuel_l_per_100km` and
-  `fuel_price_per_litre` their savings were computed with.
-
-## 1.0.29b1
+## 1.0.29
 - **Commute sensors.** `commute_month` and `commute_year`: distance on the
   workouts Suunto tagged as a commute, with rides, days, average duration and
   the fuel, money and CO2 the car would have cost in attributes. Fuel
@@ -30,6 +21,13 @@ beta pre-releases are tagged `X.Y.ZbN`.
   with sleep hours, HRV status and readiness.
 - **Three new blueprints:** Good Morning Routine, After a Long Workout, Gear
   Service Reminder.
+- **Your Suunto app goals are now exposed.** `daily_steps` and `daily_energy`
+  carry a `goal` attribute (the step and active-calorie targets set in the
+  Suunto app), and the BMR sensor carries `goal_weekly_training_hours` and
+  `goal_sleep_hours`. From the profile already fetched once a day, no extra
+  request. Goal cards can follow the app instead of a number typed into them.
+- The commute sensors also report the `fuel_l_per_100km` and
+  `fuel_price_per_litre` their savings were computed with.
 - The Configure screen is now a menu (intervals and fuel figures, gear).
   100 sensors now (was 96), plus one per piece of gear. No extra API calls.
 
