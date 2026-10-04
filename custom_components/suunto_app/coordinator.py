@@ -308,33 +308,45 @@ def _normalize_recovery(records: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
-def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Sum today's per-10-min steps/energy and take the most recent heart rate."""
-    if not records:
-        return None
-    today = dt_util.now().date()
+def _day_activity(records: list[dict[str, Any]], day: Any) -> tuple[int | None, int | None]:
+    """Total steps and active kcal over one local date, or (None, None) without data."""
     steps = 0.0
     energy = 0.0
-    saw_today = False
+    seen = False
     for rec in records:
         ts = _parse_ts(rec.get("timestamp"))
-        if ts is None or dt_util.as_local(ts).date() != today:
+        if ts is None or dt_util.as_local(ts).date() != day:
             continue
-        saw_today = True
+        seen = True
         ed = rec.get("entryData") or {}
         # Confirmed live per-interval fields: stepCount + energyConsumption.
         steps += _as_float(ed.get("stepCount")) or 0.0
         energy += _as_float(ed.get("energyConsumption")) or 0.0
-
-    current_hr, hr_at = _current_hr(records)
-
+    if not seen:
+        return None, None
     # energyConsumption is in joules (see JOULES_PER_KCAL) -> kcal.
+    return _as_int(steps), _as_int(energy / JOULES_PER_KCAL)
+
+
+def _normalize_activity(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Sum today's per-10-min steps/energy and take the most recent heart rate.
+
+    Yesterday's totals ride along from the same fetch (the lookback covers two
+    days): in the morning "today" is nearly empty, so the AI insight judges the
+    daily goals on yesterday's complete day.
+    """
+    if not records:
+        return None
+    today = dt_util.now().date()
+    steps, energy = _day_activity(records, today)
+    yesterday_steps, yesterday_energy = _day_activity(records, today - timedelta(days=1))
+    current_hr, hr_at = _current_hr(records)
     return {
         "date": today,
-        "daily_steps": _as_int(steps) if saw_today else None,
-        "daily_energy_kcal": (
-            _as_int(energy / JOULES_PER_KCAL) if saw_today else None
-        ),
+        "daily_steps": steps,
+        "daily_energy_kcal": energy,
+        "yesterday_steps": yesterday_steps,
+        "yesterday_energy_kcal": yesterday_energy,
         "current_hr_bpm": current_hr,
         "current_hr_at": hr_at,
     }

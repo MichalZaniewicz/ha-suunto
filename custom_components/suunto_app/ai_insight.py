@@ -75,8 +75,9 @@ SECTIONS: dict[str, str] = {
     " readiness, recovery balance, stress, unusual_recovery.",
     "training": "Training: the last 14 days of workouts, load (CTL/ATL/TSB/ACWR),"
     " weekly volume against the training goal, and the form forecast.",
-    "activity": "Daily activity: today's steps and active calories against the goals,"
-    " the current streak, days since the last workout.",
+    "activity": "Daily activity: YESTERDAY's complete steps and active calories against"
+    " the daily goals (today_so_far is only a partial day), the current streak, days"
+    " since the last workout.",
 }
 
 
@@ -143,6 +144,7 @@ Rules:
   Paragraph 2: what it means - cause and effect, how it ties to the other sections, and
   what to watch next.
 - Use plain hyphens; never long dashes.
+- Write numbers the way {language} does (for example a decimal comma where that is the norm).
 - warning: only for something that genuinely needs attention (for example HRV suppressed
   together with an elevated resting heart rate for several nights, or ACWR above 1.5);
   otherwise leave it empty.
@@ -153,7 +155,10 @@ atl = fatigue, acwr = acute:chronic workload ratio (about 0.8-1.3 is the safe zo
 readiness = 0-100 heuristic score, pte = Suunto peak training effect (1-5),
 tss = training stress score, suggestion = a rule-based hint from TSB and ACWR,
 sleep.stale = true means last night has not synced yet (the night shown is older),
-forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app.
+forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app,
+yesterday = the last complete day, today_so_far = the day until as_of (partial, do not judge
+goals on it). Steps and active_kcal are the whole day INCLUDING workouts, not activity on top
+of them; goals.daily_energy_kcal is an active-calorie target.
 {extra}
 Data:
 {data}"""
@@ -288,8 +293,19 @@ def build_context(
                     "days_since_last_workout": (daily.get("workout") or {}).get("days_since"),
                 }
             ),
-            "today": _compact(
+            # Yesterday is the last complete day; in the morning "today" has
+            # barely started, so it goes in as an explicitly partial figure.
+            "yesterday": _compact(
                 {
+                    "steps": activity.get("yesterday_steps"),
+                    "active_kcal": activity.get("yesterday_energy_kcal"),
+                }
+            ),
+            "today_so_far": _compact(
+                {
+                    "as_of": dt_util.now().strftime("%H:%M")
+                    if activity.get("daily_steps") is not None
+                    else None,
                     "steps": activity.get("daily_steps"),
                     "active_kcal": activity.get("daily_energy_kcal"),
                 }

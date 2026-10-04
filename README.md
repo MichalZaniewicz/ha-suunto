@@ -336,8 +336,8 @@ insight** button runs it on demand.
 
 It sends a compact summary of numbers the integration has already computed
 (last night's sleep, 14 nights of HRV and resting HR, baselines, readiness,
-CTL/ATL/TSB/ACWR, the form forecast, the last 14 days of workouts, today's
-steps, your Suunto app goals) - roughly 1-3k tokens, so a cent or less per day
+CTL/ATL/TSB/ACWR, the form forecast, the last 14 days of workouts, yesterday's
+and today's steps and active calories, your Suunto app goals) - roughly 1-3k tokens, so a cent or less per day
 on cloud models, and within Gemini's free tier. Nothing extra is fetched from
 Suunto. The answer is in the Home Assistant language.
 
@@ -357,7 +357,7 @@ blank line); a section with no data is left out:
 | `sleep` | last night's duration, deep/REM and quality, consistency over the last nights, the sleep goal |
 | `recovery` | HRV and resting HR against your baselines, readiness, recovery balance, stress |
 | `training` | the last 14 days of workouts, CTL/ATL/TSB/ACWR, weekly volume, the form forecast |
-| `activity` | today's steps and active calories against your goals, the streak |
+| `activity` | yesterday's complete steps and active calories against your goals (today so far only as a partial figure), the streak |
 
 ```yaml
 {{ state_attr('sensor.suunto_michala_ai_insight', 'sections').sleep.text }}

@@ -3,6 +3,16 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b5
+- **The AI insight's activity section judges yesterday, not today.** It runs
+  in the morning, when today has barely started, so the daily step and
+  active-calorie goals are now checked against yesterday's complete day
+  (from the 24/7 data already fetched; no extra request). Today's figures go
+  in only as "so far, as of HH:MM".
+- The prompt now says steps and active calories already include workouts,
+  and asks for numbers written the way the language does (decimal comma in
+  Polish, German and others).
+
 ## 1.0.30b4
 - The two-paragraph length (120-180 words per section) is now a hard rule in
   the prompt itself; models skimmed it when it was only in the field
