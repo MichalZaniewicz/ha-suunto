@@ -64,8 +64,9 @@ Portuguese, French, Spanish, Italian, Dutch).
    → enter the **email and password** of your Suunto app account. (Account 2FA may
    block login.)
 3. Options ("Configure" button) open a small menu: **intervals and fuel
-   figures**, and **gear** (add / mark as serviced / remove, see
-   [Gear tracking](#gear-tracking-and-service-reminders)). Two refresh cadences -
+   figures**, the optional **AI daily insight** (see
+   [AI daily insight](#ai-daily-insight-optional)), and **gear** (add / mark as
+   serviced / remove, see [Gear tracking](#gear-tracking-and-service-reminders)). Two refresh cadences -
    - **Live data interval** (default 15 min): current heart rate, daily steps/energy.
    - **History interval** (default 60 min): sleep, recovery, workouts, training
      load, baselines and other derived metrics - and the hourly long-term
@@ -313,34 +314,45 @@ notification when the interval is reached.
 ### AI daily insight (optional)
 
 Once a day an AI model reads your sleep, recovery and training data and writes
-a short review: what the last nights and workouts say, a few concrete pieces of
-advice, and a warning only when something needs attention. Where the daily
-brief restates the other sensors, this one connects them ("HRV has been under
-your norm for three nights while ACWR climbs to 1.4 - keep tomorrow easy").
+a review: a headline, an overall call for the day, four short sections (sleep,
+health and recovery, training, daily activity) each with its own status, a few
+concrete pieces of advice, and a warning only when something needs attention.
+Where the daily brief restates the other sensors, this one connects them and
+looks at the trend.
 
-**No API key goes into this integration.** It uses Home Assistant's own
-[AI Task](https://www.home-assistant.io/integrations/ai_task/) (Home Assistant
-2025.8 or newer):
+**How to turn it on** (Home Assistant 2025.8 or newer):
 
-1. Set up an AI provider as a normal integration: Google Gemini, OpenAI,
-   Anthropic, a local Ollama, or anything else that offers an AI Task entity.
-2. In this integration's **Configure -> AI daily insight**, pick that entity.
-   Optionally add notes for the model ("Preparing for a marathon on 12 April")
-   and the fallback hour.
+1. Add an AI provider as a normal integration if you have none yet:
+   **Settings -> Devices & Services -> Add Integration** -> Google Gemini (has a
+   free tier), OpenAI, Anthropic, Ollama (runs locally), or any other one that
+   offers an *AI Task* entity.
+2. Open this integration's **Configure -> AI daily insight** and pick that AI
+   Task entity. Optionally add notes for the model ("Preparing for a marathon
+   on 12 April") and the fallback hour. Save.
+3. Optional: put the **AI Insight** card from
+   [Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards) on a
+   dashboard, and import the **AI Insight Report** blueprint (below) to get the
+   review as a notification.
 
-When it runs: right after your morning watch sync brings in last night's sleep
-(the `suunto_app_woke_up` moment). If no new night has arrived by the fallback
-hour (10:00 by default), it runs anyway with what it has - and runs once more
-if the night shows up later. At most one or two runs a day; the result is
-stored, so a restart never pays for the same analysis twice. The **Generate AI
-insight** button runs it on demand.
+**No API key goes into this integration**: it uses Home Assistant's own
+[AI Task](https://www.home-assistant.io/integrations/ai_task/), so the key stays
+with the provider integration you set up in step 1. To turn the feature off
+again, clear the entity in the same Configure screen.
 
-The **Automatic AI insight** switch pauses it: while off, nothing runs by
-itself (no morning run, no fallback-hour run, no retries), so nothing is spent;
-the button still works, and the last result stays on the sensor (with
-`paused: true`). Turning it back on after the fallback hour, with nothing
-generated today, runs today's analysis right away. Automations can flip it too,
-e.g. off for a holiday.
+**How it works:**
+
+- It runs once a day, right after your morning watch sync brings in last
+  night's sleep. If no new night has arrived by the fallback hour (10:00 by
+  default), it runs anyway and once more when the night shows up. The result
+  is stored, so a restart never pays for it twice.
+- The **Generate AI insight** button runs it on demand. The **Automatic AI
+  insight** switch pauses the automatic runs, so nothing is spent while it is
+  off (the button still works, and the last result stays).
+- The review is written in your Home Assistant language. The activity section
+  judges yesterday's complete day, since in the morning today has barely
+  started.
+
+#### Details
 
 It sends a compact summary of numbers the integration has already computed
 (last night's sleep, 14 nights of HRV and resting HR, baselines, readiness,
