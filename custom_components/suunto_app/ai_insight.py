@@ -97,8 +97,8 @@ def _structure() -> dict[str, dict[str, Any]]:
     for key, covers in SECTIONS.items():
         fields[key] = {
             "description": (
-                f"Two paragraphs of 3-4 sentences each, separated by a blank line: first"
-                f" what the data shows, then what it means and why. {covers}"
+                f"120-180 words in exactly two paragraphs separated by a blank line:"
+                f" first what the data shows, then what it means and why. {covers}"
                 " Empty string if there is no data for it."
             ),
             "required": True,
@@ -126,7 +126,7 @@ STRUCTURE = _structure()
 
 _INSTRUCTIONS = """You are an endurance coach and a sleep and recovery analyst.
 Below is a JSON snapshot of one athlete's data from a Suunto watch, as of {today}.
-Write a short daily review of it, split into sections.
+Write a thorough daily review of it, split into sections.
 
 Rules:
 - Write every field in {language}.
@@ -135,8 +135,13 @@ Rules:
 - Look at trends over the last nights and workouts, not only at last night.
 - Be specific: name the numbers that support a point.
 - Keep each section to its own topic; do not repeat a point in two sections.
-- Each section is two real paragraphs: go into the trend over the last nights and
-  workouts, compare against baselines and goals, and explain the cause and effect.
+- LENGTH IS A HARD REQUIREMENT: every section (sleep, recovery, training, activity) is
+  120-180 words in exactly two paragraphs, separated by a blank line. One or two
+  sentences per section is too short and is a failed answer.
+  Paragraph 1: what the data shows - last night or today, then the trend over the last
+  nights and workouts, against the baselines and goals, with the numbers.
+  Paragraph 2: what it means - cause and effect, how it ties to the other sections, and
+  what to watch next.
 - Use plain hyphens; never long dashes.
 - warning: only for something that genuinely needs attention (for example HRV suppressed
   together with an elevated resting heart rate for several nights, or ACWR above 1.5);

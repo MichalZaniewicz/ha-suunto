@@ -3,6 +3,11 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b4
+- The two-paragraph length (120-180 words per section) is now a hard rule in
+  the prompt itself; models skimmed it when it was only in the field
+  descriptions and wrote two sentences.
+
 ## 1.0.30b3
 - **Longer AI insight sections:** each section is now two paragraphs (what
   the data shows, then what it means), separated by a blank line so a card
