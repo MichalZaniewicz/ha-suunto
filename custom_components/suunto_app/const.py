@@ -127,6 +127,9 @@ EVENT_NEW_WORKOUT = f"{DOMAIN}_new_workout"
 # Fired once when a new sleep night first reaches us (i.e. after the morning
 # watch sync), so a "good morning" automation can react to last night's sleep.
 EVENT_WOKE_UP = f"{DOMAIN}_woke_up"
+# Fired after every successful AI insight run (see ai_insight.py), carrying the
+# whole review plus labels in the HA language, so a blueprint can send it.
+EVENT_AI_INSIGHT = f"{DOMAIN}_ai_insight"
 
 # ...and even then, only a workout that STARTED this recently is announced. A
 # genuinely old record can still surface for the first time (pagination cut it

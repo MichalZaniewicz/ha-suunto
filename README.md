@@ -363,6 +363,12 @@ blank line); a section with no data is left out:
 {{ state_attr('sensor.suunto_michala_ai_insight', 'sections').sleep.text }}
 ```
 
+Every successful run also fires a `suunto_app_ai_insight` event carrying
+`headline`, `status`, `sections`, `advice`, `warning`, `manual` (true when it
+came from the button) and `labels` (section and status names in your Home
+Assistant language). The *AI Insight Report* blueprint below turns it into a
+notification.
+
 > [!WARNING]
 > Your health data goes to whichever AI provider you pick. Use a local model
 > (Ollama) if it should stay at home. The insight is written by a language
@@ -370,7 +376,7 @@ blank line); a section with no data is left out:
 
 ### Automation blueprints
 
-Seven ready-to-import blueprints under
+Eight ready-to-import blueprints under
 [`blueprints/automation/suunto_app/`](blueprints/automation/suunto_app/) wrap the
 patterns above so you don't have to write the YAML yourself - each just asks for
 an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
@@ -384,6 +390,7 @@ an *action* (e.g. "Send a notification") and the entities/thresholds it needs:
 | [Good Morning Routine](blueprints/automation/suunto_app/good_morning.yaml) | Runs one action after a good night and another after a rough one (readiness threshold you set) when `suunto_app_woke_up` fires. | [![Open your Home Assistant instance and show the blueprint import dialog with the good-morning blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fgood_morning.yaml) |
 | [After a Long Workout](blueprints/automation/suunto_app/long_workout_finished.yaml) | Runs your action when a new workout at least as long as your threshold syncs in. | [![Open your Home Assistant instance and show the blueprint import dialog with the long-workout-finished blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Flong_workout_finished.yaml) |
 | [Gear Service Reminder](blueprints/automation/suunto_app/gear_service_reminder.yaml) | Runs your action once when a tracked piece of gear reaches its service interval. | [![Open your Home Assistant instance and show the blueprint import dialog with the gear-service-reminder blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fgear_service_reminder.yaml) |
+| [AI Insight Report](blueprints/automation/suunto_app/ai_insight_report.yaml) | Sends the daily AI insight when it is generated: short (headline, section statuses, warning, advice) or full, for the sections and days you pick. | [![Open your Home Assistant instance and show the blueprint import dialog with the ai-insight-report blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FMichalZaniewicz%2Fha-suunto%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fsuunto_app%2Fai_insight_report.yaml) |
 
 Or import manually: Settings -> Automations & Scenes -> Blueprints -> Import
 Blueprint, and paste a blueprint's GitHub URL.

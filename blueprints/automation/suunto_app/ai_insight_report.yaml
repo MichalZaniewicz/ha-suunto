@@ -1,0 +1,161 @@
+blueprint:
+  name: "Suunto: AI Insight Report"
+  description: >
+    Sends the daily AI insight as soon as it is generated (the
+    `suunto_app_ai_insight` event): after the morning watch sync, at the
+    fallback hour, or when you press "Generate AI insight". Needs the AI daily
+    insight turned on under the integration's Configure menu.
+
+
+    Inside your action, use `{{ title }}` (e.g. "AI insight: Caution") and
+    `{{ message }}` (the report in the format you pick below), or
+    `{{ message_short }}` / `{{ message_full }}` for a fixed format. The
+    section names and statuses are in your Home Assistant language.
+
+
+    "Short" is the headline, one status line per section, the warning and the
+    advice, which fits a phone notification. "Full" adds every section's two
+    paragraphs; use it with a persistent notification, an e-mail or a
+    messenger that shows long text.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/ai_insight_report.yaml
+  input:
+    report_action:
+      name: Action
+      description: >
+        What to do with the report, e.g. "Send a notification" with
+        `{{ title }}` as the title and `{{ message }}` as the message.
+      default: []
+      selector:
+        action: {}
+    detail:
+      name: Report format
+      description: What `{{ message }}` contains.
+      default: short
+      selector:
+        select:
+          options:
+            - label: Short (headline, section statuses, warning, advice)
+              value: short
+            - label: Full (adds the text of every section)
+              value: full
+    sections:
+      name: Sections
+      description: Which sections the report includes.
+      default: [sleep, recovery, training, activity]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Sleep
+              value: sleep
+            - label: Health and recovery
+              value: recovery
+            - label: Training
+              value: training
+            - label: Daily activity
+              value: activity
+    include_advice:
+      name: Include the advice
+      default: true
+      selector:
+        boolean: {}
+    statuses:
+      name: Send only on these days
+      description: >
+        The AI's overall call for the day. Leave all four to get a report
+        every day, or keep only Caution and Rest to hear from it only when
+        something needs attention.
+      default: [good, ok, caution, rest]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Good
+              value: good
+            - label: OK
+              value: ok
+            - label: Caution
+              value: caution
+            - label: Rest
+              value: rest
+    include_manual:
+      name: Also send when generated from the button
+      description: Off to send only the automatic morning report.
+      default: true
+      selector:
+        boolean: {}
+
+triggers:
+  - trigger: event
+    event_type: suunto_app_ai_insight
+
+variables:
+  wanted_sections: !input sections
+  wanted_statuses: !input statuses
+  include_advice: !input include_advice
+  include_manual: !input include_manual
+  detail: !input detail
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ (include_manual or not trigger.event.data.manual)
+         and (trigger.event.data.status is none
+              or trigger.event.data.status in wanted_statuses) }}
+
+actions:
+  - variables:
+      title: >-
+        {%- set d = trigger.event.data -%}
+        {{ d.labels.title }}{% if d.status %}: {{ d.labels.statuses[d.status] }}{% endif %}
+      message_short: >-
+        {%- set d = trigger.event.data -%}
+        {%- set dots = {'good': '🟢', 'ok': '🔵', 'caution': '🟡', 'rest': '🔴'} -%}
+        {%- set ns = namespace(lines=[d.headline or '']) -%}
+        {%- set secs = d.sections or {} -%}
+        {%- set shown = namespace(any=false) -%}
+        {%- for key in ['sleep', 'recovery', 'training', 'activity'] -%}
+          {%- if key in wanted_sections and key in secs -%}
+            {%- if not shown.any -%}{%- set ns.lines = ns.lines + [''] -%}{%- set shown.any = true -%}{%- endif -%}
+            {%- set s = secs[key] -%}
+            {%- set ns.lines = ns.lines + [dots.get(s.status, '⚪') ~ ' ' ~ d.labels.sections[key]
+                ~ (': ' ~ d.labels.statuses[s.status] if s.status else '')] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if d.warning -%}
+          {%- set ns.lines = ns.lines + ['', '⚠️ ' ~ d.warning] -%}
+        {%- endif -%}
+        {%- if include_advice and d.advice -%}
+          {%- set ns.lines = ns.lines + ['', d.labels.advice ~ ':'] -%}
+          {%- for a in d.advice -%}{%- set ns.lines = ns.lines + ['- ' ~ a] -%}{%- endfor -%}
+        {%- endif -%}
+        {{ ns.lines | join('\n') }}
+      message_full: >-
+        {%- set d = trigger.event.data -%}
+        {%- set dots = {'good': '🟢', 'ok': '🔵', 'caution': '🟡', 'rest': '🔴'} -%}
+        {%- set ns = namespace(lines=[d.headline or '']) -%}
+        {%- set secs = d.sections or {} -%}
+        {%- if d.warning -%}
+          {%- set ns.lines = ns.lines + ['', '⚠️ ' ~ d.warning] -%}
+        {%- endif -%}
+        {%- for key in ['sleep', 'recovery', 'training', 'activity'] -%}
+          {%- if key in wanted_sections and key in secs -%}
+            {%- set s = secs[key] -%}
+            {%- set ns.lines = ns.lines + ['', dots.get(s.status, '⚪') ~ ' ' ~ d.labels.sections[key]
+                ~ (' (' ~ d.labels.statuses[s.status] ~ ')' if s.status else ''), s.text] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if not secs and d.summary -%}
+          {%- set ns.lines = ns.lines + ['', d.summary] -%}
+        {%- endif -%}
+        {%- if include_advice and d.advice -%}
+          {%- set ns.lines = ns.lines + ['', d.labels.advice ~ ':'] -%}
+          {%- for a in d.advice -%}{%- set ns.lines = ns.lines + ['- ' ~ a] -%}{%- endfor -%}
+        {%- endif -%}
+        {{ ns.lines | join('\n') }}
+      message: "{{ message_full if detail == 'full' else message_short }}"
+  - sequence: !input report_action
+
+mode: queued
+max: 5

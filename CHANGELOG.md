@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b6
+- **New AI Insight Report blueprint.** Sends the daily AI insight the moment
+  it is generated, short (headline, one status line per section, warning,
+  advice) or full (every section's text), for the sections you pick, only on
+  the days whose status you pick (e.g. just Caution and Rest), optionally
+  skipping runs started from the button.
+- **New `suunto_app_ai_insight` event** after every successful run, with the
+  whole review and the section/status names in your Home Assistant language.
+- The AI now sees each workout's calories and how much of each day's active
+  calories came from workouts, so it stops calling a training day's calories
+  "activity outside training".
+
 ## 1.0.30b5
 - **The AI insight's activity section judges yesterday, not today.** It runs
   in the morning, when today has barely started, so the daily step and

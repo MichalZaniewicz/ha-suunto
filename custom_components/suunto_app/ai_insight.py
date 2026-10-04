@@ -36,7 +36,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, EVENT_WOKE_UP
+from .const import DOMAIN, EVENT_AI_INSIGHT, EVENT_WOKE_UP
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -158,10 +158,72 @@ sleep.stale = true means last night has not synced yet (the night shown is older
 forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app,
 yesterday = the last complete day, today_so_far = the day until as_of (partial, do not judge
 goals on it). Steps and active_kcal are the whole day INCLUDING workouts, not activity on top
-of them; goals.daily_energy_kcal is an active-calorie target.
+of them; of_which_workouts_kcal is what that day's workouts burned, usually most of active_kcal,
+so a high active_kcal on a workout day is the workout, not extra activity outside training.
+goals.daily_energy_kcal is an active-calorie target.
 {extra}
 Data:
 {data}"""
+
+
+# Labels for a report built from the insight (the suunto_app_ai_insight event
+# carries them), in the HA language: blueprints have no access to the
+# integration's translations.
+_LABELS: dict[str, dict[str, Any]] = {
+    "en": {
+        "title": "AI insight", "advice": "Advice", "warning": "Warning",
+        "statuses": {"good": "Good", "ok": "OK", "caution": "Caution", "rest": "Rest"},
+        "sections": {"sleep": "Sleep", "recovery": "Health and recovery",
+                     "training": "Training", "activity": "Daily activity"},
+    },
+    "pl": {
+        "title": "Analiza AI", "advice": "Rady", "warning": "Uwaga",
+        "statuses": {"good": "Dobrze", "ok": "OK", "caution": "Uwaga", "rest": "Odpoczynek"},
+        "sections": {"sleep": "Sen", "recovery": "Zdrowie i regeneracja",
+                     "training": "Treningi", "activity": "Aktywność dzienna"},
+    },
+    "de": {
+        "title": "KI-Analyse", "advice": "Tipps", "warning": "Achtung",
+        "statuses": {"good": "Gut", "ok": "OK", "caution": "Vorsicht", "rest": "Ruhe"},
+        "sections": {"sleep": "Schlaf", "recovery": "Gesundheit und Erholung",
+                     "training": "Training", "activity": "Tagesaktivität"},
+    },
+    "fr": {
+        "title": "Analyse IA", "advice": "Conseils", "warning": "Attention",
+        "statuses": {"good": "Bien", "ok": "OK", "caution": "Prudence", "rest": "Repos"},
+        "sections": {"sleep": "Sommeil", "recovery": "Santé et récupération",
+                     "training": "Entraînement", "activity": "Activité du jour"},
+    },
+    "es": {
+        "title": "Análisis con IA", "advice": "Consejos", "warning": "Atención",
+        "statuses": {"good": "Bien", "ok": "OK", "caution": "Precaución", "rest": "Descanso"},
+        "sections": {"sleep": "Sueño", "recovery": "Salud y recuperación",
+                     "training": "Entrenamiento", "activity": "Actividad diaria"},
+    },
+    "it": {
+        "title": "Analisi IA", "advice": "Consigli", "warning": "Attenzione",
+        "statuses": {"good": "Bene", "ok": "OK", "caution": "Cautela", "rest": "Riposo"},
+        "sections": {"sleep": "Sonno", "recovery": "Salute e recupero",
+                     "training": "Allenamento", "activity": "Attività giornaliera"},
+    },
+    "nl": {
+        "title": "AI-analyse", "advice": "Adviezen", "warning": "Let op",
+        "statuses": {"good": "Goed", "ok": "OK", "caution": "Opgepast", "rest": "Rust"},
+        "sections": {"sleep": "Slaap", "recovery": "Gezondheid en herstel",
+                     "training": "Training", "activity": "Dagelijkse activiteit"},
+    },
+    "pt": {
+        "title": "Análise com IA", "advice": "Conselhos", "warning": "Atenção",
+        "statuses": {"good": "Bom", "ok": "OK", "caution": "Cuidado", "rest": "Descanso"},
+        "sections": {"sleep": "Sono", "recovery": "Saúde e recuperação",
+                     "training": "Treino", "activity": "Atividade diária"},
+    },
+}
+
+
+def labels_for(language: str | None) -> dict[str, Any]:
+    """Report labels in ``language``, English when it is not one of ours."""
+    return _LABELS.get((language or "en").split("-")[0].lower(), _LABELS["en"])
 
 
 def _is_schema_error(err: BaseException) -> bool:
@@ -199,10 +261,15 @@ def build_context(
     cutoff = today - timedelta(days=CONTEXT_DAYS)
 
     workouts = []
+    # Workout calories per local day: the day totals below include them, and
+    # spelling that out stops the model reading them as activity on top.
+    workout_kcal: dict[date, int] = {}
     for workout in daily.get("workouts") or []:
         start = workout.get("start_time")
         if not start or dt_util.as_local(start).date() < cutoff:
             continue
+        day = dt_util.as_local(start).date()
+        workout_kcal[day] = workout_kcal.get(day, 0) + (workout.get("energy_kcal") or 0)
         distance = workout.get("distance_meters")
         workouts.append(
             _compact(
@@ -216,6 +283,7 @@ def build_context(
                     "tss": _round(workout.get("tss")),
                     "pte": _round(workout.get("pte")),
                     "ascent_m": _round(workout.get("ascent_meters"), 0),
+                    "kcal": workout.get("energy_kcal"),
                     "feeling_1_5": workout.get("feeling"),
                     "tags": workout.get("tags"),
                 }
@@ -299,6 +367,9 @@ def build_context(
                 {
                     "steps": activity.get("yesterday_steps"),
                     "active_kcal": activity.get("yesterday_energy_kcal"),
+                    "of_which_workouts_kcal": workout_kcal.get(today - timedelta(days=1))
+                    if activity.get("yesterday_steps") is not None
+                    else None,
                 }
             ),
             "today_so_far": _compact(
@@ -308,6 +379,9 @@ def build_context(
                     else None,
                     "steps": activity.get("daily_steps"),
                     "active_kcal": activity.get("daily_energy_kcal"),
+                    "of_which_workouts_kcal": workout_kcal.get(today)
+                    if activity.get("daily_steps") is not None
+                    else None,
                 }
             ),
             "goals": fast.get("goals"),
@@ -503,6 +577,7 @@ class SuuntoAiInsight:
                 self.result = await self._async_call()
                 self.last_error = None
                 await self._store.async_save(self.result)
+                self._fire_event(manual=not wait)
             except Exception as err:  # noqa: BLE001 - any provider error ends up here
                 self.last_error = str(err) or type(err).__name__
                 _LOGGER.warning("AI insight failed: %s", self.last_error)
@@ -510,6 +585,26 @@ class SuuntoAiInsight:
             finally:
                 self.running = False
                 self._notify()
+
+    @callback
+    def _fire_event(self, manual: bool) -> None:
+        """Announce a fresh insight; ``manual`` = started from the button."""
+        result = self.result or {}
+        self.hass.bus.async_fire(
+            EVENT_AI_INSIGHT,
+            {
+                "entry_id": self._entry.entry_id,
+                "manual": manual,
+                **{
+                    key: result.get(key)
+                    for key in (
+                        "headline", "status", "sections", "advice", "warning",
+                        "summary", "for_date", "sleep_night", "sleep_stale",
+                    )
+                },
+                "labels": labels_for(self.hass.config.language),
+            },
+        )
 
     async def _async_call(self) -> dict[str, Any]:
         daily = self._daily.data
