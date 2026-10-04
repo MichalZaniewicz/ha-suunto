@@ -26,6 +26,13 @@ COMMUTE_TAG = "COMMUTE"
 # User-defined gear (chain, tyres, shoes...) tracked by distance; a list of
 # dicts in entry.options, managed by the options flow.
 CONF_GEAR = "gear"
+# Daily AI insight through Home Assistant's AI Task (see ai_insight.py): the
+# ai_task entity to use (unset = feature off), the user's own notes for the
+# prompt, and the hour to run at if the morning sync never came.
+CONF_AI_TASK_ENTITY = "ai_task_entity"
+CONF_AI_CONTEXT = "ai_extra_context"
+CONF_AI_HOUR = "ai_fallback_hour"
+DEFAULT_AI_HOUR = 10
 
 # Defaults - two cadences: live data (HR/steps) refreshes often; heavy history
 # (sleep, workouts, derived metrics) refreshes infrequently.
@@ -109,7 +116,7 @@ PROFILE_REFRESH_HOURS = 24
 # figure by ~4.19x.
 JOULES_PER_KCAL = 4186.8
 
-PLATFORMS = ["sensor", "binary_sensor", "calendar"]
+PLATFORMS = ["sensor", "binary_sensor", "calendar", "button"]
 
 # Fired on the Home Assistant bus when the daily coordinator first sees a workout
 # key it has never seen before, so automations can react to a finished workout

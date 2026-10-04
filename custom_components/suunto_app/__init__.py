@@ -10,11 +10,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
+from .ai_insight import SuuntoAiInsight
 from .api import SportsTrackerClient
 from .const import (
+    CONF_AI_CONTEXT,
+    CONF_AI_HOUR,
+    CONF_AI_TASK_ENTITY,
     CONF_FAST_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
+    DEFAULT_AI_HOUR,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -29,6 +34,8 @@ class SuuntoAppRuntimeData:
 
     fast: SuuntoActivityCoordinator
     daily: SuuntoDailyCoordinator
+    # Only when an ai_task entity is picked in the options.
+    ai: SuuntoAiInsight | None = None
 
 
 type SuuntoAppConfigEntry = ConfigEntry[SuuntoAppRuntimeData]
@@ -81,8 +88,23 @@ async def async_setup_entry(
     await fast.async_config_entry_first_refresh()
     await daily.async_config_entry_first_refresh()
 
-    entry.runtime_data = SuuntoAppRuntimeData(fast=fast, daily=daily)
+    ai: SuuntoAiInsight | None = None
+    if ai_task_entity := entry.options.get(CONF_AI_TASK_ENTITY):
+        ai = SuuntoAiInsight(
+            hass,
+            entry,
+            daily,
+            fast,
+            ai_task_entity,
+            entry.options.get(CONF_AI_CONTEXT),
+            int(entry.options.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)),
+        )
+
+    entry.runtime_data = SuuntoAppRuntimeData(fast=fast, daily=daily, ai=ai)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    if ai is not None:
+        await ai.async_start()
+        entry.async_on_unload(ai.async_stop)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

@@ -223,6 +223,10 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   readiness 76, form +27: a good day for a hard session." Put it on a
   dashboard or have a speaker read it. It only restates the other sensors, so
   it never disagrees with them.
+- **AI insight (optional):** a daily review written by an AI model of your
+  choice, with advice and a status for the day, plus a button to run it on
+  demand - see [AI daily insight](#ai-daily-insight-optional). On top of the
+  100 sensors, and only there once you turn it on.
 - **Commutes:** distance commuted **this month** and **this year**, counting
   whatever Suunto itself tagged as a commute. Attributes carry `rides`,
   `days`, `avg_duration_min`, and what the car left at home would have cost:
@@ -304,6 +308,49 @@ counts every kilometre of that sport from then on - no history scan, it uses
 the per-sport lifetime totals already fetched. **Mark gear as serviced** resets
 it to 0 km. Pair it with the *Gear Service Reminder* blueprint below to get a
 notification when the interval is reached.
+
+### AI daily insight (optional)
+
+Once a day an AI model reads your sleep, recovery and training data and writes
+a short review: what the last nights and workouts say, a few concrete pieces of
+advice, and a warning only when something needs attention. Where the daily
+brief restates the other sensors, this one connects them ("HRV has been under
+your norm for three nights while ACWR climbs to 1.4 - keep tomorrow easy").
+
+**No API key goes into this integration.** It uses Home Assistant's own
+[AI Task](https://www.home-assistant.io/integrations/ai_task/) (Home Assistant
+2025.8 or newer):
+
+1. Set up an AI provider as a normal integration: Google Gemini, OpenAI,
+   Anthropic, a local Ollama, or anything else that offers an AI Task entity.
+2. In this integration's **Configure -> AI daily insight**, pick that entity.
+   Optionally add notes for the model ("Preparing for a marathon on 12 April")
+   and the fallback hour.
+
+When it runs: right after your morning watch sync brings in last night's sleep
+(the `suunto_app_woke_up` moment). If no new night has arrived by the fallback
+hour (10:00 by default), it runs anyway with what it has - and runs once more
+if the night shows up later. At most one or two runs a day; the result is
+stored, so a restart never pays for the same analysis twice. The **Generate AI
+insight** button runs it on demand.
+
+It sends a compact summary of numbers the integration has already computed
+(last night's sleep, 14 nights of HRV and resting HR, baselines, readiness,
+CTL/ATL/TSB/ACWR, the form forecast, the last 14 days of workouts, today's
+steps, your Suunto app goals) - roughly 1-3k tokens, so a cent or less per day
+on cloud models, and within Gemini's free tier. Nothing extra is fetched from
+Suunto. The answer is in the Home Assistant language.
+
+The *AI insight* sensor's state is the headline. Attributes: `status`
+(`good` / `ok` / `caution` / `rest`), `summary`, `advice` (a list), `warning`,
+`for_date`, `generated_at`, `sleep_night` / `sleep_stale` (which night it was
+based on), `ai_task_entity`, `generating` and `error` (the last failure, if
+any). The long text is kept out of the recorder.
+
+> [!WARNING]
+> Your health data goes to whichever AI provider you pick. Use a local model
+> (Ollama) if it should stay at home. The insight is written by a language
+> model: it can be wrong, and it is not medical advice.
 
 ### Automation blueprints
 

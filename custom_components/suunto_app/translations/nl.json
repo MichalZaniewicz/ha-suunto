@@ -32,6 +32,7 @@
         "title": "Suunto App opties",
         "menu_options": {
           "settings": "Intervallen en brandstofgegevens",
+          "ai": "Dagelijkse AI-analyse",
           "gear_add": "Materiaal toevoegen om te volgen",
           "gear_service": "Materiaal als onderhouden markeren (terug naar 0 km)",
           "gear_remove": "Materiaal verwijderen"
@@ -50,6 +51,20 @@
           "scan_interval": "Hoe vaak historische gegevens worden vernieuwd (slaap, trainingen, belasting, basiswaarden). Houd dit bescheiden, het is een onofficiële API.",
           "fuel_l_per_100km": "Voor de woon-werkbesparing: de brandstof die je auto op dezelfde afstand zou verbruiken.",
           "fuel_price_per_litre": "In je eigen valuta. Voor het geld dat je met woon-werkritten bespaart."
+        }
+      },
+      "ai": {
+        "title": "Dagelijkse AI-analyse",
+        "description": "Eén keer per dag leest een AI-model naar keuze je slaap-, herstel- en trainingsgegevens en schrijft een korte terugblik met adviezen. Stel de AI-aanbieder (Google Gemini, OpenAI, Anthropic, Ollama...) eerst in als gewone Home Assistant-integratie - hier wordt geen API-sleutel opgeslagen. Je gezondheidsgegevens gaan naar die aanbieder (een lokale Ollama houdt ze thuis). Geen medisch advies.",
+        "data": {
+          "ai_task_entity": "AI-model",
+          "ai_extra_context": "Je notities voor de AI",
+          "ai_fallback_hour": "Terugvaluur"
+        },
+        "data_description": {
+          "ai_task_entity": "De AI Task-entiteit die gebruikt wordt. Laat leeg om de functie uit te zetten.",
+          "ai_extra_context": "Optioneel, bijvoorbeeld je doel of een komende wedstrijd: \"Ik bereid me voor op een marathon op 12 april\".",
+          "ai_fallback_hour": "De analyse draait na de ochtendsynchronisatie van het horloge. Is er op dit uur nog geen nieuwe nacht binnen, dan draait hij toch."
         }
       },
       "gear_add": {
@@ -80,7 +95,8 @@
       }
     },
     "abort": {
-      "no_activities": "Nog geen totaalstatistieken. Wacht op de eerste gegevensupdate en probeer het opnieuw."
+      "no_activities": "Nog geen totaalstatistieken. Wacht op de eerste gegevensupdate en probeer het opnieuw.",
+      "no_ai_task": "De AI Task-integratie is niet beschikbaar. Stel eerst een AI-aanbieder (Google Gemini, OpenAI, Anthropic, Ollama...) in Home Assistant 2025.8 of nieuwer in."
     }
   },
   "entity": {
@@ -199,7 +215,8 @@
       "form_forecast": { "name": "Vormprognose" },
       "daily_brief": { "name": "Dagbriefing" },
       "commute_month": { "name": "Woon-werkafstand deze maand" },
-      "commute_year": { "name": "Woon-werkafstand dit jaar" }
+      "commute_year": { "name": "Woon-werkafstand dit jaar" },
+      "ai_insight": { "name": "AI-analyse" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Aan het herstellen" },
@@ -208,6 +225,9 @@
     },
     "calendar": {
       "workouts": { "name": "Trainingen" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "AI-analyse maken" }
     }
   }
 }

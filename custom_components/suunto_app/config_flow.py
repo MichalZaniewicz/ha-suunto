@@ -22,6 +22,8 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -36,6 +38,9 @@ from homeassistant.helpers.selector import (
 
 from .api import SuuntoAppAuthError, SuuntoAppError, async_login
 from .const import (
+    CONF_AI_CONTEXT,
+    CONF_AI_HOUR,
+    CONF_AI_TASK_ENTITY,
     CONF_EMAIL,
     CONF_FAST_SCAN_INTERVAL,
     CONF_FUEL_CONSUMPTION,
@@ -44,6 +49,7 @@ from .const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
+    DEFAULT_AI_HOUR,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_FUEL_CONSUMPTION,
     DEFAULT_FUEL_PRICE,
@@ -160,13 +166,13 @@ class SuuntoAppConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class SuuntoAppOptionsFlow(OptionsFlow):
-    """Options: polling intervals, commute fuel figures, and tracked gear."""
+    """Options: polling intervals, commute fuel figures, AI insight, tracked gear."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Show the options menu."""
-        menu = ["settings", "gear_add"]
+        menu = ["settings", "ai", "gear_add"]
         if self.config_entry.options.get(CONF_GEAR):
             menu += ["gear_service", "gear_remove"]
         return self.async_show_menu(step_id="init", menu_options=menu)
@@ -254,6 +260,46 @@ class SuuntoAppOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="settings", data_schema=schema)
+
+    async def async_step_ai(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick the ai_task entity for the daily AI insight (empty = off)."""
+        if "ai_task" not in self.hass.config.components:
+            return self.async_abort(reason="no_ai_task")
+        if user_input is not None:
+            # Spelled out: a cleared optional field is simply missing from
+            # user_input, and _save would otherwise keep the old value.
+            return self._save(
+                **{
+                    CONF_AI_TASK_ENTITY: user_input.get(CONF_AI_TASK_ENTITY),
+                    CONF_AI_CONTEXT: (user_input.get(CONF_AI_CONTEXT) or "").strip(),
+                    CONF_AI_HOUR: int(user_input.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)),
+                }
+            )
+
+        opts = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_AI_TASK_ENTITY,
+                    description={"suggested_value": opts.get(CONF_AI_TASK_ENTITY)},
+                ): EntitySelector(EntitySelectorConfig(domain="ai_task")),
+                vol.Optional(
+                    CONF_AI_CONTEXT,
+                    description={"suggested_value": opts.get(CONF_AI_CONTEXT)},
+                ): TextSelector(TextSelectorConfig(multiline=True)),
+                vol.Required(
+                    CONF_AI_HOUR, default=opts.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0, max=23, step=1, unit_of_measurement="h",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="ai", data_schema=schema)
 
     async def async_step_gear_add(
         self, user_input: dict[str, Any] | None = None

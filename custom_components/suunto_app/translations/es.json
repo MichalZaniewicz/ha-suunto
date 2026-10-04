@@ -32,6 +32,7 @@
         "title": "Opciones de Suunto App",
         "menu_options": {
           "settings": "Intervalos y datos de combustible",
+          "ai": "Análisis diario con IA",
           "gear_add": "Añadir equipo a seguir",
           "gear_service": "Marcar equipo como revisado (volver a 0 km)",
           "gear_remove": "Quitar equipo"
@@ -50,6 +51,20 @@
           "scan_interval": "Cada cuánto actualizar los datos históricos (sueño, entrenamientos, carga, líneas base). Mantenlo moderado, es una API no oficial.",
           "fuel_l_per_100km": "Para el ahorro de los trayectos: el combustible que habría gastado tu coche en la misma distancia.",
           "fuel_price_per_litre": "En tu moneda. Para el dinero ahorrado en los trayectos."
+        }
+      },
+      "ai": {
+        "title": "Análisis diario con IA",
+        "description": "Una vez al día, el modelo de IA que elijas lee tus datos de sueño, recuperación y entrenamiento y escribe un breve resumen con consejos. Configura primero el proveedor de IA (Google Gemini, OpenAI, Anthropic, Ollama...) como una integración normal de Home Assistant: aquí no se guarda ninguna clave API. Tus datos de salud se envían a ese proveedor (un Ollama local los mantiene en casa). No es consejo médico.",
+        "data": {
+          "ai_task_entity": "Modelo de IA",
+          "ai_extra_context": "Tus notas para la IA",
+          "ai_fallback_hour": "Hora de respaldo"
+        },
+        "data_description": {
+          "ai_task_entity": "La entidad AI Task que se usará. Déjalo vacío para desactivar la función.",
+          "ai_extra_context": "Opcional, por ejemplo tu objetivo o una carrera próxima: \"Preparo un maratón el 12 de abril\".",
+          "ai_fallback_hour": "El análisis se ejecuta tras la sincronización matinal del reloj. Si a esta hora no ha llegado una noche nueva, se ejecuta igualmente."
         }
       },
       "gear_add": {
@@ -80,7 +95,8 @@
       }
     },
     "abort": {
-      "no_activities": "Aún no hay estadísticas totales. Espera a la primera actualización de datos e inténtalo de nuevo."
+      "no_activities": "Aún no hay estadísticas totales. Espera a la primera actualización de datos e inténtalo de nuevo.",
+      "no_ai_task": "La integración AI Task no está disponible. Configura primero un proveedor de IA (Google Gemini, OpenAI, Anthropic, Ollama...) en Home Assistant 2025.8 o posterior."
     }
   },
   "entity": {
@@ -199,7 +215,8 @@
       "form_forecast": { "name": "Previsión de forma" },
       "daily_brief": { "name": "Resumen diario" },
       "commute_month": { "name": "Trayectos al trabajo este mes" },
-      "commute_year": { "name": "Trayectos al trabajo este año" }
+      "commute_year": { "name": "Trayectos al trabajo este año" },
+      "ai_insight": { "name": "Análisis con IA" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recuperando" },
@@ -208,6 +225,9 @@
     },
     "calendar": {
       "workouts": { "name": "Entrenamientos" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "Generar análisis con IA" }
     }
   }
 }

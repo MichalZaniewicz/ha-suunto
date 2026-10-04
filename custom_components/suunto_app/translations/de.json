@@ -32,6 +32,7 @@
         "title": "Suunto App Optionen",
         "menu_options": {
           "settings": "Intervalle und Kraftstoffwerte",
+          "ai": "Tägliche KI-Analyse",
           "gear_add": "Ausrüstung hinzufügen",
           "gear_service": "Ausrüstung als gewartet markieren (auf 0 km)",
           "gear_remove": "Ausrüstung entfernen"
@@ -50,6 +51,20 @@
           "scan_interval": "Wie oft Verlaufsdaten aktualisiert werden (Schlaf, Workouts, Trainingslast, Basiswerte). Maßvoll halten, es ist eine inoffizielle API.",
           "fuel_l_per_100km": "Für die Pendel-Ersparnis: der Kraftstoff, den dein Auto auf derselben Strecke verbraucht hätte.",
           "fuel_price_per_litre": "In deiner Währung. Für das beim Pendeln gesparte Geld."
+        }
+      },
+      "ai": {
+        "title": "Tägliche KI-Analyse",
+        "description": "Einmal am Tag liest ein KI-Modell deiner Wahl deine Schlaf-, Erholungs- und Trainingsdaten und schreibt eine kurze Auswertung mit Tipps. Richte den KI-Anbieter (Google Gemini, OpenAI, Anthropic, Ollama...) zuerst als normale Home-Assistant-Integration ein - hier wird kein API-Schlüssel gespeichert. Deine Gesundheitsdaten gehen an diesen Anbieter (ein lokales Ollama behält sie zu Hause). Keine medizinische Beratung.",
+        "data": {
+          "ai_task_entity": "KI-Modell",
+          "ai_extra_context": "Deine Hinweise für die KI",
+          "ai_fallback_hour": "Ausweich-Uhrzeit"
+        },
+        "data_description": {
+          "ai_task_entity": "Die zu verwendende AI-Task-Entität. Leer lassen, um die Funktion auszuschalten.",
+          "ai_extra_context": "Optional, z. B. dein Ziel oder ein anstehender Wettkampf: \"Vorbereitung auf einen Marathon am 12. April\".",
+          "ai_fallback_hour": "Die Analyse läuft nach der morgendlichen Uhr-Synchronisierung. Ist bis zu dieser Stunde keine neue Nacht angekommen, läuft sie trotzdem."
         }
       },
       "gear_add": {
@@ -80,7 +95,8 @@
       }
     },
     "abort": {
-      "no_activities": "Noch keine Lebenszeit-Statistiken. Warte auf die erste Datenaktualisierung und versuche es erneut."
+      "no_activities": "Noch keine Lebenszeit-Statistiken. Warte auf die erste Datenaktualisierung und versuche es erneut.",
+      "no_ai_task": "Die AI-Task-Integration ist nicht verfügbar. Richte zuerst einen KI-Anbieter (Google Gemini, OpenAI, Anthropic, Ollama...) in Home Assistant 2025.8 oder neuer ein."
     }
   },
   "entity": {
@@ -199,7 +215,8 @@
       "form_forecast": { "name": "Formprognose" },
       "daily_brief": { "name": "Tagesbriefing" },
       "commute_month": { "name": "Pendelstrecke diesen Monat" },
-      "commute_year": { "name": "Pendelstrecke dieses Jahr" }
+      "commute_year": { "name": "Pendelstrecke dieses Jahr" },
+      "ai_insight": { "name": "KI-Analyse" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Erholung" },
@@ -208,6 +225,9 @@
     },
     "calendar": {
       "workouts": { "name": "Trainings" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "KI-Analyse erstellen" }
     }
   }
 }

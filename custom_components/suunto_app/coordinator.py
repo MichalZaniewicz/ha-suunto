@@ -1956,6 +1956,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 suggestion=load["suggestion"],
             ),
             "sleep": sleep_norm,
+            # Per-night HRV / resting HR / duration (oldest first), the same
+            # series the baselines come from - read by the AI insight.
+            "sleep_history": nights,
             "nap": nap_norm,
             "recovery": recovery_norm,
             "fitness": self._last_fitness,

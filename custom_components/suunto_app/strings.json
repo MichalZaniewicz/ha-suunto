@@ -32,6 +32,7 @@
         "title": "Suunto App options",
         "menu_options": {
           "settings": "Intervals and fuel figures",
+          "ai": "AI daily insight",
           "gear_add": "Add gear to track",
           "gear_service": "Mark gear as serviced (reset to 0 km)",
           "gear_remove": "Remove gear"
@@ -50,6 +51,20 @@
           "scan_interval": "How often to refresh history-based data (sleep, workouts, training load, baselines). Keep this modest - it is an unofficial API.",
           "fuel_l_per_100km": "Used for the commute savings: the fuel your car would have burned on the same distance.",
           "fuel_price_per_litre": "In your own currency. Used for the money saved by commuting."
+        }
+      },
+      "ai": {
+        "title": "AI daily insight",
+        "description": "Once a day, an AI model of your choice reads your sleep, recovery and training data and writes a short review with advice. Set up the AI provider (Google Gemini, OpenAI, Anthropic, Ollama...) as a normal Home Assistant integration first - no API key is stored here. Your health data is sent to that provider (a local Ollama keeps it at home). Not medical advice.",
+        "data": {
+          "ai_task_entity": "AI model",
+          "ai_extra_context": "Your notes for the AI",
+          "ai_fallback_hour": "Fallback hour"
+        },
+        "data_description": {
+          "ai_task_entity": "The AI Task entity to use. Leave empty to turn the feature off.",
+          "ai_extra_context": "Optional, e.g. your goal or an upcoming race: \"Preparing for a marathon on 12 April\".",
+          "ai_fallback_hour": "The analysis runs after the morning watch sync. If no new night has arrived by this hour, it runs anyway."
         }
       },
       "gear_add": {
@@ -80,7 +95,8 @@
       }
     },
     "abort": {
-      "no_activities": "No lifetime stats yet. Wait for the first data update and try again."
+      "no_activities": "No lifetime stats yet. Wait for the first data update and try again.",
+      "no_ai_task": "The AI Task integration is not available. Set up an AI provider (Google Gemini, OpenAI, Anthropic, Ollama...) in Home Assistant 2025.8 or newer first."
     }
   },
   "entity": {
@@ -199,7 +215,8 @@
       "form_forecast": { "name": "Form forecast" },
       "daily_brief": { "name": "Daily brief" },
       "commute_month": { "name": "Commute distance this month" },
-      "commute_year": { "name": "Commute distance this year" }
+      "commute_year": { "name": "Commute distance this year" },
+      "ai_insight": { "name": "AI insight" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recovering" },
@@ -208,6 +225,9 @@
     },
     "calendar": {
       "workouts": { "name": "Workouts" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "Generate AI insight" }
     }
   }
 }

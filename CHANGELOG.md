@@ -3,6 +3,17 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b1
+- **AI daily insight (optional).** Once a day an AI model of your choice reads
+  your sleep, recovery and training data and writes a short review with advice,
+  a status for the day (`good` / `ok` / `caution` / `rest`) and a warning when
+  something needs attention. Uses Home Assistant's AI Task (2025.8+), so no API
+  key is stored here: set up Gemini, OpenAI, Anthropic, Ollama or any other AI
+  Task provider, then pick it under Configure -> AI daily insight. Runs after the
+  morning sync (or at a fallback hour), stores the result across restarts, and
+  adds an *AI insight* sensor plus a *Generate AI insight* button. Sends only
+  already-computed metrics (about 1-3k tokens); no extra Suunto requests.
+
 ## 1.0.29
 - **Commute sensors.** `commute_month` and `commute_year`: distance on the
   workouts Suunto tagged as a commute, with rides, days, average duration and

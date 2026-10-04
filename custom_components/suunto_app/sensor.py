@@ -22,7 +22,8 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from . import SuuntoAppConfigEntry, suunto_device_info
-from .const import CONF_GEAR
+from .ai_insight import MAX_STATE_LENGTH, SuuntoAiInsight
+from .const import CONF_GEAR, DOMAIN
 
 UNIT_BPM = "bpm"
 UNIT_KCAL = "kcal"
@@ -1390,6 +1391,13 @@ async def async_setup_entry(
     for registered in er.async_entries_for_config_entry(registry, entry.entry_id):
         if registered.unique_id.startswith(prefix) and registered.unique_id not in wanted:
             registry.async_remove(registered.entity_id)
+    # The AI insight exists only while an ai_task entity is picked in the options.
+    if runtime.ai is not None:
+        async_add_entities([SuuntoAiInsightSensor(runtime.ai, entry)])
+    elif entity_id := registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_ai_insight"
+    ):
+        registry.async_remove(entity_id)
 
 
 class SuuntoAppSensor(
@@ -1477,4 +1485,50 @@ class SuuntoGearSensor(
             "interval_km": gear.get("interval_km"),
             "remaining_km": gear.get("remaining_km"),
             "service_due": gear.get("service_due"),
+        }
+
+
+class SuuntoAiInsightSensor(SensorEntity):
+    """The daily AI insight: headline as the state, the rest as attributes."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "ai_insight"
+    _attr_icon = "mdi:creation"
+    _attr_should_poll = False
+    # Long text is only useful live on a card, never worth keeping in history.
+    _unrecorded_attributes = frozenset({"summary", "advice", "warning", "error"})
+
+    def __init__(self, insight: SuuntoAiInsight, entry: SuuntoAppConfigEntry) -> None:
+        """Initialize the sensor."""
+        self._insight = insight
+        self._attr_unique_id = f"{entry.entry_id}_ai_insight"
+        self._attr_device_info = suunto_device_info(entry)
+
+    async def async_added_to_hass(self) -> None:
+        """Follow the insight's updates."""
+        self.async_on_remove(self._insight.async_add_listener(self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the headline."""
+        result = self._insight.result or {}
+        headline = result.get("headline") or result.get("summary")
+        return headline[:MAX_STATE_LENGTH] if headline else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the full analysis plus when and how it was made."""
+        result = self._insight.result or {}
+        return {
+            "status": result.get("status"),
+            "summary": result.get("summary"),
+            "advice": result.get("advice") or [],
+            "warning": result.get("warning"),
+            "for_date": result.get("for_date"),
+            "generated_at": result.get("generated_at"),
+            "sleep_night": result.get("sleep_night"),
+            "sleep_stale": result.get("sleep_stale"),
+            "ai_task_entity": self._insight.ai_task_entity,
+            "generating": self._insight.running,
+            "error": self._insight.last_error,
         }
