@@ -3,6 +3,11 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b3
+- **Longer AI insight sections:** each section is now two paragraphs (what
+  the data shows, then what it means), separated by a blank line so a card
+  can render them as paragraphs.
+
 ## 1.0.30b2
 - **The AI insight is split into sections:** sleep, health and recovery,
   training, and daily activity, each with its own status (`good` / `ok` /

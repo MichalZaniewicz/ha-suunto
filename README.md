@@ -349,8 +349,8 @@ and `error` (the last failure, if any). The long text is kept out of the
 recorder.
 
 `sections` splits the review by topic, always in this order, each with its own
-`status` (`good` / `ok` / `caution`) and `text`; a section with no data is left
-out:
+`status` (`good` / `ok` / `caution`) and `text` (two paragraphs, separated by a
+blank line); a section with no data is left out:
 
 | Key | Covers |
 | --- | --- |
