@@ -342,10 +342,26 @@ on cloud models, and within Gemini's free tier. Nothing extra is fetched from
 Suunto. The answer is in the Home Assistant language.
 
 The *AI insight* sensor's state is the headline. Attributes: `status`
-(`good` / `ok` / `caution` / `rest`), `summary`, `advice` (a list), `warning`,
-`for_date`, `generated_at`, `sleep_night` / `sleep_stale` (which night it was
-based on), `ai_task_entity`, `generating` and `error` (the last failure, if
-any). The long text is kept out of the recorder.
+(`good` / `ok` / `caution` / `rest`, the overall call for today), `sections`,
+`advice` (a list), `warning`, `for_date`, `generated_at`, `sleep_night` /
+`sleep_stale` (which night it was based on), `ai_task_entity`, `generating`
+and `error` (the last failure, if any). The long text is kept out of the
+recorder.
+
+`sections` splits the review by topic, always in this order, each with its own
+`status` (`good` / `ok` / `caution`) and `text`; a section with no data is left
+out:
+
+| Key | Covers |
+| --- | --- |
+| `sleep` | last night's duration, deep/REM and quality, consistency over the last nights, the sleep goal |
+| `recovery` | HRV and resting HR against your baselines, readiness, recovery balance, stress |
+| `training` | the last 14 days of workouts, CTL/ATL/TSB/ACWR, weekly volume, the form forecast |
+| `activity` | today's steps and active calories against your goals, the streak |
+
+```yaml
+{{ state_attr('sensor.suunto_michala_ai_insight', 'sections').sleep.text }}
+```
 
 > [!WARNING]
 > Your health data goes to whichever AI provider you pick. Use a local model

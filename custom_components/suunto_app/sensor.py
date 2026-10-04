@@ -1496,7 +1496,9 @@ class SuuntoAiInsightSensor(SensorEntity):
     _attr_icon = "mdi:creation"
     _attr_should_poll = False
     # Long text is only useful live on a card, never worth keeping in history.
-    _unrecorded_attributes = frozenset({"summary", "advice", "warning", "error"})
+    _unrecorded_attributes = frozenset(
+        {"sections", "summary", "advice", "warning", "error"}
+    )
 
     def __init__(self, insight: SuuntoAiInsight, entry: SuuntoAppConfigEntry) -> None:
         """Initialize the sensor."""
@@ -1521,6 +1523,10 @@ class SuuntoAiInsightSensor(SensorEntity):
         result = self._insight.result or {}
         return {
             "status": result.get("status"),
+            # {"sleep" | "recovery" | "training" | "activity": {"status", "text"}},
+            # in display order; a section with no data is left out.
+            "sections": result.get("sections") or {},
+            # Only on a plain-text answer (no structured output support).
             "summary": result.get("summary"),
             "advice": result.get("advice") or [],
             "warning": result.get("warning"),

@@ -3,6 +3,13 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b2
+- **The AI insight is split into sections:** sleep, health and recovery,
+  training, and daily activity, each with its own status (`good` / `ok` /
+  `caution`), in a new `sections` attribute that cards can show one by one.
+  It replaces the single `summary` paragraph (kept only for a plain-text
+  answer from a core without structured output).
+
 ## 1.0.30b1
 - **AI daily insight (optional).** Once a day an AI model of your choice reads
   your sleep, recovery and training data and writes a short review with advice,

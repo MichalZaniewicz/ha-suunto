@@ -63,38 +63,66 @@ _LANGUAGE_NAMES = {
     "pt": "Portuguese",
 }
 
-# Schema of the answer, in the format the ai_task.generate_data action takes.
-STRUCTURE: dict[str, dict[str, Any]] = {
-    "headline": {
-        "description": "One sentence, at most 120 characters: the key message for today.",
-        "required": True,
-        "selector": {"text": {}},
-    },
-    "summary": {
-        "description": "3-5 sentences on sleep, recovery and training load over the last days.",
-        "required": True,
-        "selector": {"text": {"multiline": True}},
-    },
-    "advice": {
+# Per-section call, so a card can color each section on its own.
+SECTION_STATUSES = ("good", "ok", "caution")
+# Sections of the review, in display order: key -> what it covers. Each one
+# comes back as `<key>` (text) and `<key>_status`, and is exposed on the
+# sensor as ``sections[key] = {"status", "text"}`` for the cards.
+SECTIONS: dict[str, str] = {
+    "sleep": "Sleep: last night's duration, deep/REM and quality, and how the last"
+    " nights compare (consistency, the sleep goal).",
+    "recovery": "Health and recovery: HRV and resting heart rate against the baselines,"
+    " readiness, recovery balance, stress, unusual_recovery.",
+    "training": "Training: the last 14 days of workouts, load (CTL/ATL/TSB/ACWR),"
+    " weekly volume against the training goal, and the form forecast.",
+    "activity": "Daily activity: today's steps and active calories against the goals,"
+    " the current streak, days since the last workout.",
+}
+
+
+def _structure() -> dict[str, dict[str, Any]]:
+    """Schema of the answer, in the format the ai_task.generate_data action takes."""
+    fields: dict[str, dict[str, Any]] = {
+        "headline": {
+            "description": "One sentence, at most 120 characters: the key message for today.",
+            "required": True,
+            "selector": {"text": {}},
+        },
+        "status": {
+            "description": "Overall call for today.",
+            "required": True,
+            "selector": {"select": {"options": list(STATUSES)}},
+        },
+    }
+    for key, covers in SECTIONS.items():
+        fields[key] = {
+            "description": f"2-3 sentences. {covers} Empty string if there is no data for it.",
+            "required": True,
+            "selector": {"text": {"multiline": True}},
+        }
+        fields[f"{key}_status"] = {
+            "description": f"How the {key} section looks.",
+            "required": True,
+            "selector": {"select": {"options": list(SECTION_STATUSES)}},
+        }
+    fields["advice"] = {
         "description": "2-4 short, concrete recommendations for today and the next days.",
         "required": True,
         "selector": {"text": {"multiple": True}},
-    },
-    "warning": {
+    }
+    fields["warning"] = {
         "description": "Only if something needs attention; otherwise an empty string.",
         "required": False,
         "selector": {"text": {}},
-    },
-    "status": {
-        "description": "Overall call for today.",
-        "required": True,
-        "selector": {"select": {"options": list(STATUSES)}},
-    },
-}
+    }
+    return fields
+
+
+STRUCTURE = _structure()
 
 _INSTRUCTIONS = """You are an endurance coach and a sleep and recovery analyst.
 Below is a JSON snapshot of one athlete's data from a Suunto watch, as of {today}.
-Write a short daily review of it.
+Write a short daily review of it, split into sections.
 
 Rules:
 - Write every field in {language}.
@@ -102,6 +130,8 @@ Rules:
 - Judge HRV and resting heart rate against the athlete's own baselines, not population norms.
 - Look at trends over the last nights and workouts, not only at last night.
 - Be specific: name the numbers that support a point.
+- Keep each section to its own topic; do not repeat a point in two sections.
+- Use plain hyphens; never long dashes.
 - warning: only for something that genuinely needs attention (for example HRV suppressed
   together with an elevated resting heart rate for several nights, or ACWR above 1.5);
   otherwise leave it empty.
@@ -274,22 +304,42 @@ def build_instructions(
     )
 
 
+def _text(value: Any) -> str | None:
+    return str(value or "").strip() or None
+
+
 def parse_result(data: Any) -> dict[str, Any]:
-    """Normalize the model's answer; tolerate plain text and loose types."""
+    """Normalize the model's answer; tolerate plain text and loose types.
+
+    ``summary`` is only filled when the answer came back as plain text (a
+    core without structured output); otherwise the text is in ``sections``.
+    """
     if not isinstance(data, dict):
         text = str(data or "").strip()
         headline = text.split("\n", 1)[0].split(". ", 1)[0]
-        return {"headline": headline, "summary": text, "advice": [], "warning": None, "status": None}
+        return {
+            "headline": headline, "status": None, "sections": {},
+            "summary": text or None, "advice": [], "warning": None,
+        }
     advice = data.get("advice") or []
     if isinstance(advice, str):
         advice = [line.strip(" -*\t") for line in advice.splitlines()]
     status = str(data.get("status") or "").strip().lower()
+    sections: dict[str, dict[str, Any]] = {}
+    for key in SECTIONS:
+        if text := _text(data.get(key)):
+            section_status = str(data.get(f"{key}_status") or "").strip().lower()
+            sections[key] = {
+                "status": section_status if section_status in SECTION_STATUSES else None,
+                "text": text,
+            }
     return {
-        "headline": str(data.get("headline") or "").strip() or None,
-        "summary": str(data.get("summary") or "").strip() or None,
-        "advice": [str(item).strip() for item in advice if str(item).strip()],
-        "warning": str(data.get("warning") or "").strip() or None,
+        "headline": _text(data.get("headline")),
         "status": status if status in STATUSES else None,
+        "sections": sections,
+        "summary": _text(data.get("summary")),
+        "advice": [str(item).strip() for item in advice if str(item).strip()],
+        "warning": _text(data.get("warning")),
     }
 
 
@@ -469,7 +519,7 @@ class SuuntoAiInsight:
                 "ai_task", "generate_data", service_data, blocking=True, return_response=True
             )
         parsed = parse_result((response or {}).get("data"))
-        if not parsed["headline"] and not parsed["summary"]:
+        if not parsed["headline"] and not parsed["sections"] and not parsed["summary"]:
             raise HomeAssistantError("The AI returned an empty answer")
         sleep = daily.get("sleep") or {}
         return {
