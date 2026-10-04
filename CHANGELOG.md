@@ -3,63 +3,38 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.30b7
-- **New "Automatic AI insight" switch.** Off pauses every automatic run
-  (morning, fallback hour, retries) so the AI provider is not used; the
-  "Generate AI insight" button still works and the last result stays on the
-  sensor, which gains a `paused` attribute. Turning it on after the fallback
-  hour with nothing generated today runs today's analysis right away. The
-  setting survives restarts.
-
-## 1.0.30b6
-- **New AI Insight Report blueprint.** Sends the daily AI insight the moment
-  it is generated, short (headline, one status line per section, warning,
-  advice) or full (every section's text), for the sections you pick, only on
-  the days whose status you pick (e.g. just Caution and Rest), optionally
-  skipping runs started from the button.
-- **New `suunto_app_ai_insight` event** after every successful run, with the
-  whole review and the section/status names in your Home Assistant language.
-- The AI now sees each workout's calories and how much of each day's active
-  calories came from workouts, so it stops calling a training day's calories
-  "activity outside training".
-
-## 1.0.30b5
-- **The AI insight's activity section judges yesterday, not today.** It runs
-  in the morning, when today has barely started, so the daily step and
-  active-calorie goals are now checked against yesterday's complete day
-  (from the 24/7 data already fetched; no extra request). Today's figures go
-  in only as "so far, as of HH:MM".
-- The prompt now says steps and active calories already include workouts,
-  and asks for numbers written the way the language does (decimal comma in
-  Polish, German and others).
-
-## 1.0.30b4
-- The two-paragraph length (120-180 words per section) is now a hard rule in
-  the prompt itself; models skimmed it when it was only in the field
-  descriptions and wrote two sentences.
-
-## 1.0.30b3
-- **Longer AI insight sections:** each section is now two paragraphs (what
-  the data shows, then what it means), separated by a blank line so a card
-  can render them as paragraphs.
-
-## 1.0.30b2
-- **The AI insight is split into sections:** sleep, health and recovery,
-  training, and daily activity, each with its own status (`good` / `ok` /
-  `caution`), in a new `sections` attribute that cards can show one by one.
-  It replaces the single `summary` paragraph (kept only for a plain-text
-  answer from a core without structured output).
-
-## 1.0.30b1
+## 1.0.30
 - **AI daily insight (optional).** Once a day an AI model of your choice reads
-  your sleep, recovery and training data and writes a short review with advice,
-  a status for the day (`good` / `ok` / `caution` / `rest`) and a warning when
-  something needs attention. Uses Home Assistant's AI Task (2025.8+), so no API
-  key is stored here: set up Gemini, OpenAI, Anthropic, Ollama or any other AI
-  Task provider, then pick it under Configure -> AI daily insight. Runs after the
-  morning sync (or at a fallback hour), stores the result across restarts, and
-  adds an *AI insight* sensor plus a *Generate AI insight* button. Sends only
-  already-computed metrics (about 1-3k tokens); no extra Suunto requests.
+  your sleep, recovery and training data and writes a review: a headline, an
+  overall status for the day (`good` / `ok` / `caution` / `rest`), four
+  sections (sleep, health and recovery, training, daily activity) of two
+  paragraphs each with their own status, advice, and a warning only when
+  something needs attention. It uses Home Assistant's AI Task (2025.8+), so no
+  API key is stored here: set up Gemini, OpenAI, Anthropic, Ollama or any other
+  AI Task provider, then pick it under Configure -> AI daily insight, with your
+  own notes for the model and a fallback hour.
+- It runs after the morning watch sync brings in last night's sleep, or at the
+  fallback hour if no night arrived, and once more if the night shows up
+  later; a failed run is retried at most 3 times a day. The result is stored,
+  so a restart never pays for the same analysis twice. The answer is in your
+  Home Assistant language, with the number format of that language.
+- The activity section judges yesterday's complete day (today's figures go in
+  only as "so far"), and the AI is told how much of each day's active calories
+  came from workouts. Yesterday's totals come from the 24/7 data already
+  fetched. Only already-computed metrics are sent (about 1-3k tokens); no
+  extra Suunto requests.
+- **New entities** (only while the AI insight is turned on): the *AI insight*
+  sensor (headline as state; `status`, `sections`, `advice`, `warning`,
+  `generated_at`, `paused` and more as attributes, long text kept out of the
+  recorder), a *Generate AI insight* button, and an **Automatic AI insight
+  switch** that pauses every automatic run so nothing is spent.
+- **New `suunto_app_ai_insight` event** after every successful run, with the
+  whole review plus section and status names in your Home Assistant language.
+- **New AI Insight Report blueprint** that sends the review the moment it is
+  generated: short (headline, section statuses, warning, advice) or full, for
+  the sections and day statuses you pick.
+- [Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards) 0.20.0
+  adds an AI Insight card with one tab per section.
 
 ## 1.0.29
 - **Commute sensors.** `commute_month` and `commute_year`: distance on the
