@@ -478,12 +478,22 @@ class SuuntoAiInsight:
         self.result: dict[str, Any] | None = None
         self.last_error: str | None = None
         self.running = False
+        # The "Automatic AI insight" switch: off pauses every automatic run
+        # (morning, fallback hour, retries) so nothing is spent; the button
+        # still works. Kept in the same Store as the result, so it is known
+        # before any trigger can fire after a restart.
+        self.enabled = True
 
     async def async_start(self) -> None:
-        """Load the stored result and hook up the triggers."""
+        """Load the stored state and hook up the triggers."""
         stored = await self._store.async_load()
         if isinstance(stored, dict):
-            self.result = stored
+            if "result" in stored or "enabled" in stored:
+                result = stored.get("result")
+                self.result = result if isinstance(result, dict) else None
+                self.enabled = stored.get("enabled", True) is not False
+            else:
+                self.result = stored  # 1.0.30b1-b6 stored the bare result
         self._unsubs += [
             self.hass.bus.async_listen(EVENT_WOKE_UP, self._on_woke_up),
             self._daily.async_add_listener(self._on_daily_update),
@@ -493,6 +503,23 @@ class SuuntoAiInsight:
         ]
         if dt_util.now().hour >= self._hour and not self._done_today():
             self._run_in_background()
+
+    async def async_set_enabled(self, enabled: bool) -> None:
+        """Switch automatic runs on or off.
+
+        Turning it on after the fallback hour, with nothing generated today,
+        runs today's analysis right away instead of waiting for tomorrow.
+        """
+        if enabled == self.enabled:
+            return
+        self.enabled = enabled
+        await self._async_save()
+        self._notify()
+        if enabled and dt_util.now().hour >= self._hour and not self._done_today():
+            self._run_in_background()
+
+    async def _async_save(self) -> None:
+        await self._store.async_save({"enabled": self.enabled, "result": self.result})
 
     @callback
     def async_stop(self) -> None:
@@ -545,6 +572,9 @@ class SuuntoAiInsight:
 
     @callback
     def _run_in_background(self) -> None:
+        """Start an AUTOMATIC run; skipped while the switch is off."""
+        if not self.enabled:
+            return
         today = dt_util.now().date().isoformat()
         day, count = self._attempts
         count = count if day == today else 0
@@ -556,6 +586,8 @@ class SuuntoAiInsight:
         )
 
     async def _async_generate_quietly(self) -> None:
+        if not self.enabled:
+            return  # switched off while this run was queued
         try:
             await self.async_generate(wait=True)
         except HomeAssistantError:
@@ -576,7 +608,7 @@ class SuuntoAiInsight:
             try:
                 self.result = await self._async_call()
                 self.last_error = None
-                await self._store.async_save(self.result)
+                await self._async_save()
                 self._fire_event(manual=not wait)
             except Exception as err:  # noqa: BLE001 - any provider error ends up here
                 self.last_error = str(err) or type(err).__name__

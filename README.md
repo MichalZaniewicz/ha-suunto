@@ -334,6 +334,13 @@ if the night shows up later. At most one or two runs a day; the result is
 stored, so a restart never pays for the same analysis twice. The **Generate AI
 insight** button runs it on demand.
 
+The **Automatic AI insight** switch pauses it: while off, nothing runs by
+itself (no morning run, no fallback-hour run, no retries), so nothing is spent;
+the button still works, and the last result stays on the sensor (with
+`paused: true`). Turning it back on after the fallback hour, with nothing
+generated today, runs today's analysis right away. Automations can flip it too,
+e.g. off for a holiday.
+
 It sends a compact summary of numbers the integration has already computed
 (last night's sleep, 14 nights of HRV and resting HR, baselines, readiness,
 CTL/ATL/TSB/ACWR, the form forecast, the last 14 days of workouts, yesterday's
@@ -344,8 +351,8 @@ Suunto. The answer is in the Home Assistant language.
 The *AI insight* sensor's state is the headline. Attributes: `status`
 (`good` / `ok` / `caution` / `rest`, the overall call for today), `sections`,
 `advice` (a list), `warning`, `for_date`, `generated_at`, `sleep_night` /
-`sleep_stale` (which night it was based on), `ai_task_entity`, `generating`
-and `error` (the last failure, if any). The long text is kept out of the
+`sleep_stale` (which night it was based on), `ai_task_entity`, `generating`,
+`paused` and `error` (the last failure, if any). The long text is kept out of the
 recorder.
 
 `sections` splits the review by topic, always in this order, each with its own

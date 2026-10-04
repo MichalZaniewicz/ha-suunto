@@ -226,6 +226,9 @@
     "calendar": {
       "workouts": { "name": "Workouts" }
     },
+    "switch": {
+      "ai_insight_enabled": { "name": "Automatic AI insight" }
+    },
     "button": {
       "ai_insight_generate": { "name": "Generate AI insight" }
     }

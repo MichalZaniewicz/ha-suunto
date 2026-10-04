@@ -116,7 +116,7 @@ PROFILE_REFRESH_HOURS = 24
 # figure by ~4.19x.
 JOULES_PER_KCAL = 4186.8
 
-PLATFORMS = ["sensor", "binary_sensor", "calendar", "button"]
+PLATFORMS = ["sensor", "binary_sensor", "calendar", "button", "switch"]
 
 # Fired on the Home Assistant bus when the daily coordinator first sees a workout
 # key it has never seen before, so automations can react to a finished workout

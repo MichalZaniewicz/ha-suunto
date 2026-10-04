@@ -3,6 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.30b7
+- **New "Automatic AI insight" switch.** Off pauses every automatic run
+  (morning, fallback hour, retries) so the AI provider is not used; the
+  "Generate AI insight" button still works and the last result stays on the
+  sensor, which gains a `paused` attribute. Turning it on after the fallback
+  hour with nothing generated today runs today's analysis right away. The
+  setting survives restarts.
+
 ## 1.0.30b6
 - **New AI Insight Report blueprint.** Sends the daily AI insight the moment
   it is generated, short (headline, one status line per section, warning,

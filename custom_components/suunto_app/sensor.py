@@ -1536,5 +1536,7 @@ class SuuntoAiInsightSensor(SensorEntity):
             "sleep_stale": result.get("sleep_stale"),
             "ai_task_entity": self._insight.ai_task_entity,
             "generating": self._insight.running,
+            # The "Automatic AI insight" switch is off: no automatic runs.
+            "paused": not self._insight.enabled,
             "error": self._insight.last_error,
         }
