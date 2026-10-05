@@ -230,7 +230,8 @@
       "ai_insight_enabled": { "name": "Automatic AI insight" }
     },
     "button": {
-      "ai_insight_generate": { "name": "Generate AI insight" }
+      "ai_insight_generate": { "name": "Generate AI insight" },
+      "sync_now": { "name": "Sync now" }
     }
   }
 }

@@ -230,7 +230,8 @@
       "ai_insight_enabled": { "name": "Automatische AI-analyse" }
     },
     "button": {
-      "ai_insight_generate": { "name": "AI-analyse maken" }
+      "ai_insight_generate": { "name": "AI-analyse maken" },
+      "sync_now": { "name": "Nu synchroniseren" }
     }
   }
 }

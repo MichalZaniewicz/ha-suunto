@@ -230,7 +230,8 @@
       "ai_insight_enabled": { "name": "Análise automática com IA" }
     },
     "button": {
-      "ai_insight_generate": { "name": "Gerar análise com IA" }
+      "ai_insight_generate": { "name": "Gerar análise com IA" },
+      "sync_now": { "name": "Sincronizar agora" }
     }
   }
 }

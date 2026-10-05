@@ -231,6 +231,12 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   choice, with advice and a status for the day, plus a button to run it on
   demand - see [AI daily insight](#ai-daily-insight-optional). On top of the
   100 sensors, and only there once you turn it on.
+- **Sync now button:** fetches everything from Suunto right away instead of
+  waiting for the next poll (every 15 min for activity, every 60 min for
+  sleep, recovery and workouts), with the stored session, so no new login
+  email. It cannot reach your watch: sync the watch with the Suunto app first,
+  then press it. If the full night comes in with it, the woke-up event and
+  the AI insight follow as usual.
 - **Commutes:** distance commuted **this month** and **this year**, counting
   whatever Suunto itself tagged as a commute. Attributes carry `rides`,
   `days`, `avg_duration_min`, and what the car left at home would have cost:
