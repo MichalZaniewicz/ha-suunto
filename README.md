@@ -1,5 +1,7 @@
 # Suunto → Home Assistant (`suunto_app`)
 
+![Suunto for Home Assistant](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/hero-banner.svg)
+
 A custom HACS integration that pulls your **Suunto** data into Home Assistant from
 the Suunto app (Sports Tracker) - signing in with just your email and password,
 no Docker and no partner keys.
@@ -18,11 +20,6 @@ which silently removes any <img> placed inside it. -->
 
 [![Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MichalZaniewicz&repository=ha-suunto&category=integration)
 
-![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
-
-*Example dashboard - live sensors plus backfilled long-term statistics (heart
-rate, training load, sleep).*
-
 ```
 Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 ```
@@ -37,6 +34,11 @@ Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
+
+![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
+
+*Example dashboard - live sensors plus backfilled long-term statistics (heart
+rate, training load, sleep).*
 
 ## Custom Lovelace cards
 
