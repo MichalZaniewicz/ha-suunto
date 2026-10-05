@@ -8,7 +8,8 @@ metrics the coordinators have already computed. Nothing extra is fetched from
 Suunto for this.
 
 When it runs:
-- after the morning sync: ``suunto_app_woke_up`` marks a new night, and the
+- after the morning sync: ``suunto_app_woke_up`` marks a new, finished night
+  (a mid-night fragment does not count), and the
   analysis starts once that coordinator update has finished (the event fires
   mid-update, before the new data is published);
 - at a fallback hour, if nothing was generated today yet (no sync, or a
@@ -155,6 +156,7 @@ atl = fatigue, acwr = acute:chronic workload ratio (about 0.8-1.3 is the safe zo
 readiness = 0-100 heuristic score, pte = Suunto peak training effect (1-5),
 tss = training stress score, suggestion = a rule-based hint from TSB and ACWR,
 sleep.stale = true means last night has not synced yet (the night shown is older),
+sleep.in_progress = true means only part of last night has synced so far (do not judge its length),
 forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app,
 yesterday = the last complete day, today_so_far = the day until as_of (partial, do not judge
 goals on it). Steps and active_kcal are the whole day INCLUDING workouts, not activity on top
@@ -309,6 +311,7 @@ def build_context(
                 {
                     "night": sleep.get("night"),
                     "stale": sleep.get("stale"),
+                    "in_progress": True if sleep and not sleep.get("finished") else None,
                     "hours": _round(sleep.get("duration_hours")),
                     "deep_min": sleep.get("deep_minutes"),
                     "rem_min": sleep.get("rem_minutes"),
@@ -543,8 +546,13 @@ class SuuntoAiInsight:
         return bool(self.result) and self.result.get("for_date") == dt_util.now().date().isoformat()
 
     def _has_current_night(self) -> bool:
-        """Whether today's result was built with last night's sleep in it."""
-        return bool(self._done_today() and self.result and not self.result.get("sleep_stale"))
+        """Whether today's result was built with all of last night's sleep in it."""
+        return bool(
+            self._done_today()
+            and self.result
+            and not self.result.get("sleep_stale")
+            and self.result.get("sleep_finished", True)
+        )
 
     @callback
     def _on_woke_up(self, event: Event) -> None:
@@ -682,5 +690,6 @@ class SuuntoAiInsight:
             "generated_at": dt_util.utcnow().isoformat(),
             "sleep_night": str(sleep["night"]) if sleep.get("night") else None,
             "sleep_stale": bool(sleep.get("stale")) if sleep else True,
+            "sleep_finished": bool(sleep.get("finished")) if sleep else False,
             "ai_task_entity": self.ai_task_entity,
         }

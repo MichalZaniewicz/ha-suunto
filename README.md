@@ -299,7 +299,9 @@ sync), it fires `suunto_app_woke_up` once. The event carries `night`,
 `wake_time`, `sleep_hours`, `sleep_quality_pct`, `hrv_ms`, `hrv_status`,
 `resting_hr_bpm` and `readiness`. Like the workout event it fires when the data
 arrives, not at the moment you wake up; the first poll after a restart only
-takes stock, and an out-of-date night is never announced.
+takes stock, and an out-of-date night is never announced. The watch also syncs
+during the night, so a night only counts once its last part ends at 4:00 or
+later; a fragment that arrives at 2 a.m. waits for the rest of the night.
 
 ### Gear tracking and service reminders
 

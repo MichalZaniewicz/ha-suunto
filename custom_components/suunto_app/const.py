@@ -137,6 +137,12 @@ EVENT_AI_INSIGHT = f"{DOMAIN}_ai_insight"
 # workout" for a two-month-old ride is noise. Older ones are recorded silently.
 NEW_WORKOUT_MAX_AGE_DAYS = 7
 
+# The watch syncs in the middle of the night too, so the first fragment of a
+# night can reach us at 2 a.m. while the athlete is still asleep. A night only
+# counts as finished (woke-up event, AI insight) once its last fragment ends at
+# or after this local hour on the morning after; until then more is expected.
+EARLIEST_WAKE_HOUR = 4
+
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {
     0: "Walking",

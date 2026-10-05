@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.31
+- **Fix: the woke-up event and the AI insight no longer fire in the middle of
+  the night.** The watch also syncs while you sleep, so the first part of a
+  night could reach Home Assistant at 2 a.m. and was taken as "you woke up":
+  `suunto_app_woke_up` fired and the AI insight ran on 1.5 hours of sleep. A
+  night now counts only once its last part ends at 4:00 or later; until then
+  the integration waits for the sync that brings the rest. A genuine wake-up
+  before 4:00 is still covered by the AI insight's fallback hour.
+- If the AI insight already ran on an unfinished night (for example at the
+  fallback hour), it runs once more when the full night arrives, and the model
+  is told when the night it sees is still incomplete.
+
 ## 1.0.30
 - **AI daily insight (optional).** Once a day an AI model of your choice reads
   your sleep, recovery and training data and writes a review: a headline, an

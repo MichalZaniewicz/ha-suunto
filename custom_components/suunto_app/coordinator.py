@@ -7,7 +7,7 @@ import logging
 import math
 from collections import defaultdict
 from collections.abc import Iterator
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -39,6 +39,7 @@ from .const import (
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     MAX_ROUTE_POINTS,
+    EARLIEST_WAKE_HOUR,
     NEW_WORKOUT_MAX_AGE_DAYS,
     RECENT_WORKOUTS_LIMIT,
     RECOVERY_LOOKBACK_DAYS,
@@ -231,6 +232,22 @@ def _sleep_is_current(night: Any, now: datetime) -> bool:
     """
     current_key = (dt_util.as_local(now) - timedelta(hours=12)).date()
     return night >= current_key - timedelta(days=1)
+
+
+def _night_finished(night: Any, wake_time: datetime | None) -> bool:
+    """Whether a night's sleep has ended, not just a mid-night fragment of it.
+
+    The watch also syncs while the athlete sleeps, so a night can first arrive
+    as a 1-2 h fragment ending at 1-2 a.m. Its last fragment must end at or
+    after EARLIEST_WAKE_HOUR on the morning after the night key; a genuine
+    wake-up before that is left to the AI insight's fallback hour.
+    """
+    if night is None or wake_time is None:
+        return False
+    morning = datetime.combine(
+        night + timedelta(days=1), time(EARLIEST_WAKE_HOUR), tzinfo=dt_util.DEFAULT_TIME_ZONE
+    )
+    return dt_util.as_local(wake_time) >= morning
 
 
 def _group_naps(
@@ -1692,6 +1709,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         sleep_norm = _normalize_sleep(sleep)
         if sleep_norm:
             sleep_norm["stale"] = not _sleep_is_current(sleep_norm["night"], now)
+            sleep_norm["finished"] = _night_finished(
+                sleep_norm["night"], sleep_norm.get("wake_time")
+            )
         # Only a current night may speak for "today" (readiness, unusual
         # recovery). The sleep sensors themselves keep showing the newest night
         # they have, with its date and the stale flag as attributes.
@@ -2228,20 +2248,26 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         the morning watch sync plus up to one poll - not at the actual wake-up.
         The first cycle after a restart only records the newest night, and a
         stale night (see _sleep_is_current) is never announced: an old night
-        surfacing late is not "this morning".
+        surfacing late is not "this morning". Neither is a night still in
+        progress (see _night_finished): it waits, unrecorded, for the sync
+        that brings the rest of it.
         """
         if not sleep or sleep.get("night") is None:
             return
         night = sleep["night"]
         if not self._night_seeded:
             self._night_seeded = True
-            self._known_night = night
+            # An unfinished night at startup was not announced yet.
+            self._known_night = night if sleep.get("finished") else night - timedelta(days=1)
             return
         if self._known_night is not None and night <= self._known_night:
             return
-        self._known_night = night
         if sleep.get("stale"):
+            self._known_night = night
             return
+        if not sleep.get("finished"):
+            return
+        self._known_night = night
         wake = sleep.get("wake_time")
         self.hass.bus.async_fire(
             EVENT_WOKE_UP,
