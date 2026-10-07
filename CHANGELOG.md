@@ -3,12 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.32b3
-- **Personal insights show one finding per kind of night** (its strongest
-  metric), so one habit (say, late workouts) no longer fills the list with
-  its HRV, resting HR and sleep versions of the same story.
-
-## 1.0.32b2
+## 1.0.32
 - **Four new sensors about patterns in your own history**, all computed from
   data the integration already downloads (no extra requests):
   - **Sleep regularity**: the Sleep Regularity Index over the last four weeks,
@@ -18,19 +13,18 @@ beta pre-releases are tagged `X.Y.ZbN`.
     workout of 40+ minutes, with a short per-workout trend.
   - **Personal insights**: the clearest differences in HRV, resting HR and
     sleep length after late workouts, training days, hard days, early
-    bedtimes and weekend nights, as sentences in your Home Assistant language
-    (full sentences in English and Polish, a short form in the others).
+    bedtimes and weekend nights, one finding per kind of night, as sentences
+    in your Home Assistant language (full sentences in English and Polish, a
+    short form in the others).
 - The AI daily insight now also receives these patterns as context.
-- Names in all 8 languages. 100 -> 104 sensors.
-
-## 1.0.32b1
 - **New Sync now button.** It fetches everything from Suunto right away
   (activity, sleep, recovery, workouts and stats) instead of waiting for the
   next poll, with the stored session, so no new login email. It cannot reach
   the watch itself: the watch has to sync with the Suunto app first. A press
   while a sync is still running is ignored, and a failed sync shows an error.
   If the full night arrives with it, the woke-up event and the AI insight
-  follow as usual. Named in all 8 languages.
+  follow as usual.
+- Names in all 8 languages. 100 -> 104 sensors.
 
 ## 1.0.31
 - **Fix: the woke-up event and the AI insight no longer fire in the middle of
