@@ -456,8 +456,13 @@ def personal_insights(
                 finding["threshold"] = clock(bed_cutoff)
             findings.append(finding)
 
+    # One finding per condition (its strongest metric), so a single habit
+    # cannot fill the whole list with three versions of the same story.
     findings.sort(key=lambda f: abs(f["effect_size"]), reverse=True)
-    findings = findings[:INSIGHT_LIMIT]
+    seen: set[str] = set()
+    findings = [
+        f for f in findings if not (f["condition"] in seen or seen.add(f["condition"]))
+    ][:INSIGHT_LIMIT]
     for finding in findings:
         finding["text"] = _insight_text(finding, language)
     return {

@@ -262,7 +262,8 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
     hardest days, early bedtimes and weekend nights against the rest, for HRV,
     resting HR and sleep length, and only keeps clear differences (at least 4
     nights on each side). The state is the strongest one in your Home
-    Assistant language; `insights` holds up to 5, each with the numbers,
+    Assistant language; `insights` holds up to 5 (one per kind of night, its
+    strongest metric), each with the numbers,
     `favorable` and the sentence. These are correlations in your own data,
     not proof of cause. The AI insight gets them as context too.
 - **Commutes:** distance commuted **this month** and **this year**, counting

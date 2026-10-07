@@ -3,6 +3,11 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.32b3
+- **Personal insights show one finding per kind of night** (its strongest
+  metric), so one habit (say, late workouts) no longer fills the list with
+  its HRV, resting HR and sleep versions of the same story.
+
 ## 1.0.32b2
 - **Four new sensors about patterns in your own history**, all computed from
   data the integration already downloads (no extra requests):
