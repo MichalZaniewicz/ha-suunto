@@ -214,6 +214,10 @@
       "workouts_30d": { "name": "Séances (30 jours)" },
       "form_forecast": { "name": "Prévision de forme" },
       "daily_brief": { "name": "Brief du jour" },
+      "sleep_regularity": { "name": "Régularité du sommeil" },
+      "social_jetlag": { "name": "Jetlag social" },
+      "aerobic_decoupling": { "name": "Découplage aérobie" },
+      "personal_insights": { "name": "Tendances personnelles" },
       "commute_month": { "name": "Trajets domicile-travail ce mois" },
       "commute_year": { "name": "Trajets domicile-travail cette année" },
       "ai_insight": { "name": "Analyse IA" }

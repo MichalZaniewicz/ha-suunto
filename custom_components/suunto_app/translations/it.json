@@ -214,6 +214,10 @@
       "workouts_30d": { "name": "Allenamenti (30 giorni)" },
       "form_forecast": { "name": "Previsione di forma" },
       "daily_brief": { "name": "Riepilogo giornaliero" },
+      "sleep_regularity": { "name": "Regolarità del sonno" },
+      "social_jetlag": { "name": "Jet lag sociale" },
+      "aerobic_decoupling": { "name": "Disaccoppiamento aerobico" },
+      "personal_insights": { "name": "Schemi personali" },
       "commute_month": { "name": "Tragitti casa-lavoro questo mese" },
       "commute_year": { "name": "Tragitti casa-lavoro quest'anno" },
       "ai_insight": { "name": "Analisi IA" }

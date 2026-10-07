@@ -348,6 +348,32 @@ def build_context(
                     "suggestion": load.get("suggestion"),
                 }
             ),
+            # Long-run patterns from the athlete's own history (patterns.py):
+            # correlations in a small sample, context for the advice, not facts.
+            "patterns": _compact(
+                {
+                    "sleep_regularity_index": (daily.get("sleep_regularity") or {}).get("index"),
+                    "social_jetlag_min": (daily.get("social_jetlag") or {}).get("minutes"),
+                    "aerobic_decoupling_pct": (daily.get("decoupling") or {}).get(
+                        "decoupling_pct"
+                    ),
+                    "personal_correlations": [
+                        _compact(
+                            {
+                                "condition": item["condition"],
+                                "threshold": item.get("threshold"),
+                                "metric": item["metric"],
+                                "with": item["with"],
+                                "without": item["without"],
+                                "diff_pct": item["diff_pct"],
+                                "nights": item["n_with"] + item["n_without"],
+                            }
+                        )
+                        for item in (daily.get("insights") or {}).get("insights") or []
+                    ]
+                    or None,
+                }
+            ),
             "forecast": _compact(
                 {
                     "peak_tsb": forecast.get("peak_tsb"),

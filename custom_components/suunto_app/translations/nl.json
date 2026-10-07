@@ -214,6 +214,10 @@
       "workouts_30d": { "name": "Trainingen (30 dagen)" },
       "form_forecast": { "name": "Vormprognose" },
       "daily_brief": { "name": "Dagbriefing" },
+      "sleep_regularity": { "name": "Slaapregelmaat" },
+      "social_jetlag": { "name": "Sociale jetlag" },
+      "aerobic_decoupling": { "name": "Aerobe ontkoppeling" },
+      "personal_insights": { "name": "Persoonlijke inzichten" },
       "commute_month": { "name": "Woon-werkafstand deze maand" },
       "commute_year": { "name": "Woon-werkafstand dit jaar" },
       "ai_insight": { "name": "AI-analyse" }

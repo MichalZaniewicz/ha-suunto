@@ -3,6 +3,21 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.32b2
+- **Four new sensors about patterns in your own history**, all computed from
+  data the integration already downloads (no extra requests):
+  - **Sleep regularity**: the Sleep Regularity Index over the last four weeks,
+    with average bed and wake times and their spread.
+  - **Social jetlag**: how much later you sleep on Friday and Saturday nights.
+  - **Aerobic decoupling**: heart-rate drift against speed in the newest
+    workout of 40+ minutes, with a short per-workout trend.
+  - **Personal insights**: the clearest differences in HRV, resting HR and
+    sleep length after late workouts, training days, hard days, early
+    bedtimes and weekend nights, as sentences in your Home Assistant language
+    (full sentences in English and Polish, a short form in the others).
+- The AI daily insight now also receives these patterns as context.
+- Names in all 8 languages. 100 -> 104 sensors.
+
 ## 1.0.32b1
 - **New Sync now button.** It fetches everything from Suunto right away
   (activity, sleep, recovery, workouts and stats) instead of waiting for the

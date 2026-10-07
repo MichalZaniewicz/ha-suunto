@@ -53,6 +53,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "year_workouts": 0, "year_active_days": 0, "year_energy": 0,
     "month_workouts": 0, "month_active_days": 0, "month_energy": 0,
     "best_efforts": 0, "weekly_steps": 0, "current_streak": 0,
+    "sleep_regularity": 0, "social_jetlag": 0,
     # one decimal
     "sleep_duration": 1, "sleep_quality": 1, "sleep_spo2": 1, "sleep_hrv": 1,
     "recovery_balance": 1, "recovery_time": 1, "hrv_baseline": 1,
@@ -62,7 +63,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_zone1": 1, "last_zone2": 1, "last_zone3": 1, "last_zone4": 1, "last_zone5": 1,
     "weekly_distance": 1, "weekly_time": 1, "lifetime_distance": 1, "lifetime_time": 1,
     "last_workout_weather": 1, "year_distance": 1, "year_time": 1,
-    "month_distance": 1, "month_time": 1,
+    "month_distance": 1, "month_time": 1, "aerobic_decoupling": 1,
     # two decimals
     "acwr": 2, "last_avg_pace": 2,
 }
@@ -428,6 +429,45 @@ def _cadence_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     """
     spm = (data.get("workout") or {}).get("cadence_spm")
     return {"cadence_spm": spm} if spm is not None else None
+
+
+def _attrs_except(section: str, *skip: str) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    """Build an attributes_fn exposing a data section minus the state field(s)."""
+
+    def _attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+        values = data.get(section)
+        if not values:
+            return None
+        return {key: value for key, value in values.items() if key not in skip}
+
+    return _attrs
+
+
+def _decoupling_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The latest eligible workout's halves, plus a short per-workout trend."""
+    decoupling = data.get("decoupling")
+    if not decoupling:
+        return None
+    attrs = {
+        key: value
+        for key, value in decoupling.items()
+        if key not in ("decoupling_pct", "history")
+    }
+    attrs["history"] = [
+        {
+            "start_time": item["start_time"],
+            "activity": item.get("activity"),
+            "decoupling_pct": item["decoupling_pct"],
+        }
+        for item in decoupling.get("history") or []
+    ]
+    return attrs
+
+
+def _insights_state(data: dict[str, Any]) -> str | None:
+    """The strongest personal pattern as one sentence, or None."""
+    insights = (data.get("insights") or {}).get("insights") or []
+    return insights[0]["text"][:MAX_STATE_LENGTH] if insights else None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1211,6 +1251,47 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="daily_brief",
         icon="mdi:text-box-check-outline",
         value_fn=lambda d: d.get("brief"),
+    ),
+    # --- Patterns in your own history (patterns.py) ---
+    # Sleep Regularity Index (-100..100) over the last four weeks of nights,
+    # average bed/wake times and their spread in attributes.
+    SuuntoAppSensorDescription(
+        key="sleep_regularity",
+        translation_key="sleep_regularity",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:bed-clock",
+        value_fn=_section("sleep_regularity", "index"),
+        attributes_fn=_attrs_except("sleep_regularity", "index"),
+    ),
+    # Minutes the mid-sleep point shifts later on Friday/Saturday nights.
+    SuuntoAppSensorDescription(
+        key="social_jetlag",
+        translation_key="social_jetlag",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:airplane-clock",
+        value_fn=_section("social_jetlag", "minutes"),
+        attributes_fn=_attrs_except("social_jetlag", "minutes"),
+    ),
+    # Heart-rate drift against speed in the newest workout long enough to
+    # judge (40+ min after warm-up, with GPS), recent ones in `history`.
+    SuuntoAppSensorDescription(
+        key="aerobic_decoupling",
+        translation_key="aerobic_decoupling",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-flash",
+        value_fn=_section("decoupling", "decoupling_pct"),
+        attributes_fn=_decoupling_attrs,
+    ),
+    # The strongest "with vs without" pattern as a sentence in the Home
+    # Assistant language; all findings (structured + text) in `insights`.
+    SuuntoAppSensorDescription(
+        key="personal_insights",
+        translation_key="personal_insights",
+        icon="mdi:lightbulb-on-outline",
+        value_fn=_insights_state,
+        attributes_fn=_attrs_except("insights"),
     ),
     # --- Commutes (Suunto's COMMUTE tag) ---
     SuuntoAppSensorDescription(

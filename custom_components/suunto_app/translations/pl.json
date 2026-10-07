@@ -214,6 +214,10 @@
       "workouts_30d": { "name": "Treningi (30 dni)" },
       "form_forecast": { "name": "Prognoza formy" },
       "daily_brief": { "name": "Dzienny brief" },
+      "sleep_regularity": { "name": "Regularność snu" },
+      "social_jetlag": { "name": "Społeczny jetlag" },
+      "aerobic_decoupling": { "name": "Dryf tętna (decoupling)" },
+      "personal_insights": { "name": "Twoje wzorce" },
       "commute_month": { "name": "Dojazdy w tym miesiącu" },
       "commute_year": { "name": "Dojazdy w tym roku" },
       "ai_insight": { "name": "Analiza AI" }

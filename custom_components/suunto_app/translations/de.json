@@ -214,6 +214,10 @@
       "workouts_30d": { "name": "Trainings (30 Tage)" },
       "form_forecast": { "name": "Formprognose" },
       "daily_brief": { "name": "Tagesbriefing" },
+      "sleep_regularity": { "name": "Schlafregelmäßigkeit" },
+      "social_jetlag": { "name": "Sozialer Jetlag" },
+      "aerobic_decoupling": { "name": "Aerobe Entkopplung" },
+      "personal_insights": { "name": "Persönliche Erkenntnisse" },
       "commute_month": { "name": "Pendelstrecke diesen Monat" },
       "commute_year": { "name": "Pendelstrecke dieses Jahr" },
       "ai_insight": { "name": "KI-Analyse" }

@@ -17,7 +17,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from . import metrics
+from . import metrics, patterns
 from .brief import daily_brief
 from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
@@ -299,6 +299,48 @@ def _sleep_series(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return series
+
+
+def _sleep_timings(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each night's sleep fragments as ``(start, end)`` minutes after noon of
+    the night key (see patterns.py), for sleep regularity and bedtimes."""
+    timings: list[dict[str, Any]] = []
+    for key, night in sorted(_group_sleep_nights(records).items()):
+        noon = datetime.combine(key, time(12), tzinfo=dt_util.DEFAULT_TIME_ZONE)
+        intervals = [
+            (start := (dt_util.as_local(ts) - noon).total_seconds() / 60, start + dur / 60)
+            for ts, ed in night
+            if (dur := _as_float(ed.get("duration"))) and dur > 0
+        ]
+        if intervals:
+            timings.append({"night": key, "intervals": intervals})
+    return timings
+
+
+def _training_days(workouts: list[dict[str, Any]]) -> dict[date, dict[str, Any]]:
+    """Local date -> {tss, late} for every day with a workout (normalized
+    workouts). ``late`` = a workout on that day ended at or after
+    patterns.LATE_WORKOUT_HOUR, or past midnight."""
+    days: dict[date, dict[str, Any]] = {}
+    for w in workouts:
+        start = w.get("start_time")
+        if not start:
+            continue
+        local_start = dt_util.as_local(start)
+        stop = w.get("stop_time") or (
+            start + timedelta(minutes=w["duration_minutes"])
+            if w.get("duration_minutes")
+            else start
+        )
+        local_stop = dt_util.as_local(stop)
+        day = days.setdefault(local_start.date(), {"tss": 0.0, "late": False})
+        day["tss"] += _as_float(w.get("tss")) or 0.0
+        if (
+            local_stop.date() > local_start.date()
+            or local_stop.hour >= patterns.LATE_WORKOUT_HOUR
+        ):
+            day["late"] = True
+    return days
 
 
 def _min_from_sum(eds: list[dict[str, Any]], field: str) -> int | None:
@@ -1623,6 +1665,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # _workout_hr_cache), so this fills in "from now on", not
         # retroactively - see the fetch loop in _async_update_statistics.
         self._best_efforts: dict[str, dict[str, Any]] = {}
+        # key -> aerobic decoupling of that workout, computed once from the
+        # same /data fetch (see patterns.aerobic_decoupling). Kept for the
+        # newest DECOUPLING_HISTORY eligible workouts so the sensor can show
+        # a trend; in memory, so after a restart it refills from the workouts
+        # whose /data gets fetched again (the statistics window + the last one).
+        self._decoupling: dict[str, dict[str, Any]] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
         # show exactly why sleep_duration/nap_duration bucketed the way they
@@ -1957,6 +2005,31 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "route": self._workout_route_cache.get(last_workout.get("key"), []),
             }
 
+        # Sleep timing patterns and personal "with vs without" comparisons,
+        # all from the 60-night sleep series and the 90-day workouts we
+        # already hold - no extra requests.
+        timings = _sleep_timings(sleep)
+        bed_by_night = {
+            t["night"]: min(start for start, _ in t["intervals"]) for t in timings
+        }
+        insights = patterns.personal_insights(
+            [
+                {
+                    "night": n["date"],
+                    "hrv": n["hrv"],
+                    "rhr": n["rhr"],
+                    "hours": n["duration_h"],
+                    "bed_min": bed_by_night.get(n["date"]),
+                }
+                for n in nights
+            ],
+            _training_days(norm_workouts),
+            self.hass.config.language,
+        )
+        decoupling_history = sorted(
+            self._decoupling.values(), key=lambda d: d["start_time"], reverse=True
+        )
+
         options = self.config_entry.options if self.config_entry else {}
         litres = _as_float(options.get(CONF_FUEL_CONSUMPTION)) or DEFAULT_FUEL_CONSUMPTION
         price = _as_float(options.get(CONF_FUEL_PRICE))
@@ -1988,6 +2061,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 suggestion=load["suggestion"],
             ),
             "sleep": sleep_norm,
+            "sleep_regularity": patterns.sleep_regularity(timings),
+            "social_jetlag": patterns.social_jetlag(timings),
+            "insights": insights,
+            "decoupling": (
+                {**decoupling_history[0], "history": decoupling_history}
+                if decoupling_history
+                else None
+            ),
             # Per-night HRV / resting HR / duration (oldest first), the same
             # series the baselines come from - read by the AI insight.
             "sleep_history": nights,
@@ -2443,10 +2524,30 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._workout_route_cache[key] = _downsample_route(
                     _normalize_route(locations)
                 )
+                meta = workout_meta.get(key) or {}
+                decoupling = patterns.aerobic_decoupling(
+                    [
+                        (t, bpm)
+                        for point in result.get("heartrates") or []
+                        if (t := _as_float(point.get("t"))) is not None
+                        and (bpm := _as_float(point.get("hr")))
+                    ],
+                    [
+                        (t, dist)
+                        for row in locations
+                        if (t := _as_float(row.get("t"))) is not None
+                        and (dist := _as_float(row.get("s"))) is not None
+                    ],
+                )
+                if decoupling is not None and meta.get("start_time"):
+                    self._decoupling[key] = {
+                        **decoupling,
+                        "activity": meta.get("activity"),
+                        "start_time": meta["start_time"],
+                    }
                 # Standard-distance PRs - foot activities only (same gating as
                 # cadence_spm/stride_length), checked once per workout the
                 # first time its /data is fetched. See self._best_efforts.
-                meta = workout_meta.get(key) or {}
                 if meta.get("activity_id") in FOOT_ACTIVITY_IDS:
                     for label, seconds in _best_efforts(locations).items():
                         current = self._best_efforts.get(label)
@@ -2457,6 +2558,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                 "activity": meta.get("activity"),
                                 "start_time": meta.get("start_time"),
                             }
+        # Keep only the newest decoupling results (bound memory).
+        newest = sorted(
+            self._decoupling.items(), key=lambda kv: kv[1]["start_time"], reverse=True
+        )[: patterns.DECOUPLING_HISTORY]
+        self._decoupling = dict(newest)
         # Drop cached workouts that have aged out of the window (bound memory).
         self._workout_hr_cache = {
             k: v for k, v in self._workout_hr_cache.items() if k in recent_keys

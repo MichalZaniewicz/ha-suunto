@@ -42,7 +42,7 @@ rate, training load, sleep).*
 
 ## Custom Lovelace cards
 
-Want a dashboard without wiring 100 sensors into generic entity/gauge cards by hand?
+Want a dashboard without wiring 104 sensors into generic entity/gauge cards by hand?
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion
 HACS repo with 63 purpose-built cards - last workout, HR zones, sleep & readiness,
 recovery, training load, a live 24/7 heart rate curve, an activity heatmap
@@ -102,7 +102,7 @@ reporting a bug). Email, session token and GPS start coordinates are stripped;
 everything else - including the raw 24/7 sleep export used to build the sleep and
 nap sensors - is included as-is.
 
-## Entities (100 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
+## Entities (104 sensors + 3 binary sensors + a workouts calendar under one "Suunto" device)
 
 Every entity name follows your Home Assistant language automatically - English, Polish, German,
 Portuguese, French, Spanish, Italian and Dutch are built in. Anything else falls back to English.
@@ -230,13 +230,41 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **AI insight (optional):** a daily review written by an AI model of your
   choice, with advice and a status for the day, plus a button to run it on
   demand - see [AI daily insight](#ai-daily-insight-optional). On top of the
-  100 sensors, and only there once you turn it on.
+  104 sensors, and only there once you turn it on.
 - **Sync now button:** fetches everything from Suunto right away instead of
   waiting for the next poll (every 15 min for activity, every 60 min for
   sleep, recovery and workouts), with the stored session, so no new login
   email. It cannot reach your watch: sync the watch with the Suunto app first,
   then press it. If the full night comes in with it, the woke-up event and
   the AI insight follow as usual.
+- **Patterns in your own history** (from the 60 nights and 90 days of
+  workouts already fetched, no extra requests):
+  - **Sleep regularity:** the Sleep Regularity Index (-100..100) over the last
+    four weeks: the chance of being asleep or awake at the same minute on two
+    days in a row, so 100 is an identical schedule every day. Attributes:
+    `avg_bedtime`, `avg_wake_time`, their spread in minutes (`bedtime_sd_min`,
+    `wake_time_sd_min`), and how many `nights` / `pairs` it is based on.
+    Needs at least 5 pairs of consecutive nights.
+  - **Social jetlag:** how many minutes later the middle of your sleep sits on
+    Friday and Saturday nights than on work nights (`free_midpoint`,
+    `work_midpoint` in attributes). Negative means earlier on weekends.
+  - **Aerobic decoupling:** how much your heart rate drifted against your
+    speed between the first and second half of the newest workout that is
+    long enough (40+ min after a 5-min warm-up, with GPS). Under ~5 % is the
+    classic sign of a solid aerobic base. Attributes carry both halves' speed
+    and heart rate, and `history` lists recent workouts for a trend. Speed,
+    not power, so terrain and wind make one value rough; watch the trend.
+    Workouts are checked as their data is downloaded, so after an update or a
+    restart the history refills from your newest workouts onward.
+  - **Personal insights:** what goes with better or worse nights for you,
+    e.g. "After a workout ending after 20:00, your HRV is 21% lower (39 ms vs
+    50 ms)". It compares nights after late workouts, training days, your
+    hardest days, early bedtimes and weekend nights against the rest, for HRV,
+    resting HR and sleep length, and only keeps clear differences (at least 4
+    nights on each side). The state is the strongest one in your Home
+    Assistant language; `insights` holds up to 5, each with the numbers,
+    `favorable` and the sentence. These are correlations in your own data,
+    not proof of cause. The AI insight gets them as context too.
 - **Commutes:** distance commuted **this month** and **this year**, counting
   whatever Suunto itself tagged as a commute. Attributes carry `rides`,
   `days`, `avg_duration_min`, and what the car left at home would have cost:
@@ -245,7 +273,7 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
 - **Gear:** one distance sensor per piece of gear you define (chain, tyres,
   shoes...), with `interval_km`, `remaining_km` and `service_due` attributes -
   see [Gear tracking](#gear-tracking-and-service-reminders). These are on top
-  of the 100 sensors.
+  of the 104 sensors.
 - **Derived - recovery:** HRV baseline + status (low/balanced/high), resting heart
   rate + baseline, and **Readiness** (0-100, a heuristic blending sleep, HRV,
   resting HR and recovery balance). If last night's sleep hasn't arrived by
@@ -440,7 +468,7 @@ Blueprint, and paste a blueprint's GitHub URL.
 *Backfilled statistics: intraday heart rate (24/7 + workout peaks) and the
 Fitness / Fatigue / Form (CTL / ATL / TSB) trend.*
 
-Beyond the 100 live sensors, the integration imports **hourly long-term
+Beyond the 104 live sensors, the integration imports **hourly long-term
 statistics** for the fast-changing and daily metrics. They are backfilled over a
 rolling window, so if your watch syncs to the app late (e.g. hours later), the
 missed hours are filled in **retroactively** - something a normal sensor can't do,
