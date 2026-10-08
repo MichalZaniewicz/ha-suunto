@@ -65,25 +65,28 @@ Portuguese, French, Spanish, Italian, Dutch).
 
 ![Suunto Cards preview](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto-cards/master/docs/screenshots/cards-overview-dark.png)
 
-## Installation & configuration
+## Get started
 
-1. Install via HACS (Custom repositories → this repo as an **Integration**) and restart HA.
-2. **Settings → Devices & Services → Add Integration → "Suunto App (unofficial)"**
-   → enter the **email and password** of your Suunto app account. (Account 2FA may
-   block login.)
-3. Options ("Configure" button) open a small menu: **intervals and fuel
-   figures**, the optional **AI daily insight** (see
-   [AI daily insight](#ai-daily-insight-optional)), and **gear** (add / mark as
-   serviced / remove, see [Gear tracking](#gear-tracking-and-service-reminders)). Two refresh cadences -
-   - **Live data interval** (default 15 min): current heart rate, daily steps/energy.
-   - **History interval** (default 60 min): sleep, recovery, workouts, training
-     load, baselines and other derived metrics - and the hourly long-term
-     statistics (see [below](#long-term-statistics-intraday-curves--backfill)).
+1. **HACS:** click the button below (or add this repository in HACS as an *Integration*) and download **Suunto App (unofficial)**.
 
-   Splitting the cadences keeps live values fresh without re-fetching ~90 days of
-   history every few minutes. The same screen holds your car's **fuel
-   consumption** and the **fuel price** (default 7 l/100 km and 6.5 per litre),
-   used only for the commute savings below.
+   <p align="center"><a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=MichalZaniewicz&repository=ha-suunto&category=integration"><img alt="Open this repository in HACS" src="https://my.home-assistant.io/badges/hacs_repository.svg" height="28"></a></p>
+
+2. **Restart** Home Assistant.
+3. **Add the integration:** click the button below (or Settings → Devices & services → **Add integration** → **Suunto App (unofficial)**).
+
+   <p align="center"><a href="https://my.home-assistant.io/redirect/config_flow_start/?domain=suunto_app"><img alt="Add the Suunto App integration to Home Assistant" src="https://my.home-assistant.io/badges/config_flow_start.svg" height="28"></a></p>
+
+4. **Log in** with the email and password of your Suunto app account. (Two-factor authentication on the account may block the login.)
+
+Then pick the [blueprints](#automation-blueprints) you want and add [the cards](https://github.com/MichalZaniewicz/ha-suunto-cards). Full instructions and every entity are in the **[wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**.
+
+### Options (optional)
+
+The integration's **Configure** button opens a small menu:
+
+- **Intervals and fuel figures.** Two refresh cadences: **live data** (default 15 min: current heart rate, daily steps/energy) and **history** (default 60 min: sleep, recovery, workouts, training load, baselines and the hourly [long-term statistics](#long-term-statistics-intraday-curves--backfill)). Splitting them keeps live values fresh without re-fetching ~90 days of history every few minutes. The same screen holds your car's **fuel consumption** and the **fuel price** (default 7 l/100 km and 6.5 per litre), used only for the commute savings.
+- **AI daily insight**, see [AI daily insight](#ai-daily-insight-optional).
+- **Gear:** add, mark as serviced or remove, see [Gear tracking](#gear-tracking-and-service-reminders).
 
 ### Credential storage
 
