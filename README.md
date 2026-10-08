@@ -37,11 +37,12 @@ Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suun
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
 
+## Don't want to read? Watch the 3-minute video
 
+Setup, the sensors, sleep and readiness, workouts, training load, notifications,
+the AI insight and the companion cards, with voice-over and subtitles.
 
 https://github.com/user-attachments/assets/1dc9d95c-bf14-449e-8f4c-783758cafbe3
-
-
 
 ## Custom Lovelace cards
 
