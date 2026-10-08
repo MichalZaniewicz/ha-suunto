@@ -3,6 +3,10 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.33
+- No functional changes. CI now runs the HACS validation with every check
+  enabled (brands included), ahead of the submission to the default HACS store.
+
 ## 1.0.32
 - **Four new sensors about patterns in your own history**, all computed from
   data the integration already downloads (no extra requests):
