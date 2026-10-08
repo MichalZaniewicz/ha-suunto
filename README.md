@@ -42,6 +42,8 @@ statistics and troubleshooting.
 Setup, the sensors, sleep and readiness, workouts, training load, notifications,
 the AI insight and the companion cards, with voice-over and subtitles.
 
+🔊 The player starts muted, so click the speaker icon for the voice-over.
+
 https://github.com/user-attachments/assets/1dc9d95c-bf14-449e-8f4c-783758cafbe3
 
 ## Custom Lovelace cards
