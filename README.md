@@ -37,6 +37,12 @@ Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suun
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
 
+
+
+https://github.com/user-attachments/assets/1dc9d95c-bf14-449e-8f4c-783758cafbe3
+
+
+
 ## Custom Lovelace cards
 
 Want a dashboard without wiring 104 sensors into generic entity/gauge cards by hand?
