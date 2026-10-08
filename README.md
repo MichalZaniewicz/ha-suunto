@@ -31,6 +31,8 @@ Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 
 ## Documentation
 
+![Suunto for Home Assistant - trailer](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/trailer.webp)
+
 Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
