@@ -29,14 +29,6 @@ Suunto watch ──▶ Suunto app / Sports Tracker ──▶ Home Assistant
 > update. Use your own account, at your own risk. Login pipeline ported from
 > [`tajchert/suuntool`](https://github.com/tajchert/suuntool).
 
-## Documentation
-
-![Suunto for Home Assistant - trailer](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/trailer.webp)
-
-Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
-installation, every sensor, dashboard examples, derived metrics, long-term
-statistics and troubleshooting.
-
 ## Don't want to read? Watch the 3-minute video
 
 Setup, the sensors, sleep and readiness, workouts, training load, notifications,
@@ -45,6 +37,14 @@ the AI insight and the companion cards, with voice-over and subtitles.
 🔊 The player starts muted, so click the speaker icon for the voice-over.
 
 https://github.com/user-attachments/assets/1dc9d95c-bf14-449e-8f4c-783758cafbe3
+
+## Documentation
+
+![Suunto for Home Assistant - trailer](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/trailer.webp)
+
+Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
+installation, every sensor, dashboard examples, derived metrics, long-term
+statistics and troubleshooting.
 
 ## Custom Lovelace cards
 
