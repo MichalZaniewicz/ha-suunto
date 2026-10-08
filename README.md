@@ -37,11 +37,6 @@ Full docs are in the **[project wiki](https://github.com/MichalZaniewicz/ha-suun
 installation, every sensor, dashboard examples, derived metrics, long-term
 statistics and troubleshooting.
 
-![Suunto example dashboard](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/dashboard.jpg)
-
-*Example dashboard - live sensors plus backfilled long-term statistics (heart
-rate, training load, sleep).*
-
 ## Custom Lovelace cards
 
 Want a dashboard without wiring 104 sensors into generic entity/gauge cards by hand?
