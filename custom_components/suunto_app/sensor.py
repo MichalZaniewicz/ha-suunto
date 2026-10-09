@@ -93,8 +93,8 @@ def _workout_location_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     card - each vertex carries its own speed so the card can color the track
     by pace without a second data source.
 
-    ``route`` is listed in this description's ``unrecorded_attributes`` (see
-    SuuntoAppSensor.__init__) - a GPS track is only useful to a dashboard
+    ``route`` is in ``SuuntoAppSensor._unrecorded_attributes`` - a GPS track
+    is only useful to a dashboard
     reading the live state, never worth keeping in the recorder's history on
     every hourly update.
     """
@@ -258,8 +258,8 @@ def _records_attrs_for(section: str) -> Callable[[dict[str, Any]], dict[str, Any
 
 # All-time personal records - fastest pace, biggest climb, longest and farthest
 # single workout, highest single-session TSS - each with the workout it
-# happened in. Seeded once via a deep history scan then held forever in memory
-# (coordinator._async_seed_records / _merge_records), so these are true
+# happened in. Seeded by a deep history scan, then held and stored
+# (coordinator._async_deep_scan / _merge_records), so these are true
 # lifetime bests, not bounded to the normal 90-day fetch window.
 _records_attrs = _records_attrs_for("records")
 
@@ -268,8 +268,8 @@ _records_attrs = _records_attrs_for("records")
 _records_month_attrs = _records_attrs_for("records_month")
 
 # Same PR shape, scoped to the current calendar year. Unlike the month version,
-# this DOES need a one-off deep scan (a year doesn't fit inside the normal
-# 90-day window) - see coordinator._async_seed_year_workouts - and resets on
+# this DOES need the deep scan (a year doesn't fit inside the normal
+# 90-day window) - see coordinator._async_deep_scan - and resets on
 # every New Year's rollover instead of the 1st of each month.
 _records_year_attrs = _records_attrs_for("records_year")
 
@@ -477,9 +477,6 @@ class SuuntoAppSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], Any]
     source: str = SOURCE_DAILY
     attributes_fn: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None
-    # Attribute keys to exclude from the recorder (see Entity._unrecorded_attributes) -
-    # for an attribute that only ever matters to a dashboard reading the live state.
-    unrecorded_attributes: frozenset[str] | None = None
 
 
 SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
@@ -680,7 +677,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:map-marker",
         value_fn=_workout_location_state,
         attributes_fn=_workout_location_attrs,
-        unrecorded_attributes=frozenset({"route"}),
     ),
     SuuntoAppSensorDescription(
         key="last_distance",
@@ -994,8 +990,9 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     ),
     # --- This year's totals (a "year in review" snapshot) ---
     # Same shape as the lifetime stats above, scoped to the current calendar
-    # year - resets on Jan 1, see coordinator._year_totals_snapshot /
-    # _async_seed_year_workouts. TOTAL_INCREASING is still correct here (like
+    # year - resets on Jan 1, see coordinator._period_totals_snapshot /
+    # _async_deep_scan. Unknown until that scan has succeeded, never a
+    # 90-day undercount (a drop would read as a meter reset). TOTAL_INCREASING is still correct here (like
     # daily_steps/daily_energy): HA reads the Jan 1 drop as a legitimate meter
     # reset, not a bad reading, same as any other periodically-resetting total.
     SuuntoAppSensorDescription(
@@ -1108,7 +1105,7 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     # All-time personal records - state is the longest streak (days); the
     # individual PRs (fastest pace, biggest climb, longest/farthest/hardest
     # single workout) ride in attributes, each with the workout it happened
-    # in. See coordinator._async_seed_records for how "all-time" is seeded.
+    # in. See coordinator._async_deep_scan for how "all-time" is seeded.
     SuuntoAppSensorDescription(
         key="training_records",
         translation_key="training_records",
@@ -1131,8 +1128,8 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     ),
     # Same personal-records shape again, scoped to the current calendar year -
     # a "training year in review" snapshot. Resets on Jan 1, see
-    # coordinator._async_seed_records_year for why this one (unlike the
-    # month version) needs its own deep-scan seed.
+    # coordinator._async_deep_scan for why this one (unlike the month
+    # version) needs the deep-scan seed.
     SuuntoAppSensorDescription(
         key="training_records_year",
         translation_key="training_records_year",
@@ -1243,7 +1240,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         icon="mdi:chart-timeline-variant-shimmer",
         value_fn=_section("forecast", "tomorrow_tsb"),
         attributes_fn=_forecast_attrs,
-        unrecorded_attributes=frozenset({"series"}),
     ),
     # One-sentence summary of today, in the Home Assistant language.
     SuuntoAppSensorDescription(
@@ -1488,6 +1484,18 @@ class SuuntoAppSensor(
 
     entity_description: SuuntoAppSensorDescription
     _attr_has_entity_name = True
+    # Long lists only a dashboard reads from the live state, kept out of the
+    # recorder. This MUST be a class attribute: HA folds it into the state info
+    # once, in Entity.__init_subclass__, and never reads an instance value (an
+    # earlier per-description version set it in __init__ and did nothing, so
+    # every route went into the database). The keys are unique to the sensors
+    # meant: route (last_workout_location), series (form_forecast), workouts
+    # (recent_workouts), activities (lifetime_by_activity), laps
+    # (last_workout_laps), history (aerobic_decoupling), insights
+    # (personal_insights).
+    _unrecorded_attributes = frozenset(
+        {"route", "series", "workouts", "activities", "laps", "history", "insights"}
+    )
 
     def __init__(
         self,
@@ -1502,8 +1510,6 @@ class SuuntoAppSensor(
             self._attr_suggested_display_precision = precision
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_device_info = suunto_device_info(entry)
-        if description.unrecorded_attributes:
-            self._unrecorded_attributes = description.unrecorded_attributes
 
     @property
     def native_value(self) -> Any:

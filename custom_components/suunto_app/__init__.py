@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -9,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.storage import Store
 
 from .ai_insight import SuuntoAiInsight
 from .api import SportsTrackerClient
@@ -85,8 +87,17 @@ async def async_setup_entry(
     daily = SuuntoDailyCoordinator(
         hass, entry, client, timedelta(minutes=daily_minutes)
     )
-    await fast.async_config_entry_first_refresh()
-    await daily.async_config_entry_first_refresh()
+    # Independent, so fetched side by side. Both are awaited to the end before
+    # an error (auth, not ready) is passed on, so no refresh is left running
+    # behind a failed setup.
+    results = await asyncio.gather(
+        fast.async_config_entry_first_refresh(),
+        daily.async_config_entry_first_refresh(),
+        return_exceptions=True,
+    )
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
 
     ai: SuuntoAiInsight | None = None
     if ai_task_entity := entry.options.get(CONF_AI_TASK_ENTITY):
@@ -115,6 +126,17 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, entry: SuuntoAppConfigEntry
+) -> None:
+    """Delete the entry's stored files when the integration is removed."""
+    for key in (
+        f"{DOMAIN}.history.{entry.entry_id}",
+        f"{DOMAIN}.ai_insight.{entry.entry_id}",
+    ):
+        await Store(hass, 1, key).async_remove()
 
 
 async def _async_update_listener(

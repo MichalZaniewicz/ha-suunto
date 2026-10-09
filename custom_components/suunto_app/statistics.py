@@ -59,11 +59,28 @@ def hourly_sum(samples: list[tuple[datetime, float]]) -> dict[datetime, float]:
     return dict(buckets)
 
 
+def changed_rows(
+    previous: dict[datetime, Any] | None, current: dict[datetime, Any]
+) -> dict[datetime, Any]:
+    """The rows of ``current`` that differ from what was imported last time.
+
+    Every cycle rebuilds the whole rolling window (5 days hourly, 60 nights,
+    60 days of training load), but nearly all of it is unchanged since the
+    previous hour - re-importing it cost the recorder ~1300 upserts an hour.
+    With no previous import (first cycle after a restart) everything counts as
+    changed, so the full backfill still happens once.
+    """
+    if not previous:
+        return dict(current)
+    return {hour: value for hour, value in current.items() if previous.get(hour) != value}
+
+
 async def async_update_statistics(
     hass: Any,
     *,
     means: list[tuple[str, str, str | None, list[tuple[datetime, float]]]],
     sums: list[tuple[str, str, str | None, list[tuple[datetime, float]]]],
+    sent: dict[str, dict[datetime, Any]] | None = None,
 ) -> None:
     """Bucket each metric hourly and import it as external statistics.
 
@@ -71,7 +88,13 @@ async def async_update_statistics(
     the per-hour delta). Idempotent: re-importing a window replaces the
     overlapping rows, so late syncs backfill cleanly. Raises nothing the caller
     must handle - the coordinator wraps this so a hiccup never breaks the update.
+
+    ``sent`` (suffix -> hour -> row values, owned by the caller and updated in
+    place) remembers the last import, so only rows that changed since are sent.
+    It is replaced by the current window each time, so it never outgrows it.
     """
+    if sent is None:
+        sent = {}
     # Imported lazily so the pure helpers above stay HA-free / testable.
     from homeassistant.components.recorder import get_instance
     from homeassistant.components.recorder.models import (
@@ -141,13 +164,16 @@ async def async_update_statistics(
         buckets = hourly_mean(samples)
         if not buckets:
             continue
-        metadata = _meta(suffix, name, unit, is_mean=True)
-        data = [
-            StatisticData(start=hour, mean=mean, min=low, max=high)
-            for hour, (mean, low, high) in sorted(buckets.items())
-        ]
-        async_add_external_statistics(hass, metadata, data)
-        _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
+        rows = changed_rows(sent.get(suffix), buckets)
+        if rows:
+            metadata = _meta(suffix, name, unit, is_mean=True)
+            data = [
+                StatisticData(start=hour, mean=mean, min=low, max=high)
+                for hour, (mean, low, high) in sorted(rows.items())
+            ]
+            async_add_external_statistics(hass, metadata, data)
+            _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
+        sent[suffix] = buckets
 
     for suffix, name, unit, samples in sums:
         buckets = hourly_sum(samples)
@@ -177,10 +203,19 @@ async def async_update_statistics(
             base = float(series[-1]["sum"])
 
         running = base
-        data = []
+        cumulative: dict[datetime, tuple[float, float]] = {}
         for hour, total in ordered:
             running += total
-            data.append(StatisticData(start=hour, state=total, sum=running))
-        metadata = _meta(suffix, name, unit, is_mean=False)
-        async_add_external_statistics(hass, metadata, data)
-        _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
+            cumulative[hour] = (total, running)
+        # A changed hour shifts every later running sum, so those rows count as
+        # changed too and the cumulative stays consistent.
+        rows = changed_rows(sent.get(suffix), cumulative)
+        if rows:
+            data = [
+                StatisticData(start=hour, state=total, sum=total_sum)
+                for hour, (total, total_sum) in sorted(rows.items())
+            ]
+            metadata = _meta(suffix, name, unit, is_mean=False)
+            async_add_external_statistics(hass, metadata, data)
+            _LOGGER.debug("Imported %d rows for %s:%s", len(data), DOMAIN, suffix)
+        sent[suffix] = cumulative
