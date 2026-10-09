@@ -39,6 +39,7 @@ from .const import (
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     MAX_ROUTE_POINTS,
+    AWAKE_MIN_STEPS,
     EARLIEST_WAKE_HOUR,
     NEW_WORKOUT_MAX_AGE_DAYS,
     RECENT_WORKOUTS_LIMIT,
@@ -248,6 +249,17 @@ def _night_finished(night: Any, wake_time: datetime | None) -> bool:
         night + timedelta(days=1), time(EARLIEST_WAKE_HOUR), tzinfo=dt_util.DEFAULT_TIME_ZONE
     )
     return dt_util.as_local(wake_time) >= morning
+
+
+def _steps_since(records: list[dict[str, Any]], since: datetime) -> float:
+    """Sum the 24/7 activity steps recorded after ``since``."""
+    total = 0.0
+    for rec in records:
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None or ts <= since:
+            continue
+        total += _as_float((rec.get("entryData") or {}).get("stepCount")) or 0.0
+    return total
 
 
 def _group_naps(
@@ -1683,6 +1695,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # sleep/recovery/readiness sensor for a cycle. In-memory only.
         self._last_good_sleep: list[dict[str, Any]] = []
         self._last_good_recovery: list[dict[str, Any]] = []
+        # The 24/7 activity export the statistics import fetched this cycle,
+        # reused to tell a finished night from a brief wake (steps after the
+        # wake time). None until the first successful fetch.
+        self._last_activity: list[dict[str, Any]] | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -1882,6 +1898,18 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             }
             for w in norm_workouts[:RECENT_WORKOUTS_LIMIT]
         ]
+
+        # A fragment ending after EARLIEST_WAKE_HOUR can still be a brief wake
+        # in the middle of sleep. Only call the night finished once the watch
+        # has seen the athlete walking after it. Without an activity export
+        # (fetch failed since startup) the hour rule alone decides.
+        if (
+            sleep_norm
+            and sleep_norm["finished"]
+            and self._last_activity is not None
+            and _steps_since(self._last_activity, sleep_norm["wake_time"]) < AWAKE_MIN_STEPS
+        ):
+            sleep_norm["finished"] = False
 
         # Let automations react to a finished workout without polling a sensor.
         self._fire_new_workout_events(norm_workouts)
@@ -2428,6 +2456,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         now = dt_util.utcnow()
         since_ms = _since_ms(now, STATS_LOOKBACK_DAYS)
         activity = await self._client.async_get_wellness("activity", since_ms)
+        self._last_activity = activity
 
         hr: list[tuple[datetime, float]] = []
         steps: list[tuple[datetime, float]] = []

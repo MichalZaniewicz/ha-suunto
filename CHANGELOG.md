@@ -3,6 +3,15 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.34b1
+- **No more early-morning AI insight after a brief wake-up.** A night used to
+  count as finished as soon as a sleep fragment ended after 4 a.m., so waking
+  for a moment at 4:17 and syncing fired the woke-up event and the AI insight
+  on half a night. Now the watch must also have recorded at least 200 steps
+  after the wake time. The step data is already downloaded for the
+  statistics, so there are no extra requests. Until you have walked a bit,
+  the night waits; the AI fallback hour still covers a morning without steps.
+
 ## 1.0.33
 - No functional changes. CI now runs the HACS validation with every check
   enabled (brands included), ahead of the submission to the default HACS store.

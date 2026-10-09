@@ -142,6 +142,12 @@ NEW_WORKOUT_MAX_AGE_DAYS = 7
 # counts as finished (woke-up event, AI insight) once its last fragment ends at
 # or after this local hour on the morning after; until then more is expected.
 EARLIEST_WAKE_HOUR = 4
+# The hour alone is not enough: a brief wake at 4:17 ends a fragment too, and
+# the sync after it looks like a finished night while the athlete sleeps on
+# until 7 (seen live 2026-10-09). So the 24/7 stream must also show the
+# athlete up and moving: at least this many steps after the wake time. A
+# bathroom trip stays well below it.
+AWAKE_MIN_STEPS = 200
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {
