@@ -66,16 +66,12 @@ which silently removes any <img> placed inside it. -->
 </details>
 
 <p align="center">
-  <a href="https://github.com/user-attachments/assets/1dc9d95c-bf14-449e-8f4c-783758cafbe3"><img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/video-header.svg" alt="Don't want to read? Watch the 3-minute tour" width="100%"></a>
+  <a href="https://github.com/user-attachments/assets/0e43480c-e3f6-4b18-b22a-8393331db2d5"><img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/video-header.svg" alt="Don't want to read? Watch the 3-minute tour" width="100%"></a>
 </p>
 
 <p align="center">🔊 <b>The video starts muted</b> - click the speaker icon in the player to hear the voice-over.</p>
 
-
-
 https://github.com/user-attachments/assets/0e43480c-e3f6-4b18-b22a-8393331db2d5
-
-
 
 ## Daily AI insight
 
