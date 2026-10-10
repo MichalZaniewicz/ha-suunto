@@ -3,6 +3,12 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.35
+- **New README.** An animated banner, a new trailer and 3-minute tour, a
+  stats strip, the features at a glance, the daily AI insight and a wall of
+  the companion cards. The long reference sections moved to the wiki, which
+  gains a Blueprints page with import buttons. No code changes.
+
 ## 1.0.34
 - **No more early-morning AI insight after a brief wake-up.** A night used to
   count as finished as soon as a sleep fragment ended after 4 a.m., so waking
