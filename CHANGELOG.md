@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.35b1
+## 1.0.35
 - **New README.** An animated banner, a new trailer and 3-minute tour, a
   stats strip, the features at a glance, the daily AI insight and a wall of
   the companion cards. The long reference sections moved to the wiki, which
