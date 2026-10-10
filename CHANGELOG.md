@@ -3,19 +3,14 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.34b3
-- **Fix: the hourly steps and energy statistics slowly lost steps.** The
-  statistics window started exactly 5 days before each update, in the middle
-  of an hour, so its oldest hour only held part of that hour's steps and
-  overwrote the full count every cycle. The running sums sank a little every
-  hour (seen live: 98 steps overnight), and the oldest hour of HR, recovery
-  balance and stress lost samples. The window now starts on a full hour.
-  Steps already lost this way are not restored.
-- With that fixed, an hourly update now writes about 2 rows per statistic
-  (the hour that just ended and the current one) instead of rewriting all
-  120 hours of steps and energy.
-
-## 1.0.34b2
+## 1.0.34
+- **No more early-morning AI insight after a brief wake-up.** A night used to
+  count as finished as soon as a sleep fragment ended after 4 a.m., so waking
+  for a moment at 4:17 and syncing fired the woke-up event and the AI insight
+  on half a night. Now the watch must also have recorded at least 200 steps
+  after the wake time. The step data is already downloaded for the
+  statistics, so there are no extra requests. Until you have walked a bit,
+  the night waits; the AI fallback hour still covers a morning without steps.
 - **Fix: long attribute lists were saved to the database after all.** The
   route of the last workout and the form forecast series were meant to stay
   out of the recorder, but the setting never took effect, so every update
@@ -24,6 +19,13 @@ beta pre-releases are tagged `X.Y.ZbN`.
   activity, lap splits, the decoupling history and the personal insights.
   The entities and their states are unchanged; only their history gets
   smaller from now on.
+- **Fix: the hourly steps and energy statistics slowly lost steps.** The
+  statistics window started exactly 5 days before each update, in the middle
+  of an hour, so its oldest hour only held part of that hour's steps and
+  overwrote the full count every cycle. The running sums sank a little every
+  hour (seen live: hundreds of steps a day), and the oldest hour of HR,
+  recovery balance and stress lost samples. The window now starts on a full
+  hour. Steps already lost this way are not restored.
 - **Fix: this year's totals could break their long-term statistics.** If the
   history scan for the current year failed (the Suunto backend throws the
   odd error), the year totals were counted from the last 90 days only.
@@ -42,18 +44,9 @@ beta pre-releases are tagged `X.Y.ZbN`.
 - **Far fewer database writes for the long-term statistics.** Every hour the
   whole rolling window (5 days of hourly HR and steps, 60 nights of sleep,
   60 days of training load) used to be written again, about 1300 rows an
-  hour. Now only rows that actually changed are written; the full backfill
-  still runs once after each restart.
+  hour. Now only rows that actually changed are written, about 2 per
+  statistic an hour; the full backfill still runs once after each restart.
 - Removing the integration now also deletes its stored files.
-
-## 1.0.34b1
-- **No more early-morning AI insight after a brief wake-up.** A night used to
-  count as finished as soon as a sleep fragment ended after 4 a.m., so waking
-  for a moment at 4:17 and syncing fired the woke-up event and the AI insight
-  on half a night. Now the watch must also have recorded at least 200 steps
-  after the wake time. The step data is already downloaded for the
-  statistics, so there are no extra requests. Until you have walked a bit,
-  the night waits; the AI fallback hour still covers a morning without steps.
 
 ## 1.0.33
 - No functional changes. CI now runs the HACS validation with every check
