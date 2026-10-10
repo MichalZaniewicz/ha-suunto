@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.34b3
+- **Fix: the hourly steps and energy statistics slowly lost steps.** The
+  statistics window started exactly 5 days before each update, in the middle
+  of an hour, so its oldest hour only held part of that hour's steps and
+  overwrote the full count every cycle. The running sums sank a little every
+  hour (seen live: 98 steps overnight), and the oldest hour of HR, recovery
+  balance and stress lost samples. The window now starts on a full hour.
+  Steps already lost this way are not restored.
+- With that fixed, an hourly update now writes about 2 rows per statistic
+  (the hour that just ended and the current one) instead of rewriting all
+  120 hours of steps and energy.
+
 ## 1.0.34b2
 - **Fix: long attribute lists were saved to the database after all.** The
   route of the last workout and the form forecast series were meant to stay

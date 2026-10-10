@@ -1535,6 +1535,20 @@ def _since_ms(now: datetime, days: int) -> int:
     return int((now - timedelta(days=days)).timestamp() * 1000)
 
 
+def _since_hour_ms(now: datetime, days: int) -> int:
+    """Like _since_ms, but rounded down to the start of that UTC hour.
+
+    For streams that feed the hourly statistics. A cutoff in the middle of an
+    hour (say 03:27) makes the oldest hourly bucket hold only part of its
+    samples, and the re-import then overwrote that hour's full total with the
+    smaller one every cycle - the steps/energy running sums sank a little each
+    hour (seen live: -98 steps overnight), and the oldest HR/balance/stress
+    mean lost samples. Starting on the hour keeps every bucket complete.
+    """
+    cutoff = suunto_stats.floor_hour(now - timedelta(days=days))
+    return int(cutoff.timestamp() * 1000)
+
+
 class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Fast coordinator: live-ish activity (current HR, daily steps/energy)."""
 
@@ -1783,7 +1797,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         results = await asyncio.gather(
             self._client.async_get_wellness("sleep", _since_ms(now, SLEEP_LOOKBACK_DAYS)),
             self._client.async_get_wellness(
-                "recovery", _since_ms(now, RECOVERY_LOOKBACK_DAYS)
+                "recovery", _since_hour_ms(now, RECOVERY_LOOKBACK_DAYS)
             ),
             self._client.async_get_workouts(_since_ms(now, WORKOUTS_LOOKBACK_DAYS)),
             return_exceptions=True,
@@ -2553,7 +2567,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         its point retroactively.
         """
         now = dt_util.utcnow()
-        since_ms = _since_ms(now, STATS_LOOKBACK_DAYS)
+        since_ms = _since_hour_ms(now, STATS_LOOKBACK_DAYS)
         activity = await self._client.async_get_wellness("activity", since_ms)
         self._last_activity = activity
 
