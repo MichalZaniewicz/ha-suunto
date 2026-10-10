@@ -60,11 +60,16 @@ WORKOUTS_LOOKBACK_DAYS = 90
 # produces). 60 covers 6 weeks at up to ~1.4 workouts/day.
 RECENT_WORKOUTS_LIMIT = 60
 
-# One-off deep scan used ONLY to seed the VO2max / fitness-age sensors. Suunto
+# Reach of the deep history scan that seeds what the 90-day window cannot see:
+# all-time records, this year's totals/records, and VO2max / fitness age (Suunto
 # derives those from runs and walks alone, so an account that mostly rides can go
-# well over a year without a fresh reading (confirmed live: the newest reading was
-# 308 days old). Runs once, and only while no reading is known.
+# well over a year without a fresh reading - confirmed live: the newest reading
+# was 308 days old). One scan feeds all three, and its result is kept in a Store,
+# so a restart does not repeat it.
 FITNESS_LOOKBACK_DAYS = 730
+# The stored seed is redone after this many days anyway, so a workout deleted or
+# edited in the app (a GPS glitch that set a "record") does not live on forever.
+DEEP_SCAN_REFRESH_DAYS = 7
 
 # Backfill buffer for the hourly statistics import (activity + workout heartrates
 # + recovery). Larger than ACTIVITY_LOOKBACK_DAYS (which the 15-min fast poll uses
@@ -76,7 +81,7 @@ STATS_LOOKBACK_DAYS = 5
 # (see coordinator._downsample_route). A long workout's polyline can carry well
 # over a thousand points - far more precision than a dashboard card needs to
 # draw a recognizable route shape, and this attribute is excluded from the
-# recorder (SuuntoAppSensorDescription.unrecorded_attributes) but still sent to
+# recorder (SuuntoAppSensor._unrecorded_attributes) but still sent to
 # every connected frontend on each state update, so it stays deliberately small.
 MAX_ROUTE_POINTS = 300
 
@@ -142,6 +147,12 @@ NEW_WORKOUT_MAX_AGE_DAYS = 7
 # counts as finished (woke-up event, AI insight) once its last fragment ends at
 # or after this local hour on the morning after; until then more is expected.
 EARLIEST_WAKE_HOUR = 4
+# The hour alone is not enough: a brief wake at 4:17 ends a fragment too, and
+# the sync after it looks like a finished night while the athlete sleeps on
+# until 7 (seen live 2026-10-09). So the 24/7 stream must also show the
+# athlete up and moving: at least this many steps after the wake time. A
+# bathroom trip stays well below it.
+AWAKE_MIN_STEPS = 200
 
 # activityId -> label (partial; unknown ids fall back to "Activity <id>").
 ACTIVITY_NAMES: dict[int, str] = {

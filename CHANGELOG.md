@@ -3,6 +3,51 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.34
+- **No more early-morning AI insight after a brief wake-up.** A night used to
+  count as finished as soon as a sleep fragment ended after 4 a.m., so waking
+  for a moment at 4:17 and syncing fired the woke-up event and the AI insight
+  on half a night. Now the watch must also have recorded at least 200 steps
+  after the wake time. The step data is already downloaded for the
+  statistics, so there are no extra requests. Until you have walked a bit,
+  the night waits; the AI fallback hour still covers a morning without steps.
+- **Fix: long attribute lists were saved to the database after all.** The
+  route of the last workout and the form forecast series were meant to stay
+  out of the recorder, but the setting never took effect, so every update
+  stored the full GPS track. Now it works, and the other long lists only a
+  card reads are kept out too: the recent workouts list, lifetime per
+  activity, lap splits, the decoupling history and the personal insights.
+  The entities and their states are unchanged; only their history gets
+  smaller from now on.
+- **Fix: the hourly steps and energy statistics slowly lost steps.** The
+  statistics window started exactly 5 days before each update, in the middle
+  of an hour, so its oldest hour only held part of that hour's steps and
+  overwrote the full count every cycle. The running sums sank a little every
+  hour (seen live: hundreds of steps a day), and the oldest hour of HR,
+  recovery balance and stress lost samples. The window now starts on a full
+  hour. Steps already lost this way are not restored.
+- **Fix: this year's totals could break their long-term statistics.** If the
+  history scan for the current year failed (the Suunto backend throws the
+  odd error), the year totals were counted from the last 90 days only.
+  Because they only ever grow, Home Assistant read that drop as a meter
+  reset. Now the year sensors stay unknown until the scan succeeds, and it
+  is retried every cycle.
+- **Fix: best efforts and the decoupling trend survived no restart.** They
+  can only be built going forward, so a restart lost them. They are now
+  kept on disk.
+- **Faster restarts, far fewer requests.** Records, VO2max and this year's
+  totals used to need up to three deep history scans on every restart. Now
+  one scan feeds all three, its result is kept on disk, and it is redone
+  only once a week (and at New Year) to pick up workouts deleted in the
+  app. A restart with stored data makes no deep scan at all. Live and
+  history data are now fetched side by side at startup.
+- **Far fewer database writes for the long-term statistics.** Every hour the
+  whole rolling window (5 days of hourly HR and steps, 60 nights of sleep,
+  60 days of training load) used to be written again, about 1300 rows an
+  hour. Now only rows that actually changed are written, about 2 per
+  statistic an hour; the full backfill still runs once after each restart.
+- Removing the integration now also deletes its stored files.
+
 ## 1.0.33
 - No functional changes. CI now runs the HACS validation with every check
   enabled (brands included), ahead of the submission to the default HACS store.

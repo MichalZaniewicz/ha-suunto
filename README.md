@@ -191,9 +191,9 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   days); attributes carry four more all-time personal records - fastest pace,
   biggest single-workout climb, longest single workout, farthest single
   workout, and highest single-session TSS - each with the workout it happened
-  in. Seeded once via a deep history scan (same technique the VO2max sensor
-  uses) and only ever improved from there, so these are true lifetime bests,
-  not bounded to the normal fetch window.
+  in. Seeded via a deep history scan (the same one the VO2max sensor uses,
+  kept on disk and redone once a week) and only ever improved from there, so
+  these are true lifetime bests, not bounded to the normal fetch window.
 - **Training records - this month:** the same five personal records, scoped to
   the current calendar month instead of your whole history - quietly resets on
   the 1st. No deep scan needed (a month always fits inside the normal fetch
@@ -214,7 +214,8 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
   the route/lap sensors - the fastest continuous stretch covering at least
   that distance within a single workout. **Tracked from when you install
   this version onward, not retroactively** - a genuine best from before you
-  updated won't be found unless you happen to beat it again.
+  updated won't be found unless you happen to beat it again. Kept on disk, so
+  a Home Assistant restart does not lose it.
 - **Fitness:** **VO2max**, estimated VO2max and **fitness age**, as measured by the
   watch. Suunto derives these from **runs and walks only**, so they hold their last
   reading between such workouts - each sensor's `measured_at` attribute shows when
@@ -263,8 +264,8 @@ Pro"), read from your most recent workout - not just "Suunto App (unofficial)".
     classic sign of a solid aerobic base. Attributes carry both halves' speed
     and heart rate, and `history` lists recent workouts for a trend. Speed,
     not power, so terrain and wind make one value rough; watch the trend.
-    Workouts are checked as their data is downloaded, so after an update or a
-    restart the history refills from your newest workouts onward.
+    Workouts are checked as their data is downloaded, so after an update the
+    history fills from your newest workouts onward; it is kept across restarts.
   - **Personal insights:** what goes with better or worse nights for you,
     e.g. "After a workout ending after 20:00, your HRV is 21% lower (39 ms vs
     50 ms)". It compares nights after late workouts, training days, your

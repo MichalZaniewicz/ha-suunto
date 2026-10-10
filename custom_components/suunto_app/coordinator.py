@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -31,6 +32,7 @@ from .const import (
     DEFAULT_FUEL_CONSUMPTION,
     DEFAULT_FUEL_PRICE,
     CURRENT_HR_MAX_GAP_MINUTES,
+    DEEP_SCAN_REFRESH_DAYS,
     DOMAIN,
     PROFILE_REFRESH_HOURS,
     EVENT_NEW_WORKOUT,
@@ -39,6 +41,7 @@ from .const import (
     FOOT_ACTIVITY_IDS,
     JOULES_PER_KCAL,
     MAX_ROUTE_POINTS,
+    AWAKE_MIN_STEPS,
     EARLIEST_WAKE_HOUR,
     NEW_WORKOUT_MAX_AGE_DAYS,
     RECENT_WORKOUTS_LIMIT,
@@ -248,6 +251,17 @@ def _night_finished(night: Any, wake_time: datetime | None) -> bool:
         night + timedelta(days=1), time(EARLIEST_WAKE_HOUR), tzinfo=dt_util.DEFAULT_TIME_ZONE
     )
     return dt_util.as_local(wake_time) >= morning
+
+
+def _steps_since(records: list[dict[str, Any]], since: datetime) -> float:
+    """Sum the 24/7 activity steps recorded after ``since``."""
+    total = 0.0
+    for rec in records:
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None or ts <= since:
+            continue
+        total += _as_float((rec.get("entryData") or {}).get("stepCount")) or 0.0
+    return total
 
 
 def _group_naps(
@@ -1260,14 +1274,14 @@ def _workouts_since(workouts: list[dict[str, Any]], since: date) -> list[dict[st
     """Normalized workouts whose LOCAL start date is on/after ``since``.
 
     Used for the calendar-month records snapshot: unlike the all-time records
-    (``_async_seed_records``), a month's worth of workouts is always well
+    (``_async_deep_scan``), a month's worth of workouts is always well
     inside the normal 90-day fetch window, so no deep scan/seeding is needed -
     it is simply recomputed fresh from ``norm_workouts`` every cycle and
     naturally resets itself on the 1st of the month. Also used to bound the
     calendar-YEAR records/totals to since Jan 1 - that one DOES still need a
-    deep scan of its own (a year doesn't fit inside 90 days), this just filters
+    deep scan (a year doesn't fit inside 90 days), this just filters
     whichever batch (normal window or deep scan) it's handed either way - see
-    ``_async_seed_year_workouts``.
+    ``_async_deep_scan``.
     """
     return [
         w
@@ -1457,9 +1471,82 @@ def _normalize_stats(stats: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+# The daily coordinator's history Store (see _async_load_store): seeds and
+# go-forward results that would otherwise be lost or re-fetched on a restart.
+STORE_VERSION = 1
+# Delay before a changed Store is written, so one update cycle is one write.
+STORE_SAVE_DELAY_S = 30
+# Datetime fields inside the stored snapshots. JSON keeps them as ISO strings,
+# and the sensors call .isoformat() / as_local() on them, so they are turned
+# back into datetimes on load.
+_STORE_DATETIME_KEYS = frozenset({"start_time", "measured_at"})
+# What the year totals, year records and year commutes read from a workout
+# (_period_totals_snapshot, _records_snapshot, _commute_snapshot). The year
+# cache keeps only these, which keeps the Store small.
+_YEAR_FIELDS = (
+    "key",
+    "activity",
+    "activity_id",
+    "start_time",
+    "distance_meters",
+    "duration_minutes",
+    "energy_kcal",
+    "avg_pace_min_km",
+    "ascent_meters",
+    "tss",
+    "tags",
+)
+
+
+def _year_entry(workout: dict[str, Any]) -> dict[str, Any]:
+    """The part of a normalized workout the year cache keeps."""
+    return {field: workout.get(field) for field in _YEAR_FIELDS}
+
+
+def _encode_store(value: Any) -> Any:
+    """Make a snapshot JSON-safe: datetimes become ISO strings."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _encode_store(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_encode_store(item) for item in value]
+    return value
+
+
+def _decode_store(value: Any) -> Any:
+    """Undo _encode_store for the known datetime fields."""
+    if isinstance(value, dict):
+        return {
+            key: (
+                _parse_ts(item)
+                if key in _STORE_DATETIME_KEYS and isinstance(item, str)
+                else _decode_store(item)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_decode_store(item) for item in value]
+    return value
+
+
 def _since_ms(now: datetime, days: int) -> int:
     """Epoch-milliseconds cutoff ``days`` before ``now``."""
     return int((now - timedelta(days=days)).timestamp() * 1000)
+
+
+def _since_hour_ms(now: datetime, days: int) -> int:
+    """Like _since_ms, but rounded down to the start of that UTC hour.
+
+    For streams that feed the hourly statistics. A cutoff in the middle of an
+    hour (say 03:27) makes the oldest hourly bucket hold only part of its
+    samples, and the re-import then overwrote that hour's full total with the
+    smaller one every cycle - the steps/energy running sums sank a little each
+    hour (seen live: -98 steps overnight), and the oldest HR/balance/stress
+    mean lost samples. Starting on the hour keeps every bucket complete.
+    """
+    cutoff = suunto_stats.floor_hour(now - timedelta(days=days))
+    return int(cutoff.timestamp() * 1000)
 
 
 class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -1597,34 +1684,42 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # window entirely; holding the last reading keeps the sensors populated
         # (their `measured_at` attribute shows how old it is).
         self._last_fitness: dict[str, Any] | None = None
-        # Guards the one-off deep history scan that seeds the above.
-        self._fitness_seeded = False
         # All-time personal records (longest streak, fastest pace, biggest
-        # climb, longest/farthest/hardest single workout). Unlike fitness
-        # above, "all-time" always needs a deep scan once (a record can hide
-        # anywhere in the account's history, not just when the normal window
-        # comes up empty) - see _async_seed_records / _merge_records.
+        # climb, longest/farthest/hardest single workout). A record can hide
+        # anywhere in the account's history, so this is seeded by the deep scan
+        # (_async_deep_scan) and then merged with every window (_merge_records).
         self._last_records: dict[str, Any] | None = None
-        self._records_seeded = False
         # Same personal-records shape, scoped to the current calendar year.
         # Unlike the calendar-month version (records_month, no seeding needed -
         # a month always fits inside the normal 90-day window), a year does
-        # not, so this needs its own one-off deep scan too - just bounded to
-        # since Jan 1 instead of the full FITNESS_LOOKBACK_DAYS. _records_year
-        # tracks which calendar year the current seed/snapshot covers, so a
-        # New Year's rollover resets and reseeds instead of quietly carrying
-        # last year's records forward.
+        # not, so it comes from the deep scan too. _records_year is the
+        # calendar year the year data below covers, set only by a SUCCESSFUL
+        # scan (or a stored one of the same year): until then the year sensors
+        # read unknown. Never the 90-day window alone - the year totals are
+        # TOTAL_INCREASING, so an undercount there reads to Home Assistant as
+        # a meter reset and corrupts their long-term sums for good.
         self._last_records_year: dict[str, Any] | None = None
-        self._records_year_seeded = False
         self._records_year: int | None = None
-        # key -> normalized workout, for this calendar year only - a plain
+        # key -> _year_entry(workout), for this calendar year only - a plain
         # year-to-date totals snapshot (distance/time/energy/workout count,
         # for a "year in review" card) needs the actual workouts, not just
         # PRs, and a dict keyed by `key` is what lets the deep-scan seed and
         # every cycle's fresh window coexist without double-counting an
-        # overlapping workout (see _async_update_data). Reset alongside the
-        # PR state above on a New Year's rollover.
+        # overlapping workout (see _async_update_data).
         self._year_workouts_cache: dict[str, dict[str, Any]] = {}
+        # When the deep scan last succeeded; redone after DEEP_SCAN_REFRESH_DAYS.
+        self._seeded_at: datetime | None = None
+        # The seeds above plus the go-forward-only results below (best efforts,
+        # decoupling) survive a restart in this Store. Loaded on the first
+        # update, saved only when its content changed.
+        self._store: Store[dict[str, Any]] = Store(
+            hass, STORE_VERSION, f"{DOMAIN}.history.{entry.entry_id}"
+        )
+        self._store_loaded = False
+        self._store_saved: dict[str, Any] | None = None
+        # suffix -> hour -> values of the last statistics import, so only
+        # changed rows are sent to the recorder (statistics.changed_rows).
+        self._stats_sent: dict[str, dict[datetime, Any]] = {}
         # Last known watch model (SummaryExtension.gear), held the same way as
         # fitness above - not every workout has one (manual entries), and a fresh
         # install has none until its first fetch completes.
@@ -1664,12 +1759,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # time a workout's /data is ever fetched (i.e. when its key is new to
         # _workout_hr_cache), so this fills in "from now on", not
         # retroactively - see the fetch loop in _async_update_statistics.
+        # Kept in the history Store: it cannot be rebuilt after a restart.
         self._best_efforts: dict[str, dict[str, Any]] = {}
         # key -> aerobic decoupling of that workout, computed once from the
         # same /data fetch (see patterns.aerobic_decoupling). Kept for the
         # newest DECOUPLING_HISTORY eligible workouts so the sensor can show
-        # a trend; in memory, so after a restart it refills from the workouts
-        # whose /data gets fetched again (the statistics window + the last one).
+        # a trend; in the history Store for the same reason as best efforts.
         self._decoupling: dict[str, dict[str, Any]] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
@@ -1683,10 +1778,17 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # sleep/recovery/readiness sensor for a cycle. In-memory only.
         self._last_good_sleep: list[dict[str, Any]] = []
         self._last_good_recovery: list[dict[str, Any]] = []
+        # The 24/7 activity export the statistics import fetched this cycle,
+        # reused to tell a finished night from a brief wake (steps after the
+        # wake time). None until the first successful fetch.
+        self._last_activity: list[dict[str, Any]] | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
         now = dt_util.utcnow()
+        if not self._store_loaded:
+            self._store_loaded = True
+            await self._async_load_store()
 
         # Fetch the independent endpoints concurrently. return_exceptions keeps a
         # single flaky stream from blanking everything: a failed stream falls
@@ -1695,7 +1797,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         results = await asyncio.gather(
             self._client.async_get_wellness("sleep", _since_ms(now, SLEEP_LOOKBACK_DAYS)),
             self._client.async_get_wellness(
-                "recovery", _since_ms(now, RECOVERY_LOOKBACK_DAYS)
+                "recovery", _since_hour_ms(now, RECOVERY_LOOKBACK_DAYS)
             ),
             self._client.async_get_workouts(_since_ms(now, WORKOUTS_LOOKBACK_DAYS)),
             return_exceptions=True,
@@ -1883,18 +1985,47 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for w in norm_workouts[:RECENT_WORKOUTS_LIMIT]
         ]
 
+        # A fragment ending after EARLIEST_WAKE_HOUR can still be a brief wake
+        # in the middle of sleep. Only call the night finished once the watch
+        # has seen the athlete walking after it. Without an activity export
+        # (fetch failed since startup) the hour rule alone decides.
+        if (
+            sleep_norm
+            and sleep_norm["finished"]
+            and self._last_activity is not None
+            and _steps_since(self._last_activity, sleep_norm["wake_time"]) < AWAKE_MIN_STEPS
+        ):
+            sleep_norm["finished"] = False
+
         # Let automations react to a finished workout without polling a sensor.
         self._fire_new_workout_events(norm_workouts)
         self._fire_woke_up_event(sleep_norm, baseline)
 
-        if (fitness := _fitness_snapshot(workouts)) is not None:
+        # The deep history scan (_async_deep_scan): when nothing is stored yet,
+        # when the stored seed is older than DEEP_SCAN_REFRESH_DAYS, and at a
+        # New Year's rollover. One scan feeds VO2max, the all-time records and
+        # the year below. None when it was not due, or failed (then it is
+        # simply tried again next cycle).
+        year_start = today.replace(month=1, day=1)
+        deep: list[dict[str, Any]] | None = None
+        if (
+            self._seeded_at is None
+            or now - self._seeded_at > timedelta(days=DEEP_SCAN_REFRESH_DAYS)
+            or self._records_year != today.year
+        ):
+            deep = await self._async_deep_scan(now)
+            if deep is not None:
+                self._seeded_at = now
+        deep_norm = [_normalize_workout(w) for w in deep] if deep is not None else None
+
+        # VO2max only comes from runs and walks, so a rider can easily go a year
+        # without one: the deep scan reaches further back, and the last reading
+        # is held (and stored) in between.
+        fitness = _fitness_snapshot(workouts)
+        if fitness is None and deep is not None:
+            fitness = _fitness_snapshot(deep)
+        if fitness is not None:
             self._last_fitness = fitness
-        elif self._last_fitness is None and not self._fitness_seeded:
-            # Nothing in the normal window. VO2max only comes from runs and walks,
-            # so a rider can easily go a year without one and these sensors would
-            # sit unknown forever. Reach further back ONCE to seed them.
-            self._fitness_seeded = True
-            self._last_fitness = await self._async_seed_fitness(now)
 
         # Watch model for the device registry entry. A fresh install has none
         # until the first fetch completes, and a rider who switches watches
@@ -1914,14 +2045,14 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # All-time personal records. The normal 90-day window can only ever
         # improve a record (a genuinely new PR set today); anything a record
-        # could hold from further back is seeded once via a deep scan below
-        # and then never lost, since _merge_records keeps the better of the
-        # two on every cycle.
+        # could hold from further back comes from the deep scan and is then
+        # kept, since _merge_records keeps the better of the two every cycle.
+        # A fresh scan REPLACES what was held, so a record from a workout
+        # deleted in the app does not outlive the next rescan.
         current_records = _records_snapshot(norm_workouts)
-        if not self._records_seeded:
-            self._records_seeded = True
+        if deep_norm is not None:
             self._last_records = _merge_records(
-                await self._async_seed_records(now), current_records
+                _records_snapshot(deep_norm), current_records
             )
         else:
             self._last_records = _merge_records(self._last_records, current_records)
@@ -1936,45 +2067,43 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # but no seeding needed (a month always fits inside the 90-day window).
         month_totals = _period_totals_snapshot(this_months_window)
 
-        # This calendar year's personal records. A year does NOT fit inside
-        # the normal 90-day window the way a month does, so - like the
-        # all-time records above - this needs its own one-off deep scan to
-        # pick up January through the window's edge, then merges the current
-        # window on top every cycle after that. A New Year's rollover resets
-        # both the seed flag and the held snapshot: last year's PRs must not
-        # bleed into the new year's count.
-        year_start = today.replace(month=1, day=1)
-        if self._records_year != today.year:
+        # This calendar year's personal records and totals. A year does NOT
+        # fit inside the normal 90-day window the way a month does, so January
+        # through the window's edge comes from the deep scan, and the current
+        # window is merged on top every cycle after that.
+        if deep_norm is not None:
+            year_seed = _workouts_since(deep_norm, year_start)
             self._records_year = today.year
-            self._records_year_seeded = False
+            self._last_records_year = _records_snapshot(year_seed)
+            self._year_workouts_cache = {
+                w["key"]: _year_entry(w) for w in year_seed if w.get("key")
+            }
+        year_workouts: list[dict[str, Any]] | None = None
+        year_totals: dict[str, Any] | None = None
+        if self._records_year == today.year:
+            this_years_window = _workouts_since(norm_workouts, year_start)
+            self._last_records_year = _merge_records(
+                self._last_records_year, _records_snapshot(this_years_window)
+            )
+            # Plain year-to-date totals (distance/time/energy/workout count) -
+            # a different shape from the PRs above, since a SUM can't be merged
+            # the way "keep the better PR" can: two overlapping sources would
+            # double-count a workout present in both. Keying this cache by
+            # workout `key` sidesteps that - the deep scan seeds it, and every
+            # cycle's current window just overwrites/adds by key, so a workout
+            # counted in both never contributes twice.
+            for w in this_years_window:
+                if key := w.get("key"):
+                    self._year_workouts_cache[key] = _year_entry(w)
+            year_workouts = list(self._year_workouts_cache.values())
+            year_totals = _period_totals_snapshot(year_workouts)
+        else:
+            # No successful scan for this year yet (failed, or the stored year
+            # is last year's): unknown, never the 90-day window alone, since
+            # the year totals are TOTAL_INCREASING (see _records_year).
+            self._records_year = None
             self._last_records_year = None
             self._year_workouts_cache = {}
-        this_years_window = _workouts_since(norm_workouts, year_start)
-        current_records_year = _records_snapshot(this_years_window)
-        if not self._records_year_seeded:
-            self._records_year_seeded = True
-            seed_workouts = await self._async_seed_year_workouts(now, year_start)
-            for w in seed_workouts or []:
-                if key := w.get("key"):
-                    self._year_workouts_cache[key] = w
-            self._last_records_year = _merge_records(
-                _records_snapshot(seed_workouts or []), current_records_year
-            )
-        else:
-            self._last_records_year = _merge_records(
-                self._last_records_year, current_records_year
-            )
-        # Plain year-to-date totals (distance/time/energy/workout count) - a
-        # different shape from the PRs above, since a SUM can't be merged the
-        # way "keep the better PR" can: two overlapping sources would double-
-        # count a workout present in both. Keying this cache by workout `key`
-        # sidesteps that - the one-off deep scan seeds it, and every cycle's
-        # current window just overwrites/adds by key, so a workout counted in
-        # both never contributes twice.
-        for w in this_years_window:
-            if key := w.get("key"):
-                self._year_workouts_cache[key] = w
-        year_totals = _period_totals_snapshot(list(self._year_workouts_cache.values()))
 
         # Lap splits for the last workout only (from the cache
         # _async_update_statistics just populated). Built as a shallow copy
@@ -2036,14 +2165,17 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if price is None:
             price = DEFAULT_FUEL_PRICE
         stats_norm = _normalize_stats(stats)
+        self._save_store()
 
         return {
             # Commutes (Suunto's COMMUTE tag) this month / this year, with the
             # fuel, money and CO2 the car would have cost.
             "commute": {
                 "month": _commute_snapshot(this_months_window, litres, price),
-                "year": _commute_snapshot(
-                    list(self._year_workouts_cache.values()), litres, price
+                "year": (
+                    _commute_snapshot(year_workouts, litres, price)
+                    if year_workouts is not None
+                    else None
                 ),
             },
             "gear": _gear_snapshot(
@@ -2132,90 +2264,99 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             manufacturer=device.get("manufacturer") or "Suunto",
         )
 
-    async def _async_seed_fitness(self, now: datetime) -> dict[str, Any] | None:
-        """One-off deep scan for the newest VO2max / fitness-age reading.
+    async def _async_deep_scan(self, now: datetime) -> list[dict[str, Any]] | None:
+        """Fetch FITNESS_LOOKBACK_DAYS of raw workouts, or None if it failed.
 
-        Best-effort: a failure here must never disturb the data update, so it
-        swallows API errors (auth included - the caller's normal fetch already
-        surfaces a genuine auth problem) and simply leaves the sensors unknown
-        until the user logs their next run or walk.
+        One scan feeds every seed: VO2max / fitness age (only from runs and
+        walks, so it can be far back), the all-time records (a record can hide
+        anywhere in the history) and this year's records and totals (a year
+        does not fit in the 90-day window). It used to be three separate scans
+        on every restart; now it runs once, its result goes into the Store,
+        and it is redone only after DEEP_SCAN_REFRESH_DAYS or a New Year.
+
+        Best-effort: a failure must never disturb the data update, so API
+        errors are swallowed (auth included - the normal fetch already
+        surfaces a genuine auth problem) and the caller retries next cycle.
         """
         try:
             deep = await self._client.async_get_workouts(
                 _since_ms(now, FITNESS_LOOKBACK_DAYS), max_pages=12
             )
         except SuuntoAppError as err:
-            _LOGGER.debug("Fitness seed scan failed (non-fatal): %s", err)
+            _LOGGER.debug("Deep history scan failed (non-fatal): %s", err)
             return None
-        fitness = _fitness_snapshot(deep)
-        if fitness is None:
-            _LOGGER.debug(
-                "No VO2max reading in %d days of history (Suunto derives it from "
-                "runs and walks only)", FITNESS_LOOKBACK_DAYS
-            )
-        else:
-            _LOGGER.debug("Seeded fitness from %s", fitness.get("measured_at"))
-        return fitness
+        _LOGGER.debug(
+            "Deep history scan: %d workouts in %d days", len(deep), FITNESS_LOOKBACK_DAYS
+        )
+        return deep
 
-    async def _async_seed_records(self, now: datetime) -> dict[str, Any] | None:
-        """One-off deep scan for all-time personal records.
+    async def _async_load_store(self) -> None:
+        """Restore the seeds and go-forward results kept in ``self._store``.
 
-        Same reach as the fitness seed above, but unconditional: unlike a
-        "latest reading" (fitness), a record can be sitting anywhere in the
-        account's history, so this always runs once per restart rather than
-        only when the normal window comes up empty. Normalizes the deep batch
-        directly (bypassing ``_normalize_workouts``' cache) so a one-off scan
-        of up to 1200 workouts never mutates ``self._norm_cache``.
-
-        Best-effort: a failure here must never disturb the data update.
+        Anything unreadable or of the wrong shape is ignored: the deep scan
+        then simply runs again, and best efforts start over as before.
         """
         try:
-            deep = await self._client.async_get_workouts(
-                _since_ms(now, FITNESS_LOOKBACK_DAYS), max_pages=12
-            )
-        except SuuntoAppError as err:
-            _LOGGER.debug("Records seed scan failed (non-fatal): %s", err)
-            return None
-        records = _records_snapshot([_normalize_workout(w) for w in deep])
-        _LOGGER.debug(
-            "Seeded records from %d days of history: streak=%d",
-            FITNESS_LOOKBACK_DAYS, records["longest_streak_days"]
-        )
-        return records
+            stored = await self._store.async_load()
+        except Exception:  # noqa: BLE001 - a broken file must not block setup
+            _LOGGER.warning("Suunto history store unreadable, rebuilding it", exc_info=True)
+            return
+        if not isinstance(stored, dict):
+            return
+        data = _decode_store(stored)
+        if isinstance(fitness := data.get("fitness"), dict):
+            self._last_fitness = fitness
+        if isinstance(records := data.get("records"), dict):
+            self._last_records = records
+        if isinstance(efforts := data.get("best_efforts"), dict):
+            self._best_efforts = {
+                label: pr
+                for label, pr in efforts.items()
+                if isinstance(pr, dict) and pr.get("value") is not None
+            }
+        if isinstance(decoupling := data.get("decoupling"), dict):
+            self._decoupling = {
+                key: item
+                for key, item in decoupling.items()
+                if isinstance(item, dict) and isinstance(item.get("start_time"), datetime)
+            }
+        # Year data only counts for the year it was made in; a stale year is
+        # dropped here and the rollover rescan rebuilds it.
+        year_workouts = data.get("year_workouts")
+        if data.get("year") == dt_util.now().year and isinstance(year_workouts, list):
+            self._records_year = data["year"]
+            records_year = data.get("records_year")
+            self._last_records_year = records_year if isinstance(records_year, dict) else None
+            self._year_workouts_cache = {
+                w["key"]: w
+                for w in year_workouts
+                if isinstance(w, dict)
+                and w.get("key")
+                and isinstance(w.get("start_time"), datetime)
+            }
+        # The scan counts as done only together with what it produced.
+        if self._last_records is not None:
+            self._seeded_at = _parse_ts(stored.get("seeded_at"))
+        self._store_saved = stored
 
-    async def _async_seed_year_workouts(
-        self, now: datetime, year_start: date
-    ) -> list[dict[str, Any]] | None:
-        """One-off deep scan for this calendar year's workouts.
-
-        Same idea as ``_async_seed_records``, but bounded to since ``year_start``
-        instead of the full ``FITNESS_LOOKBACK_DAYS`` - a mid-year HA restart
-        still needs January's workouts even though they may have long since
-        aged out of the normal 90-day window, but nothing before this January
-        is ever relevant here (re-seeded fresh at each year rollover, see
-        ``_async_update_data`` - a new year starts with nothing to seed from
-        anyway). Returns the normalized workout list itself (not just a PR
-        snapshot) - the caller derives BOTH this year's personal records and
-        its plain totals (distance/time/workout count) from the same scan,
-        one API call either way. Best-effort: a failure here must never
-        disturb the data update.
-        """
-        days_into_year = (now.date() - year_start).days + 1
-        try:
-            deep = await self._client.async_get_workouts(
-                _since_ms(now, days_into_year), max_pages=12
-            )
-        except SuuntoAppError as err:
-            _LOGGER.debug("Year workouts seed scan failed (non-fatal): %s", err)
-            return None
-        workouts = _workouts_since(
-            [_normalize_workout(w) for w in deep], year_start
+    def _save_store(self) -> None:
+        """Queue a Store write when its content changed since the last one."""
+        payload = _encode_store(
+            {
+                "seeded_at": self._seeded_at,
+                "fitness": self._last_fitness,
+                "records": self._last_records,
+                "year": self._records_year,
+                "records_year": self._last_records_year,
+                "year_workouts": list(self._year_workouts_cache.values()),
+                "best_efforts": self._best_efforts,
+                "decoupling": self._decoupling,
+            }
         )
-        _LOGGER.debug(
-            "Seeded %d workouts for %d from %d days of history",
-            len(workouts), year_start.year, days_into_year
-        )
-        return workouts
+        if payload == self._store_saved:
+            return
+        self._store_saved = payload
+        self._store.async_delay_save(lambda: payload, STORE_SAVE_DELAY_S)
 
     def _normalize_workouts(
         self, workouts: list[dict[str, Any]]
@@ -2426,8 +2567,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         its point retroactively.
         """
         now = dt_util.utcnow()
-        since_ms = _since_ms(now, STATS_LOOKBACK_DAYS)
+        since_ms = _since_hour_ms(now, STATS_LOOKBACK_DAYS)
         activity = await self._client.async_get_wellness("activity", since_ms)
+        self._last_activity = activity
 
         hr: list[tuple[datetime, float]] = []
         steps: list[tuple[datetime, float]] = []
@@ -2720,6 +2862,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ("steps", "Suunto steps (hourly)", "steps", steps),
                 ("energy", "Suunto energy (hourly)", "kcal", energy),
             ],
+            sent=self._stats_sent,
         )
 
     async def _async_weekly_steps(self, now: datetime) -> int | None:
