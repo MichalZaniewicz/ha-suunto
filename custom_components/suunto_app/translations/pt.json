@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "A entidade AI Task a usar. Deixe vazio para desligar a função.",
           "ai_extra_context": "Opcional, por exemplo o seu objetivo ou uma prova próxima: \"Preparo uma maratona a 12 de abril\".",
-          "ai_fallback_hour": "A análise corre após a sincronização matinal do relógio. Se até esta hora não tiver chegado uma noite nova, corre na mesma."
+          "ai_fallback_hour": "A análise corre após a sincronização matinal do relógio. Se até esta hora não tiver chegado uma noite nova, corre na mesma. Se a última noite só sincronizou em parte (dormes até mais tarde), espera até mais 3 horas."
         }
       },
       "gear_add": {

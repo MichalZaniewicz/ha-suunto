@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "Encja AI Task, której używać. Zostaw puste, aby wyłączyć funkcję.",
           "ai_extra_context": "Opcjonalnie, np. Twój cel lub zbliżające się zawody: \"Przygotowuję się do maratonu 12 kwietnia\".",
-          "ai_fallback_hour": "Analiza rusza po porannej synchronizacji zegarka. Jeśli do tej godziny nie dotrze nowa noc, i tak się wykona."
+          "ai_fallback_hour": "Analiza rusza po porannej synchronizacji zegarka. Jeśli do tej godziny nie dotrze nowa noc, i tak się wykona. Jeśli ostatnia noc zsynchronizowała się tylko częściowo (dłużej śpisz), czeka jeszcze do 3 godzin."
         }
       },
       "gear_add": {

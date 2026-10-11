@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "L'entità AI Task da usare. Lascia vuoto per disattivare la funzione.",
           "ai_extra_context": "Facoltativo, ad esempio il tuo obiettivo o una gara in arrivo: \"Mi preparo per una maratona il 12 aprile\".",
-          "ai_fallback_hour": "L'analisi parte dopo la sincronizzazione mattutina dell'orologio. Se entro quest'ora non è arrivata una nuova notte, parte comunque."
+          "ai_fallback_hour": "L'analisi parte dopo la sincronizzazione mattutina dell'orologio. Se entro quest'ora non è arrivata una nuova notte, parte comunque. Se l'ultima notte è sincronizzata solo in parte (dormi più a lungo), aspetta fino a 3 ore in più."
         }
       },
       "gear_add": {

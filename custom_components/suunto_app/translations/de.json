@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "Die zu verwendende AI-Task-Entität. Leer lassen, um die Funktion auszuschalten.",
           "ai_extra_context": "Optional, z. B. dein Ziel oder ein anstehender Wettkampf: \"Vorbereitung auf einen Marathon am 12. April\".",
-          "ai_fallback_hour": "Die Analyse läuft nach der morgendlichen Uhr-Synchronisierung. Ist bis zu dieser Stunde keine neue Nacht angekommen, läuft sie trotzdem."
+          "ai_fallback_hour": "Die Analyse läuft nach der morgendlichen Uhr-Synchronisierung. Ist bis zu dieser Stunde keine neue Nacht angekommen, läuft sie trotzdem. Ist die letzte Nacht erst teilweise synchronisiert (du schläfst länger), wartet sie bis zu 3 weitere Stunden."
         }
       },
       "gear_add": {

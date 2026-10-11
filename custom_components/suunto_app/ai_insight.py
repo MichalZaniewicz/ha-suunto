@@ -13,7 +13,9 @@ When it runs:
   analysis starts once that coordinator update has finished (the event fires
   mid-update, before the new data is published);
 - at a fallback hour, if nothing was generated today yet (no sync, or a
-  restart that swallowed the event);
+  restart that swallowed the event). If last night is still in progress
+  then (a fragment synced, no walking after it yet), it waits for the
+  woke-up event instead, at most FALLBACK_WAIT_HOURS;
 - on demand, from the "Generate AI insight" button.
 At most one automatic run per day, plus one more if the first one had to go
 without last night's sleep and the night arrives later. The result is kept in
@@ -50,6 +52,9 @@ MAX_STATE_LENGTH = 255
 # A failed automatic run (provider down, quota) is retried on the next daily
 # coordinator update, at most this many times a day.
 MAX_ATTEMPTS_PER_DAY = 3
+# How long past the fallback hour a run waits for a night still in progress
+# (the athlete sleeping in): a 17-minute fragment is no basis for the day.
+FALLBACK_WAIT_HOURS = 3
 # The model's overall call for today; a card can color itself by it.
 STATUSES = ("good", "ok", "caution", "rest")
 
@@ -156,7 +161,9 @@ atl = fatigue, acwr = acute:chronic workload ratio (about 0.8-1.3 is the safe zo
 readiness = 0-100 heuristic score, pte = Suunto peak training effect (1-5),
 tss = training stress score, suggestion = a rule-based hint from TSB and ACWR,
 sleep.stale = true means last night has not synced yet (the night shown is older),
-sleep.in_progress = true means only part of last night has synced so far (do not judge its length),
+sleep.in_progress = true means only part of last night has synced so far: do not judge its length,
+HRV, heart rate, quality or SpO2, and do not call the night bad because of them (a short fragment says
+nothing about the whole night),
 forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app,
 yesterday = the last complete day, today_so_far = the day until as_of (partial, do not judge
 goals on it). Steps and active_kcal are the whole day INCLUDING workouts, not activity on top
@@ -530,7 +537,7 @@ class SuuntoAiInsight:
                 self.hass, self._on_fallback_time, hour=self._hour, minute=0, second=0
             ),
         ]
-        if dt_util.now().hour >= self._hour and not self._done_today():
+        if self._fallback_due():
             self._run_in_background()
 
     async def async_set_enabled(self, enabled: bool) -> None:
@@ -544,7 +551,7 @@ class SuuntoAiInsight:
         self.enabled = enabled
         await self._async_save()
         self._notify()
-        if enabled and dt_util.now().hour >= self._hour and not self._done_today():
+        if enabled and self._fallback_due():
             self._run_in_background()
 
     async def _async_save(self) -> None:
@@ -580,6 +587,29 @@ class SuuntoAiInsight:
             and self.result.get("sleep_finished", True)
         )
 
+    def _night_in_progress(self) -> bool:
+        """Whether last night has only partly synced (see _night_finished).
+
+        Only last night (key = yesterday) counts: with a late fallback hour,
+        tonight's first fragment must not hold today's analysis back.
+        """
+        sleep = (self._daily.data or {}).get("sleep") or {}
+        last_night = dt_util.now().date() - timedelta(days=1)
+        return str(sleep.get("night")) == last_night.isoformat() and not sleep.get("finished")
+
+    def _fallback_due(self) -> bool:
+        """Whether a run without the woke-up event is due now.
+
+        From the fallback hour on, while nothing was generated today. A night
+        still in progress holds it back for up to FALLBACK_WAIT_HOURS, so a
+        late riser gets one analysis of the whole night instead of one of the
+        first fragment followed by a second one.
+        """
+        now = dt_util.now()
+        if now.hour < self._hour or self._done_today():
+            return False
+        return now.hour >= self._hour + FALLBACK_WAIT_HOURS or not self._night_in_progress()
+
     @callback
     def _on_woke_up(self, event: Event) -> None:
         if event.data.get("entry_id") == self._entry.entry_id:
@@ -591,17 +621,14 @@ class SuuntoAiInsight:
             self._pending = False
             if not self._has_current_night():
                 self._run_in_background()
-        elif (
-            self.last_error
-            and not self.running
-            and not self._done_today()
-            and dt_util.now().hour >= self._hour
-        ):
-            self._run_in_background()  # retry a failed run, capped per day
+        elif not self.running and self._fallback_due():
+            # A failed run (retries are capped per day), or the fallback run
+            # that waited for a night in progress.
+            self._run_in_background()
 
     @callback
     def _on_fallback_time(self, _now: datetime) -> None:
-        if not self._done_today():
+        if self._fallback_due():
             self._run_in_background()
 
     @callback

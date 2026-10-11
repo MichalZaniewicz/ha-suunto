@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "De AI Task-entiteit die gebruikt wordt. Laat leeg om de functie uit te zetten.",
           "ai_extra_context": "Optioneel, bijvoorbeeld je doel of een komende wedstrijd: \"Ik bereid me voor op een marathon op 12 april\".",
-          "ai_fallback_hour": "De analyse draait na de ochtendsynchronisatie van het horloge. Is er op dit uur nog geen nieuwe nacht binnen, dan draait hij toch."
+          "ai_fallback_hour": "De analyse draait na de ochtendsynchronisatie van het horloge. Is er op dit uur nog geen nieuwe nacht binnen, dan draait hij toch. Is de afgelopen nacht pas deels gesynchroniseerd (je slaapt uit), dan wacht hij tot 3 uur langer."
         }
       },
       "gear_add": {

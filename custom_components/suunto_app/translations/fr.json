@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "L'entité AI Task à utiliser. Laissez vide pour désactiver la fonction.",
           "ai_extra_context": "Facultatif, par exemple votre objectif ou une course à venir : \"Je prépare un marathon le 12 avril\".",
-          "ai_fallback_hour": "L'analyse se lance après la synchronisation matinale de la montre. Si aucune nouvelle nuit n'est arrivée à cette heure, elle se lance quand même."
+          "ai_fallback_hour": "L'analyse se lance après la synchronisation matinale de la montre. Si aucune nouvelle nuit n'est arrivée à cette heure, elle se lance quand même. Si la dernière nuit n'est que partiellement synchronisée (grasse matinée), elle attend jusqu'à 3 heures de plus."
         }
       },
       "gear_add": {

@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "The AI Task entity to use. Leave empty to turn the feature off.",
           "ai_extra_context": "Optional, e.g. your goal or an upcoming race: \"Preparing for a marathon on 12 April\".",
-          "ai_fallback_hour": "The analysis runs after the morning watch sync. If no new night has arrived by this hour, it runs anyway."
+          "ai_fallback_hour": "The analysis runs after the morning watch sync. If no new night has arrived by this hour, it runs anyway. If last night has only partly synced (you are sleeping in), it waits up to 3 more hours."
         }
       },
       "gear_add": {

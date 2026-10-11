@@ -3,6 +3,19 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.36b1
+- **No AI insight from a sleep fragment when you sleep in.** The watch can
+  sync a first 15-minute piece of the night and then nothing until you get
+  up. If that was after the fallback hour (10:00 by default), the analysis
+  ran anyway and judged the whole night by that piece ("0.3 h of sleep, very
+  low HRV"). Now the fallback hour waits while last night is still in
+  progress and runs once you are up and the full night has synced, at most
+  3 hours later. A morning with no new night at all still runs at the
+  fallback hour, as before.
+- When the analysis does have to run on a partial night, the AI is told not
+  to judge that fragment's HRV, heart rate, quality or SpO2 either, not just
+  its length.
+
 ## 1.0.35
 - **New README.** An animated banner, a new trailer and 3-minute tour, a
   stats strip, the features at a glance, the daily AI insight and a wall of

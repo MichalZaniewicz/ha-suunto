@@ -64,7 +64,7 @@
         "data_description": {
           "ai_task_entity": "La entidad AI Task que se usará. Déjalo vacío para desactivar la función.",
           "ai_extra_context": "Opcional, por ejemplo tu objetivo o una carrera próxima: \"Preparo un maratón el 12 de abril\".",
-          "ai_fallback_hour": "El análisis se ejecuta tras la sincronización matinal del reloj. Si a esta hora no ha llegado una noche nueva, se ejecuta igualmente."
+          "ai_fallback_hour": "El análisis se ejecuta tras la sincronización matinal del reloj. Si a esta hora no ha llegado una noche nueva, se ejecuta igualmente. Si la última noche solo se ha sincronizado en parte (duermes hasta tarde), espera hasta 3 horas más."
         }
       },
       "gear_add": {
