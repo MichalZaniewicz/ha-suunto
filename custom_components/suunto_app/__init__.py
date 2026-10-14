@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -28,6 +28,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import SuuntoActivityCoordinator, SuuntoDailyCoordinator
+from .llm_api import async_setup_llm_api, async_unload_llm_api
 
 
 @dataclass
@@ -118,6 +119,8 @@ async def async_setup_entry(
         entry.async_on_unload(ai.async_stop)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # The "Suunto" tool set for conversation agents (llm_api.py).
+    async_setup_llm_api(hass)
     return True
 
 
@@ -125,7 +128,16 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: SuuntoAppConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # The tool set is domain-wide: it goes with the last loaded account.
+    remaining = [
+        other
+        for other in hass.config_entries.async_entries(DOMAIN)
+        if other.entry_id != entry.entry_id and other.state is ConfigEntryState.LOADED
+    ]
+    if unloaded and not remaining:
+        async_unload_llm_api(hass)
+    return unloaded
 
 
 async def async_remove_entry(

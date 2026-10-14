@@ -57,6 +57,7 @@ which silently removes any <img> placed inside it. -->
 - 🏆 **Totals and records.** This month and this year, lifetime totals per sport, monthly, yearly and all-time records, VO2max and fitness age.
 - 🔔 **Notifications.** 8 ready-made blueprints: good morning (fires once you're actually up), new workout, long workout finished, low readiness, unusual recovery, a weekly digest, gear service and the AI insight report. One click to import each.
 - 🤖 **A daily AI insight.** The AI model you already use in Home Assistant reads your night, recovery and training each morning and writes a short verdict with advice for the day. Optional, with no API key of ours and no extra Suunto requests.
+- 🗣️ **Ask Assist.** *"How did I sleep?"* *"Can I train hard today?"* *"How far did I ride this month?"* - by voice or in the chat, with the AI model you already use in Home Assistant. Turn on the "Suunto" tools next to Assist in its options; answers come from data already downloaded.
 - 📊 **Curves that fill in later.** Hourly heart rate, steps, energy, recovery balance and stress as long-term statistics, plus daily sleep, readiness and load trends. A watch that syncs late backfills the gaps.
 - 🧭 **A daily brief.** One plain sentence about your sleep, HRV, readiness and form, in 8 languages.
 - 🚲 **Commutes and gear.** Fuel and CO2 saved by riding instead of driving, and distance on each bike, chain or pair of shoes with a service reminder.

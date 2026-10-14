@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.36b2
+- **Ask Assist about your training.** A "Suunto" tool set (LLM API) that a
+  conversation agent (Gemini, OpenAI, Claude, Ollama...) turns on next to
+  *Assist* in its options. Ask by voice or in the chat: *"How did I sleep?"*,
+  *"Can I train hard today?"*, *"How far did I ride this month?"*, *"What is
+  my best 5K?"*. Eight read-only tools: readiness, sleep, workouts (by date
+  range and sport, with lap splits for the newest one), training load with a
+  week-by-week table, today's steps and calories against your goals, totals
+  (week, month, year, lifetime, commutes, gear), records and best efforts,
+  and your personal patterns plus today's AI insight. Answers come from data
+  already downloaded, so a question adds no Suunto requests.
+
 ## 1.0.36b1
 - **No AI insight from a sleep fragment when you sleep in.** The watch can
   sync a first 15-minute piece of the night and then nothing until you get
