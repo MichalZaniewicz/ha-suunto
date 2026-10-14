@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.36b2
+## 1.0.36
 - **Ask Assist about your training.** A "Suunto" tool set (LLM API) that a
   conversation agent (Gemini, OpenAI, Claude, Ollama...) turns on next to
   *Assist* in its options. Ask by voice or in the chat: *"How did I sleep?"*,
@@ -14,8 +14,6 @@ beta pre-releases are tagged `X.Y.ZbN`.
   (week, month, year, lifetime, commutes, gear), records and best efforts,
   and your personal patterns plus today's AI insight. Answers come from data
   already downloaded, so a question adds no Suunto requests.
-
-## 1.0.36b1
 - **No AI insight from a sleep fragment when you sleep in.** The watch can
   sync a first 15-minute piece of the night and then nothing until you get
   up. If that was after the fallback hour (10:00 by default), the analysis
