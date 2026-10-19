@@ -144,6 +144,31 @@ def _weighted_avg(pairs: list[tuple[float | None, float]]) -> float | None:
     return num / den if den else None
 
 
+def _dedupe_sleep_snapshots(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep one record per sleep fragment, dropping repeated snapshots of it.
+
+    Some watches make the export return the same fragment many times (same
+    ``sleepId`` and start ``timestamp``), one growing snapshot per watch sync;
+    summed, they turned an 8 h night into 129 h. The longest snapshot is the
+    final one. Fragments of one night start at different times, so they stay
+    separate; a record without a ``sleepId`` is kept as is.
+    """
+    best: dict[tuple[Any, Any], dict[str, Any]] = {}
+    out: list[dict[str, Any]] = []
+    for rec in records:
+        sleep_id = (rec.get("entryData") or {}).get("sleepId")
+        if sleep_id is None:
+            out.append(rec)
+            continue
+        key = (sleep_id, rec.get("timestamp"))
+        cur = best.get(key)
+        if cur is None or (
+            _as_float((rec.get("entryData") or {}).get("duration")) or 0.0
+        ) > (_as_float((cur.get("entryData") or {}).get("duration")) or 0.0):
+            best[key] = rec
+    return out + list(best.values())
+
+
 def _group_sleep_nights(
     records: list[dict[str, Any]],
 ) -> dict[Any, list[tuple[datetime, dict[str, Any]]]]:
@@ -153,6 +178,7 @@ def _group_sleep_nights(
     noon key makes an evening start and its post-midnight continuation land in
     the same night, so they can be summed (the app shows the sum).
     """
+    records = _dedupe_sleep_snapshots(records)
     segments = [r for r in records if not (r.get("entryData") or {}).get("isNap")]
     segments = segments or records
     groups: dict[Any, list[tuple[datetime, dict[str, Any]]]] = {}
@@ -276,7 +302,7 @@ def _group_naps(
     that starts that same evening), attributing it to the wrong day.
     """
     groups: dict[Any, list[tuple[datetime, dict[str, Any]]]] = {}
-    for rec in records:
+    for rec in _dedupe_sleep_snapshots(records):
         if not (rec.get("entryData") or {}).get("isNap"):
             continue
         ts = _parse_ts(rec.get("timestamp"))

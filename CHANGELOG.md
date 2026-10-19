@@ -3,6 +3,18 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.37b1
+- **Fix: sleep counted many times over (#5, likely also #3).** On some
+  watches the Suunto export returns the same night again after every watch
+  sync, as a growing copy with the same `sleepId` and start time. All the
+  copies were added up, so an 8 h 14 min night read as 129.5 h, and deep,
+  light, REM and nap times were inflated the same way. Now only the longest
+  (final) copy of each sleep piece counts. This also fixes the sleep
+  statistics, readiness, the HRV and resting HR baselines and the sleep
+  regularity patterns, which were built from the same data. Real separate
+  pieces of one night (after waking up) are still added together, as
+  before. Thanks to @CarlossRecio for finding the cause.
+
 ## 1.0.36
 - **Ask Assist about your training.** A "Suunto" tool set (LLM API) that a
   conversation agent (Gemini, OpenAI, Claude, Ollama...) turns on next to
