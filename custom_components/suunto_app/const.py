@@ -49,6 +49,22 @@ RECOVERY_LOOKBACK_DAYS = 5
 ACTIVITY_LOOKBACK_DAYS = 2
 WORKOUTS_LOOKBACK_DAYS = 90
 
+# The recovery stream's stressState, one sample every 30 minutes. Mapped from
+# live data (2026-10-19): 1 all night with 0 steps, 2 on a 5,000 steps/h
+# afternoon walk at ~100 bpm, 3 on a quiet evening at 70-80 bpm, 4 rare. Same
+# four states, in the same order, as the Suunto app's "Resources" chart.
+STRESS_STATES: dict[int, str] = {
+    1: "recovering",
+    2: "active",
+    3: "inactive",
+    4: "stressed",
+}
+STRESS_SAMPLE_MINUTES = 30
+
+# No new data from the watch for this long raises a Repairs notice ("sync your
+# watch"); it clears itself on the next sync.
+SYNC_STALE_HOURS = 24
+
 # How many of the most recent workouts ride along in the recent_workouts
 # sensor's attribute. Sliced from norm_workouts, which is already the full
 # 90-day window fetched above - no extra cost to raising this. Needs to

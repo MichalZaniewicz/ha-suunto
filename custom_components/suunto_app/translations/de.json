@@ -115,6 +115,8 @@
       "nap_duration": { "name": "Nickerchen-Dauer" },
       "recovery_balance": { "name": "Erholungsbalance" },
       "stress_state": { "name": "Stresszustand" },
+      "stress_today": { "name": "Stress heute" },
+      "last_sync": { "name": "Letzte Uhr-Synchronisierung" },
       "daily_steps": { "name": "Tägliche Schritte" },
       "daily_energy": { "name": "Tägliche Energie" },
       "daily_total_energy": { "name": "Tägliche Gesamtenergie" },
@@ -236,6 +238,12 @@
     "button": {
       "ai_insight_generate": { "name": "KI-Analyse erstellen" },
       "sync_now": { "name": "Jetzt synchronisieren" }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Suunto-Uhr wurde nicht synchronisiert",
+      "description": "Keine neuen Daten von der Uhr von **{account}** seit {last_sync} (vor {hours} Stunden). Öffne die Suunto-App auf dem Handy mit eingeschaltetem Bluetooth, um die Uhr zu synchronisieren. Dieser Hinweis verschwindet nach der nächsten Synchronisierung von selbst."
     }
   }
 }

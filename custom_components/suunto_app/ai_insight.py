@@ -164,6 +164,10 @@ sleep.stale = true means last night has not synced yet (the night shown is older
 sleep.in_progress = true means only part of last night has synced so far: do not judge its length,
 HRV, heart rate, quality or SpO2, and do not call the night bad because of them (a short fragment says
 nothing about the whole night),
+recovery.stress_yesterday = minutes in each of the watch's four states (recovering, active,
+inactive, stressed) over yesterday,
+patterns.personal_correlations with metric efficiency = metres per heartbeat (speed / heart rate)
+in one sport, hot_weather / cold_weather compare that sport's workouts in heat / cold with mild weather,
 forecast = what form would do under full rest, goals = targets the athlete set in the Suunto app,
 yesterday = the last complete day, today_so_far = the day until as_of (partial, do not judge
 goals on it). Steps and active_kcal are the whole day INCLUDING workouts, not activity on top
@@ -343,7 +347,8 @@ def build_context(
             "recovery": _compact(
                 {
                     "balance_pct": _round(recovery.get("balance_pct")),
-                    "stress_state": recovery.get("stress_state"),
+                    "stress_state": recovery.get("stress_name"),
+                    "stress_yesterday": (daily.get("stress") or {}).get("yesterday"),
                 }
             ),
             "load": _compact(
@@ -369,11 +374,15 @@ def build_context(
                             {
                                 "condition": item["condition"],
                                 "threshold": item.get("threshold"),
+                                "threshold_c": item.get("threshold_c"),
                                 "metric": item["metric"],
                                 "with": item["with"],
                                 "without": item["without"],
                                 "diff_pct": item["diff_pct"],
-                                "nights": item["n_with"] + item["n_without"],
+                                "sport": item.get("activity"),
+                                ("workouts" if item.get("activity") else "nights"): (
+                                    item["n_with"] + item["n_without"]
+                                ),
                             }
                         )
                         for item in (daily.get("insights") or {}).get("insights") or []

@@ -51,7 +51,7 @@ which silently removes any <img> placed inside it. -->
 <summary><b>Every feature, in detail</b></summary>
 
 - 😴 **Sleep, every night.** Duration, deep/light/REM, average and lowest heart rate, HRV, SpO2, quality, bedtime and wake-up time, naps kept apart so they never inflate the night, plus sleep regularity and your weekend social jetlag.
-- 🔋 **Readiness and recovery.** A 0-100 readiness score from sleep, HRV and resting heart rate against your own baseline, recovery balance and stress, a recovery countdown after each workout, and an alert when HRV drops while resting heart rate rises.
+- 🔋 **Readiness and recovery.** A 0-100 readiness score from sleep, HRV and resting heart rate against your own baseline, recovery balance and stress with the minutes you spent recovering, active, inactive and stressed each day, a recovery countdown after each workout, and an alert when HRV drops while resting heart rate rises.
 - 📈 **Training load.** Fitness, fatigue and form (CTL / ATL / TSB), the acute:chronic workload ratio, a suggestion for today (rest / easy / moderate / hard) and a 7-day form forecast.
 - 🚴 **Every workout.** Distance, duration, pace, speed, heart rate and time in zones 0-5 with their bpm ranges, TSS, Peak Training Effect, EPOC, your feeling, laps, the GPS route with per-point speed, weather, route achievements, best efforts from 1K to the marathon, and a workouts calendar.
 - 🏆 **Totals and records.** This month and this year, lifetime totals per sport, monthly, yearly and all-time records, VO2max and fitness age.
@@ -60,6 +60,8 @@ which silently removes any <img> placed inside it. -->
 - 🗣️ **Ask Assist.** *"How did I sleep?"* *"Can I train hard today?"* *"How far did I ride this month?"* - by voice or in the chat, with the AI model you already use in Home Assistant. Turn on the "Suunto" tools next to Assist in its options; answers come from data already downloaded.
 - 📊 **Curves that fill in later.** Hourly heart rate, steps, energy, recovery balance and stress as long-term statistics, plus daily sleep, readiness and load trends. A watch that syncs late backfills the gaps.
 - 🧭 **A daily brief.** One plain sentence about your sleep, HRV, readiness and form, in 8 languages.
+- 💡 **What works for you.** Patterns from your own history: how late workouts, training days or early bedtimes change your sleep, HRV and resting heart rate, and how heat and cold change your speed per heartbeat in each sport.
+- ⌚ **A nudge to sync.** The time of the newest data from your watch, and a notice in Settings > Repairs when the watch has not synced for a day, so stale numbers never pass for today's.
 - 🚲 **Commutes and gear.** Fuel and CO2 saved by riding instead of driving, and distance on each bike, chain or pair of shoes with a service reminder.
 - 🌍 **8 languages.** English, Polish, German, Portuguese, French, Spanish, Italian and Dutch, following your Home Assistant language.
 - 🔐 **One login.** Your password is used once, exchanged for a session token and not stored. Suunto emails you about a new login only at setup, or if the session ever expires.

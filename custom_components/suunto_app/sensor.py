@@ -46,7 +46,7 @@ _DISPLAY_PRECISION: dict[str, int] = {
     "last_ascent": 0, "last_ascent_rate": 0, "last_cal_per_km": 0, "resting_hr": 0,
     "last_descent": 0, "last_ascent_time": 0, "last_descent_time": 0,
     "last_min_altitude": 0, "last_max_altitude": 0,
-    "stress_state": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
+    "stress_state": 0, "stress_today": 0, "workouts_7d": 0, "workouts_30d": 0, "lifetime_workouts": 0,
     "lifetime_days": 0, "lifetime_energy": 0, "readiness": 0, "fitness_age": 0,
     "last_feeling": 0, "days_since_last_workout": 0, "training_records": 0,
     "training_records_month": 0, "training_records_year": 0,
@@ -319,6 +319,24 @@ def _tss_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
     if (has_hr := workout.get("has_hr")) is not None:
         out["has_hr"] = has_hr
     return out or None
+
+
+def _stress_state_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """The stress state's name (recovering / active / inactive / stressed)."""
+    name = (data.get("recovery") or {}).get("stress_name")
+    return {"state_name": name} if name else None
+
+
+def _stress_today_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Today's minutes per stress state, plus yesterday's complete day."""
+    stress = data.get("stress") or {}
+    today = stress.get("today")
+    if not today and not stress.get("yesterday"):
+        return None
+    attrs: dict[str, Any] = dict(today or {})
+    if yesterday := stress.get("yesterday"):
+        attrs["yesterday"] = yesterday
+    return attrs
 
 
 def _recovery_attrs(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -594,6 +612,25 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:head-flash-outline",
         value_fn=_section("recovery", "stress_state"),
+        attributes_fn=_stress_state_attrs,
+    ),
+    SuuntoAppSensorDescription(
+        key="stress_today",
+        translation_key="stress_today",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:chart-donut",
+        value_fn=lambda d: ((d.get("stress") or {}).get("today") or {}).get("stressed_minutes"),
+        attributes_fn=_stress_today_attrs,
+    ),
+    SuuntoAppSensorDescription(
+        key="last_sync",
+        translation_key="last_sync",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:watch-import",
+        value_fn=_section("sync", "last_sync"),
+        attributes_fn=_attrs_except("sync", "last_sync"),
     ),
     # --- Daily activity ---
     SuuntoAppSensorDescription(

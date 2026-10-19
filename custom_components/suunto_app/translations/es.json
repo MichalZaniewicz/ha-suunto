@@ -115,6 +115,8 @@
       "nap_duration": { "name": "Duración de la siesta" },
       "recovery_balance": { "name": "Equilibrio de recuperación" },
       "stress_state": { "name": "Estado de estrés" },
+      "stress_today": { "name": "Estrés hoy" },
+      "last_sync": { "name": "Última sincronización del reloj" },
       "daily_steps": { "name": "Pasos diarios" },
       "daily_energy": { "name": "Energía diaria" },
       "daily_total_energy": { "name": "Energía total diaria" },
@@ -236,6 +238,12 @@
     "button": {
       "ai_insight_generate": { "name": "Generar análisis con IA" },
       "sync_now": { "name": "Sincronizar ahora" }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "El reloj Suunto no se ha sincronizado",
+      "description": "No hay datos nuevos del reloj de **{account}** desde {last_sync} (hace {hours} horas). Abre la app Suunto en el móvil con el Bluetooth activado para sincronizar el reloj. Este aviso desaparece solo tras la próxima sincronización."
     }
   }
 }

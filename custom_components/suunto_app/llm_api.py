@@ -489,6 +489,11 @@ def today_result(
             "age": profile.get("age"),
         },
         "workouts_today": todays,
+        # Minutes recovering / active / inactive / stressed (Suunto's
+        # "Resources"), from the 30-minute stress samples.
+        "stress_today": (daily.get("stress") or {}).get("today"),
+        "stress_yesterday": (daily.get("stress") or {}).get("yesterday"),
+        "watch_last_synced": (daily.get("sync") or {}).get("last_sync"),
     }
 
 
@@ -595,7 +600,21 @@ def insights_result(daily: dict[str, Any], ai_result: dict[str, Any] | None) -> 
                 "with": item.get("with"),
                 "without": item.get("without"),
                 "diff_pct": item.get("diff_pct"),
-                "nights": (item.get("n_with") or 0) + (item.get("n_without") or 0),
+                # Weather findings compare one sport's workouts, the rest nights.
+                ("workouts" if item.get("activity") else "nights"): (
+                    (item.get("n_with") or 0) + (item.get("n_without") or 0)
+                ),
+                "sport": item.get("activity"),
+                "with_speed_kmh_at_hr": (
+                    [item.get("with_speed_kmh"), item.get("with_hr")]
+                    if item.get("activity")
+                    else None
+                ),
+                "without_speed_kmh_at_hr": (
+                    [item.get("without_speed_kmh"), item.get("without_hr")]
+                    if item.get("activity")
+                    else None
+                ),
                 "good_for_you": item.get("favorable"),
             }
             for item in insights.get("insights") or []
@@ -778,8 +797,10 @@ class TodayTool(_SuuntoTool):
     description = (
         "Today so far: steps and active calories against the daily goals, total "
         "calories including the basal rate, the latest heart rate, yesterday's "
-        "complete steps and calories, and today's workouts. Use it for 'how many steps "
-        "do I have', 'did I hit my goal'."
+        "complete steps and calories, today's workouts, minutes spent recovering, "
+        "active, inactive and stressed today and yesterday, and when the watch last "
+        "synced. Use it for 'how many steps do I have', 'did I hit my goal', 'how "
+        "stressed was I today'."
     )
     parameters = _schema({"account": _ACCOUNT_FIELD})
 
@@ -825,7 +846,8 @@ class InsightsTool(_SuuntoTool):
     name = "suunto_get_insights"
     description = (
         "What the data says about this athlete: personal patterns (for example how "
-        "late workouts or training days change sleep, HRV or resting HR), aerobic "
+        "late workouts or training days change sleep, HRV or resting HR, and how "
+        "heat or cold changes speed per heartbeat in a sport), aerobic "
         "decoupling of recent long workouts, sleep regularity, social jetlag, the "
         "one-line daily brief and today's AI daily insight if one was generated. Use it "
         "for 'what helps me sleep better', 'what works for me', 'any advice for today'."

@@ -3,6 +3,29 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.37b2
+- **Last watch sync** (`last_sync`): the time of the newest data from your
+  watch, with `hours_ago` and `stale`. When nothing new has arrived for 24
+  hours, a notice appears in Settings > Repairs ("Suunto watch has not
+  synced"); it clears itself after the next sync. Until now a watch left
+  unsynced made every sensor quietly show old numbers.
+- **Stress today** (`stress_today`): minutes spent recovering, active,
+  inactive and stressed today (the four states of the Suunto app's
+  "Resources" chart), from the 30-minute stress samples. The state is the
+  stressed minutes; all four are attributes, plus yesterday's complete day.
+  The existing Stress state sensor gets a `state_name` attribute (1
+  recovering, 2 active, 3 inactive, 4 stressed), mapped from live data.
+- **Heat and cold in "What works for you"** (`personal_insights`): compares
+  your speed per heartbeat (metres per beat) in one sport in heat (25 C and
+  above) or cold (5 C and below) against mild weather, e.g. "In heat (25 C
+  and above, Cycling), your efficiency is 12% lower (2.78 m/beat vs 3.17
+  m/beat)". It uses the weather already stored with each outdoor workout and
+  the same thresholds as the sleep patterns, so a weak or noisy difference
+  never shows. Up to 7 findings now (one per condition).
+- Assist (the "Suunto" tools) and the AI daily insight also get the stress
+  minutes and the last sync time; the AI now sees the stress state by name
+  instead of a bare number.
+
 ## 1.0.37b1
 - **Fix: sleep counted many times over (#5, likely also #3).** On some
   watches the Suunto export returns the same night again after every watch

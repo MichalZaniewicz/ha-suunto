@@ -115,6 +115,8 @@
       "nap_duration": { "name": "Nap duration" },
       "recovery_balance": { "name": "Recovery balance" },
       "stress_state": { "name": "Stress state" },
+      "stress_today": { "name": "Stress today" },
+      "last_sync": { "name": "Last watch sync" },
       "daily_steps": { "name": "Daily steps" },
       "daily_energy": { "name": "Daily energy" },
       "daily_total_energy": { "name": "Daily total energy" },
@@ -236,6 +238,12 @@
     "button": {
       "ai_insight_generate": { "name": "Generate AI insight" },
       "sync_now": { "name": "Sync now" }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Suunto watch has not synced",
+      "description": "No new data from the watch of **{account}** since {last_sync} ({hours} hours ago). Open the Suunto app on your phone with Bluetooth on to sync the watch. This notice disappears by itself after the next sync."
     }
   }
 }

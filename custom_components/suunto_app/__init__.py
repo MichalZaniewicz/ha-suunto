@@ -9,6 +9,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 
@@ -149,6 +150,7 @@ async def async_remove_entry(
         f"{DOMAIN}.ai_insight.{entry.entry_id}",
     ):
         await Store(hass, 1, key).async_remove()
+    ir.async_delete_issue(hass, DOMAIN, f"watch_not_synced_{entry.entry_id}")
 
 
 async def _async_update_listener(

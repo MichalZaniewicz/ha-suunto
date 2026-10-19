@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -50,6 +51,9 @@ from .const import (
     SLEEP_LOOKBACK_DAYS,
     STANDARD_DISTANCES_M,
     STATS_LOOKBACK_DAYS,
+    STRESS_SAMPLE_MINUTES,
+    STRESS_STATES,
+    SYNC_STALE_HOURS,
     FITNESS_LOOKBACK_DAYS,
     WORKOUT_CACHE_GRACE_HOURS,
     WORKOUTS_LOOKBACK_DAYS,
@@ -404,6 +408,69 @@ def _normalize_recovery(records: list[dict[str, Any]]) -> dict[str, Any] | None:
         # Confirmed live fields: balance (0..1 fraction) and stressState (enum int).
         "balance_pct": _frac_to_pct(ed.get("balance")),
         "stress_state": _as_int(ed.get("stressState")),
+        "stress_name": STRESS_STATES.get(_as_int(ed.get("stressState"))),
+    }
+
+
+def _stress_breakdown(records: list[dict[str, Any]], day: date) -> dict[str, Any] | None:
+    """Minutes recovering / active / inactive / stressed on one local date.
+
+    Each stressState sample covers STRESS_SAMPLE_MINUTES. The export can repeat
+    a record (eventually consistent, like the workouts list), so samples are
+    counted once per timestamp. None without a single sample that day.
+    """
+    by_ts: dict[datetime, str] = {}
+    for rec in records:
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None or dt_util.as_local(ts).date() != day:
+            continue
+        name = STRESS_STATES.get(_as_int((rec.get("entryData") or {}).get("stressState")))
+        if name is not None:
+            by_ts[ts] = name
+    if not by_ts:
+        return None
+    minutes = {f"{name}_minutes": 0 for name in STRESS_STATES.values()}
+    for name in by_ts.values():
+        minutes[f"{name}_minutes"] += STRESS_SAMPLE_MINUTES
+    return {"date": day.isoformat(), **minutes, "samples": len(by_ts)}
+
+
+def _newest_data_time(
+    sleep: list[dict[str, Any]],
+    recovery: list[dict[str, Any]],
+    activity: list[dict[str, Any]] | None,
+    workouts: list[dict[str, Any]],
+) -> datetime | None:
+    """The newest moment any stream has data for, i.e. roughly the last sync.
+
+    The watch uploads everything it recorded since the previous sync at once,
+    so the newest record across the 24/7 streams (10-minute activity, 30-minute
+    recovery, sleep fragment ends) and the workout stop times is where the data
+    currently ends.
+    """
+    times: list[datetime] = []
+    for rec in [*sleep, *recovery, *(activity or [])]:
+        ts = _parse_ts(rec.get("timestamp"))
+        if ts is None:
+            continue
+        duration = _as_float((rec.get("entryData") or {}).get("duration"))
+        times.append(ts + timedelta(seconds=duration) if duration and duration > 0 else ts)
+    for w in workouts:
+        stop = _as_float(w.get("stopTime"))
+        if stop:
+            times.append(datetime.fromtimestamp(stop / 1000, tz=timezone.utc))
+    return max(times, default=None)
+
+
+def _sync_snapshot(last_sync: datetime | None, now: datetime) -> dict[str, Any] | None:
+    """The last-sync sensor's state and attributes."""
+    if last_sync is None:
+        return None
+    hours = max(0.0, (now - last_sync).total_seconds() / 3600)
+    return {
+        "last_sync": last_sync,
+        "hours_ago": round(hours, 1),
+        "stale": hours > SYNC_STALE_HOURS,
     }
 
 
@@ -1808,6 +1875,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # reused to tell a finished night from a brief wake (steps after the
         # wake time). None until the first successful fetch.
         self._last_activity: list[dict[str, Any]] | None = None
+        # Newest data time seen across the streams (see _newest_data_time).
+        # Only moves forward, so one short, eventually-consistent export cannot
+        # make the watch look unsynced.
+        self._last_sync: datetime | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch history streams + workouts and build the daily-metrics payload."""
@@ -1973,6 +2044,15 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except Exception:  # noqa: BLE001 - statistics are best-effort
             _LOGGER.exception("Hourly statistics import failed (non-fatal)")
+
+        # When the watch last synced, from the newest data in every stream
+        # (including the activity export the statistics import just fetched),
+        # plus a Repairs notice while that is over SYNC_STALE_HOURS old.
+        newest = _newest_data_time(sleep, recovery, self._last_activity, workouts)
+        if newest is not None and (self._last_sync is None or newest > self._last_sync):
+            self._last_sync = newest
+        sync = _sync_snapshot(self._last_sync, now)
+        self._update_sync_issue(sync)
 
         # Rolling 7-day step total, read back from the "steps" statistic the
         # import above just refreshed. Best-effort, same reasoning as the
@@ -2180,6 +2260,17 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ],
             _training_days(norm_workouts),
             self.hass.config.language,
+            workouts=[
+                {
+                    "activity_id": w.get("activity_id"),
+                    "activity": w.get("activity"),
+                    "temp_c": w.get("weather_temp_c"),
+                    "speed_kmh": w.get("avg_speed_kmh"),
+                    "hr": w.get("avg_hr_bpm"),
+                    "minutes": w.get("duration_minutes"),
+                }
+                for w in norm_workouts
+            ],
         )
         decoupling_history = sorted(
             self._decoupling.values(), key=lambda d: d["start_time"], reverse=True
@@ -2232,6 +2323,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "sleep_history": nights,
             "nap": nap_norm,
             "recovery": recovery_norm,
+            # Minutes per stress state (Suunto's "Resources"), today so far and
+            # yesterday complete, from the 30-minute recovery stream.
+            "stress": {
+                "today": _stress_breakdown(recovery, today),
+                "yesterday": _stress_breakdown(recovery, today - timedelta(days=1)),
+            },
+            "sync": sync,
             "fitness": self._last_fitness,
             "device": self._last_device,
             "records": self._last_records,
@@ -2251,6 +2349,28 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    def _update_sync_issue(self, sync: dict[str, Any] | None) -> None:
+        """Raise or clear the "watch has not synced" Repairs notice."""
+        if self.config_entry is None:
+            return
+        issue_id = f"watch_not_synced_{self.config_entry.entry_id}"
+        if sync is None or not sync["stale"]:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+            return
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="watch_not_synced",
+            translation_placeholders={
+                "account": self.config_entry.title,
+                "last_sync": dt_util.as_local(sync["last_sync"]).strftime("%Y-%m-%d %H:%M"),
+                "hours": str(round(sync["hours_ago"])),
+            },
+        )
 
     def _sync_device_registry(self, device: dict[str, Any]) -> None:
         """Push a freshly-detected watch model into the device registry.

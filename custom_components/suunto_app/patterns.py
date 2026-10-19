@@ -42,9 +42,16 @@ DECOUPLING_HISTORY = 10
 INSIGHT_MIN_GROUP = 4
 INSIGHT_MIN_EFFECT = 0.4
 INSIGHT_MIN_DIFF_PCT = 3.0
-INSIGHT_LIMIT = 5
+# One finding per condition at most, so this keeps every condition.
+INSIGHT_LIMIT = 7
 # A workout ending at or after this local hour counts as a late workout.
 LATE_WORKOUT_HOUR = 20
+# Weather findings compare workouts of one sport in heat (at or above
+# HOT_TEMP_C) or cold (at or below COLD_TEMP_C) against the mild ones between.
+HOT_TEMP_C = 25
+COLD_TEMP_C = 5
+# Shorter workouts are mostly warm-up, their averages say little.
+WEATHER_MIN_MINUTES = 15
 
 
 def clock(minutes_after_noon: float) -> str:
@@ -217,6 +224,9 @@ _METRICS: dict[str, tuple[str, bool]] = {
     "resting_hr": ("rhr", False),
     "sleep": ("hours", True),
 }
+# Workout metric -> True when a higher value is the better one. Efficiency is
+# metres covered per heartbeat: average speed over average heart rate.
+_WORKOUT_METRICS: dict[str, bool] = {"efficiency": True}
 
 _TEXT: dict[str, dict[str, str]] = {
     "en": {
@@ -225,9 +235,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "After your hardest training days",
         "early_bed": "When you go to bed before {time}",
         "free_night": "On Friday and Saturday nights",
+        "hot_weather": "In heat ({temp}°C and above, {activity})",
+        "cold_weather": "In the cold ({temp}°C and below, {activity})",
         "hrv": "HRV",
         "resting_hr": "resting HR",
         "sleep": "sleep",
+        "efficiency": "efficiency",
+        "per_beat": "m/beat",
         "higher": "higher",
         "lower": "lower",
         "longer": "longer",
@@ -240,9 +254,17 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Po najcięższych dniach treningowych",
         "early_bed": "Gdy kładziesz się przed {time}",
         "free_night": "W noce z piątku i soboty",
+        "hot_weather": "W upale (od {temp}°C, {activity})",
+        "cold_weather": "W zimnie (do {temp}°C, {activity})",
         "hrv": "HRV",
         "resting_hr": "tętno spoczynkowe",
         "sleep": "sen",
+        "efficiency": "wydajność",
+        "per_beat": "m/uderzenie",
+        "higher_efficiency": "wyższa",
+        "lower_efficiency": "niższa",
+        # Feminine "wydajność".
+        "template_efficiency": "{condition} twoja {metric} jest o {pct}% {direction} ({with_value} vs {without_value})",
         "higher": "wyższe",
         "lower": "niższe",
         "longer": "dłuższy",
@@ -257,9 +279,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Nach deinen härtesten Trainingstagen",
         "early_bed": "Wenn du vor {time} ins Bett gehst",
         "free_night": "In den Nächten auf Samstag und Sonntag",
+        "hot_weather": "Bei Hitze (ab {temp}°C, {activity})",
+        "cold_weather": "Bei Kälte (bis {temp}°C, {activity})",
         "hrv": "HRV",
         "resting_hr": "Ruhepuls",
         "sleep": "Schlaf",
+        "efficiency": "Effizienz",
+        "per_beat": "m/Schlag",
     },
     "fr": {
         "late_workout": "Après une séance terminée après {hour}h",
@@ -267,9 +293,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Après vos journées d'entraînement les plus dures",
         "early_bed": "Quand vous vous couchez avant {time}",
         "free_night": "Les nuits du vendredi et du samedi",
+        "hot_weather": "Par forte chaleur (dès {temp}°C, {activity})",
+        "cold_weather": "Par temps froid (jusqu'à {temp}°C, {activity})",
         "hrv": "VFC",
         "resting_hr": "FC au repos",
         "sleep": "sommeil",
+        "efficiency": "efficacité",
+        "per_beat": "m/battement",
     },
     "es": {
         "late_workout": "Tras un entrenamiento que acaba después de las {hour}:00",
@@ -277,9 +307,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Tras tus días de entrenamiento más duros",
         "early_bed": "Cuando te acuestas antes de las {time}",
         "free_night": "Las noches de viernes y sábado",
+        "hot_weather": "Con calor (desde {temp}°C, {activity})",
+        "cold_weather": "Con frío (hasta {temp}°C, {activity})",
         "hrv": "VFC",
         "resting_hr": "FC en reposo",
         "sleep": "sueño",
+        "efficiency": "eficiencia",
+        "per_beat": "m/latido",
     },
     "it": {
         "late_workout": "Dopo un allenamento finito dopo le {hour}:00",
@@ -287,9 +321,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Dopo i tuoi giorni di allenamento più duri",
         "early_bed": "Quando vai a letto prima delle {time}",
         "free_night": "Le notti di venerdì e sabato",
+        "hot_weather": "Con il caldo (da {temp}°C, {activity})",
+        "cold_weather": "Con il freddo (fino a {temp}°C, {activity})",
         "hrv": "HRV",
         "resting_hr": "FC a riposo",
         "sleep": "sonno",
+        "efficiency": "efficienza",
+        "per_beat": "m/battito",
     },
     "nl": {
         "late_workout": "Na een training die na {hour}:00 eindigt",
@@ -297,9 +335,13 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Na je zwaarste trainingsdagen",
         "early_bed": "Als je voor {time} naar bed gaat",
         "free_night": "In de nachten van vrijdag en zaterdag",
+        "hot_weather": "Bij hitte (vanaf {temp}°C, {activity})",
+        "cold_weather": "Bij kou (tot {temp}°C, {activity})",
         "hrv": "HRV",
         "resting_hr": "rusthartslag",
         "sleep": "slaap",
+        "efficiency": "efficiëntie",
+        "per_beat": "m/slag",
     },
     "pt": {
         "late_workout": "Depois de um treino que acaba após as {hour}:00",
@@ -307,18 +349,24 @@ _TEXT: dict[str, dict[str, str]] = {
         "hard_day": "Depois dos seus dias de treino mais duros",
         "early_bed": "Quando se deita antes das {time}",
         "free_night": "Nas noites de sexta e sábado",
+        "hot_weather": "Com calor (a partir de {temp}°C, {activity})",
+        "cold_weather": "Com frio (até {temp}°C, {activity})",
         "hrv": "VFC",
         "resting_hr": "FC em repouso",
         "sleep": "sono",
+        "efficiency": "eficiência",
+        "per_beat": "m/batimento",
     },
 }
 
 _UNITS = {"hrv": "ms", "resting_hr": "bpm", "sleep": "h"}
 
 
-def _format_value(metric: str, value: float) -> str:
+def _format_value(metric: str, value: float, phrases: dict[str, str]) -> str:
     if metric == "sleep":
         return f"{value:.1f} h"
+    if metric == "efficiency":
+        return f"{value:.2f} {phrases.get('per_beat', _TEXT['en']['per_beat'])}"
     return f"{round(value)} {_UNITS[metric]}"
 
 
@@ -329,9 +377,13 @@ def _insight_text(finding: dict[str, Any], language: str | None) -> str:
     if metric == "sleep":
         direction = phrases.get("longer" if higher else "shorter")
     else:
-        direction = phrases.get("higher" if higher else "lower")
+        word = "higher" if higher else "lower"
+        direction = phrases.get(f"{word}_{metric}", phrases.get(word))
     condition = phrases[finding["condition"]].format(
-        hour=LATE_WORKOUT_HOUR, time=finding.get("threshold") or ""
+        hour=LATE_WORKOUT_HOUR,
+        time=finding.get("threshold") or "",
+        temp=finding.get("threshold_c", ""),
+        activity=finding.get("activity") or "",
     )
     template = phrases.get(f"template_{metric}", phrases.get("template"))
     if template is None:
@@ -341,16 +393,16 @@ def _insight_text(finding: dict[str, Any], language: str | None) -> str:
             condition=condition,
             metric=phrases[metric],
             pct=round(finding["diff_pct"]),
-            with_value=_format_value(metric, finding["with"]),
-            without_value=_format_value(metric, finding["without"]),
+            with_value=_format_value(metric, finding["with"], phrases),
+            without_value=_format_value(metric, finding["without"], phrases),
         )
     return template.format(
         condition=condition,
         metric=phrases[metric],
         pct=abs(round(finding["diff_pct"])),
         direction=direction,
-        with_value=_format_value(metric, finding["with"]),
-        without_value=_format_value(metric, finding["without"]),
+        with_value=_format_value(metric, finding["with"], phrases),
+        without_value=_format_value(metric, finding["without"], phrases),
     )
 
 
@@ -374,12 +426,15 @@ def _compare(
     diff_pct = (mean_with - mean_without) / mean_without * 100
     if abs(effect) < INSIGHT_MIN_EFFECT or abs(diff_pct) < INSIGHT_MIN_DIFF_PCT:
         return None
-    better_high = _METRICS[metric][1]
+    better_high = (
+        _METRICS[metric][1] if metric in _METRICS else _WORKOUT_METRICS[metric]
+    )
+    digits = 2 if metric == "efficiency" else 1
     return {
         "condition": condition,
         "metric": metric,
-        "with": round(mean_with, 1),
-        "without": round(mean_without, 1),
+        "with": round(mean_with, digits),
+        "without": round(mean_without, digits),
         "diff_pct": round(diff_pct, 1),
         "effect_size": round(effect, 2),
         "n_with": len(with_values),
@@ -388,10 +443,60 @@ def _compare(
     }
 
 
+def _weather_findings(workouts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Efficiency in heat and in cold against mild weather, per sport.
+
+    ``workouts``: ``{"activity_id", "activity", "temp_c", "speed_kmh", "hr",
+    "minutes"}`` (any value may be None). Efficiency is metres per heartbeat
+    (speed / heart rate), so an easy and a hard session of one sport stay
+    comparable. Only outdoor workouts with weather, distance and heart rate
+    count, and each sport is compared only with itself. Same thresholds as
+    the sleep comparisons (INSIGHT_MIN_GROUP, effect size, minimum difference).
+    """
+    by_sport: dict[Any, list[tuple[float, float, float, float]]] = {}
+    names: dict[Any, str] = {}
+    for w in workouts:
+        temp, speed, hr = w.get("temp_c"), w.get("speed_kmh"), w.get("hr")
+        if temp is None or not speed or not hr or speed <= 0 or hr <= 0:
+            continue
+        if (w.get("minutes") or 0) < WEATHER_MIN_MINUTES:
+            continue
+        sport = w.get("activity_id")
+        names.setdefault(sport, w.get("activity") or "")
+        by_sport.setdefault(sport, []).append((temp, speed * 1000 / 60 / hr, speed, hr))
+
+    findings: list[dict[str, Any]] = []
+    for sport, rows in by_sport.items():
+        mild = [r for r in rows if COLD_TEMP_C < r[0] < HOT_TEMP_C]
+        for condition, threshold, extreme in (
+            ("hot_weather", HOT_TEMP_C, [r for r in rows if r[0] >= HOT_TEMP_C]),
+            ("cold_weather", COLD_TEMP_C, [r for r in rows if r[0] <= COLD_TEMP_C]),
+        ):
+            finding = _compare(
+                condition, "efficiency", [r[1] for r in extreme], [r[1] for r in mild]
+            )
+            if finding is None:
+                continue
+            finding.update(
+                {
+                    "activity": names[sport],
+                    "activity_id": sport,
+                    "threshold_c": threshold,
+                    "with_speed_kmh": round(_mean([r[2] for r in extreme]), 1),
+                    "with_hr": round(_mean([r[3] for r in extreme])),
+                    "without_speed_kmh": round(_mean([r[2] for r in mild]), 1),
+                    "without_hr": round(_mean([r[3] for r in mild])),
+                }
+            )
+            findings.append(finding)
+    return findings
+
+
 def personal_insights(
     nights: list[dict[str, Any]],
     days: dict[date, dict[str, Any]],
     language: str | None = None,
+    workouts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     """The strongest "with vs without" patterns in the athlete's own history.
 
@@ -406,8 +511,11 @@ def personal_insights(
     a standardized effect of at least INSIGHT_MIN_EFFECT and a difference of
     at least INSIGHT_MIN_DIFF_PCT, so small or noisy differences never show.
     These are correlations in a small personal sample, not proof of cause.
+
+    ``workouts`` adds the weather comparisons (see _weather_findings); those
+    count workouts instead of nights (``n_with`` / ``n_without``).
     """
-    if not nights:
+    if not nights and not workouts:
         return None
     training_tss = sorted(d["tss"] for d in days.values() if d.get("tss"))
     hard_cutoff = (
@@ -455,6 +563,7 @@ def personal_insights(
             if condition == "early_bed":
                 finding["threshold"] = clock(bed_cutoff)
             findings.append(finding)
+    findings.extend(_weather_findings(workouts or []))
 
     # One finding per condition (its strongest metric), so a single habit
     # cannot fill the whole list with three versions of the same story.

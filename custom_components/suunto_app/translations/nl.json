@@ -115,6 +115,8 @@
       "nap_duration": { "name": "Duur van dutje" },
       "recovery_balance": { "name": "Herstelbalans" },
       "stress_state": { "name": "Stresstoestand" },
+      "stress_today": { "name": "Stress vandaag" },
+      "last_sync": { "name": "Laatste horlogesynchronisatie" },
       "daily_steps": { "name": "Dagelijkse stappen" },
       "daily_energy": { "name": "Dagelijkse energie" },
       "daily_total_energy": { "name": "Dagelijkse totale energie" },
@@ -236,6 +238,12 @@
     "button": {
       "ai_insight_generate": { "name": "AI-analyse maken" },
       "sync_now": { "name": "Nu synchroniseren" }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Suunto-horloge is niet gesynchroniseerd",
+      "description": "Geen nieuwe gegevens van het horloge van **{account}** sinds {last_sync} ({hours} uur geleden). Open de Suunto-app op je telefoon met Bluetooth aan om het horloge te synchroniseren. Deze melding verdwijnt vanzelf na de volgende synchronisatie."
     }
   }
 }
