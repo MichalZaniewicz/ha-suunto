@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.38b1
+## 1.0.38
 - **Weekly AI summary.** Once a week, on the day and hour you choose under
   Configure > AI (default Sunday 19:00), the AI model you picked for the
   daily insight reviews the whole training week: every workout, the volume
