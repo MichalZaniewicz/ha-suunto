@@ -33,6 +33,18 @@ CONF_AI_TASK_ENTITY = "ai_task_entity"
 CONF_AI_CONTEXT = "ai_extra_context"
 CONF_AI_HOUR = "ai_fallback_hour"
 DEFAULT_AI_HOUR = 10
+# Language the AI writes in: "auto" follows Home Assistant's server language
+# (Settings > System > General), not the user profile's; or one of these.
+CONF_AI_LANGUAGE = "ai_language"
+AI_LANGUAGE_AUTO = "auto"
+AI_LANGUAGES = ("en", "pl", "de", "fr", "es", "it", "nl", "pt")
+# Weekly AI summary (ai_weekly.py): the weekday and hour it runs at, through
+# the same ai_task entity. Paused with its own switch, like the daily one.
+CONF_AI_WEEKLY_DAY = "ai_weekly_day"
+CONF_AI_WEEKLY_HOUR = "ai_weekly_hour"
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+DEFAULT_AI_WEEKLY_DAY = "sun"
+DEFAULT_AI_WEEKLY_HOUR = 19
 
 # Defaults - two cadences: live data (HR/steps) refreshes often; heavy history
 # (sleep, workouts, derived metrics) refreshes infrequently.
@@ -137,13 +149,14 @@ PROFILE_REFRESH_HOURS = 24
 # figure by ~4.19x.
 JOULES_PER_KCAL = 4186.8
 
-PLATFORMS = ["sensor", "binary_sensor", "calendar", "button", "switch"]
+PLATFORMS = ["sensor", "binary_sensor", "calendar", "button", "switch", "event"]
 
 # Fired on the Home Assistant bus when the daily coordinator first sees a workout
 # key it has never seen before, so automations can react to a finished workout
-# without polling a sensor's state. The very first cycle after a restart only
+# without polling a sensor's state. The very first cycle of a fresh install only
 # SEEDS the known-key set (the fetch window holds ~90 days of history, and
-# replaying all of it as "new" would fire a burst of bogus events).
+# replaying all of it as "new" would fire a burst of bogus events); the set is
+# kept in the history Store, so a restart does not re-seed.
 EVENT_NEW_WORKOUT = f"{DOMAIN}_new_workout"
 # Fired once when a new sleep night first reaches us (i.e. after the morning
 # watch sync), so a "good morning" automation can react to last night's sleep.
@@ -151,6 +164,8 @@ EVENT_WOKE_UP = f"{DOMAIN}_woke_up"
 # Fired after every successful AI insight run (see ai_insight.py), carrying the
 # whole review plus labels in the HA language, so a blueprint can send it.
 EVENT_AI_INSIGHT = f"{DOMAIN}_ai_insight"
+# Fired after every successful weekly AI summary (see ai_weekly.py), same shape.
+EVENT_AI_WEEKLY = f"{DOMAIN}_ai_weekly_summary"
 
 # ...and even then, only a workout that STARTED this recently is announced. A
 # genuinely old record can still surface for the first time (pagination cut it

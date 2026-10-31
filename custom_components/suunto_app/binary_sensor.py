@@ -92,14 +92,12 @@ BINARY_SENSORS: tuple[SuuntoAppBinarySensorDescription, ...] = (
     SuuntoAppBinarySensorDescription(
         key="is_recovering",
         translation_key="is_recovering",
-        icon="mdi:bed-clock",
         is_on_fn=_is_recovering,
         next_change_fn=_recovering_next_change,
     ),
     SuuntoAppBinarySensorDescription(
         key="workout_today",
         translation_key="workout_today",
-        icon="mdi:calendar-check",
         is_on_fn=_workout_today,
         next_change_fn=_next_local_midnight,
     ),
@@ -107,7 +105,6 @@ BINARY_SENSORS: tuple[SuuntoAppBinarySensorDescription, ...] = (
         key="unusual_recovery",
         translation_key="unusual_recovery",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:shield-alert-outline",
         is_on_fn=_unusual_recovery,
     ),
 )

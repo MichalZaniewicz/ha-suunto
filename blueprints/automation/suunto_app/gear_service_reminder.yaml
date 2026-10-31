@@ -34,6 +34,6 @@ actions:
   - variables:
       gear_name: "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
       gear_km: "{{ states(trigger.entity_id) | float(0) | round(0) }}"
-  - !input notify_action
+  - sequence: !input notify_action
 
 mode: single

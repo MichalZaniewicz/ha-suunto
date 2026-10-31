@@ -3,6 +3,63 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.38b1
+- **Weekly AI summary.** Once a week, on the day and hour you choose under
+  Configure > AI (default Sunday 19:00), the AI model you picked for the
+  daily insight reviews the whole training week: every workout, the volume
+  against last week and the 4-week average, the nights against your
+  baselines, readiness and the daily steps and active calories day by day
+  (read back from the long-term statistics, no extra Suunto requests), new
+  best efforts, the load at the end of the week and the patterns from your
+  own history. Same four sections as the daily insight (training, sleep,
+  recovery, activity) plus a plan for the coming week. New entities while
+  the AI is set up: **Weekly AI summary** sensor, **Generate weekly AI
+  summary** button (the seven days ending today) and **Automatic weekly AI
+  summary** switch. A summary missed because Home Assistant was off runs
+  within 24 hours after it starts. New `suunto_app_ai_weekly_summary` event
+  and an **AI Weekly Summary Report** blueprint (9 now). Assist's insights
+  tool sees the last weekly summary too ("how was my week?").
+- **Language of the AI.** Configure > AI has a "Language" choice:
+  Automatic or one of the 8 languages. Automatic keeps the old behaviour and
+  follows Home Assistant's server language (Settings > System > General),
+  not the language of your user profile. The labels in the AI events follow
+  it too.
+- **A clear hint when the AI runs out of room.** When the provider stops
+  because the answer hit its output limit (Claude: "reached the output token
+  limit"), the error on the AI sensors and in the toast now says what to
+  change: raise the maximum tokens in the AI Task entity's settings (about
+  8000) or turn thinking off.
+- **Workouts and nights that synced while Home Assistant was off are
+  announced.** The workouts and the night already announced were kept in
+  memory only, so after a restart the first update quietly marked
+  everything as seen: a workout that synced while Home Assistant was off
+  never fired `suunto_app_new_workout`, and that morning's
+  `suunto_app_woke_up` (and the AI insight it starts) waited for the
+  fallback hour. They are now kept in the integration's history store.
+  Events found while Home Assistant is still starting are held until it has
+  started (automations armed) and then fired in order; they are saved too,
+  so a reload or a restart in between does not lose them. The very first
+  update after installing (or upgrading to this version) still only records
+  what is there.
+- **Event entities.** *Workout* (new workout), *Morning* (woke up) and,
+  while the AI is set up, *AI report* (daily insight / weekly summary)
+  mirror the bus events, so an automation can be built from the UI and
+  every one lands in the logbook. The bus events are unchanged.
+- **Icons that follow the state.** Every icon now comes from the
+  integration's `icons.json`, and some change with the state: Training
+  suggestion (sofa, walk, run, sprint), HRV status, Readiness (gauge filling
+  up), Recovery balance (battery level), Stress state (one icon per state),
+  Current streak (a flame that goes out at 0), Days since last workout,
+  Last feeling (from a sad to a happy face), achievements, and the binary
+  sensors.
+- **Fix: blueprints could not be saved from the automation editor.** Six
+  blueprints put the notification action in a way Home Assistant refuses:
+  the editor stores an action input as a list, and the blueprint placed that
+  list inside its own action list, so saving failed with "Message
+  malformed: expected dictionary at 'actions[1]'". The action is now
+  wrapped in a `sequence`. Re-import the blueprints (or update them in
+  Settings > Blueprints) to get the fix.
+
 ## 1.0.37
 - **Fix: sleep counted many times over (#5, likely also #3).** On some
   watches the Suunto export returns the same night again after every watch

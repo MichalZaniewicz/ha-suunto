@@ -1,4 +1,4 @@
-"""Button platform: sync now, and generate the AI insight on demand (see ai_insight.py)."""
+"""Button platform: sync now, and the AI insight / weekly summary on demand."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SuuntoAppConfigEntry, suunto_device_info
 from .ai_insight import SuuntoAiInsight
+from .ai_weekly import SuuntoAiWeekly
 from .const import DOMAIN
 
 
@@ -20,17 +21,24 @@ async def async_setup_entry(
     entry: SuuntoAppConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Add Sync now always, the AI insight button only while it is configured."""
+    """Add Sync now always, the AI buttons only while the AI is configured."""
     async_add_entities([SuuntoSyncButton(entry)])
-    insight = entry.runtime_data.ai
-    if insight is not None:
-        async_add_entities([SuuntoAiInsightButton(insight, entry)])
-        return
+    runtime = entry.runtime_data
+    if runtime.ai is not None:
+        async_add_entities([SuuntoAiInsightButton(runtime.ai, entry)])
+    if runtime.weekly is not None:
+        async_add_entities([SuuntoAiWeeklyButton(runtime.weekly, entry)])
     registry = er.async_get(hass)
-    if entity_id := registry.async_get_entity_id(
-        "button", DOMAIN, f"{entry.entry_id}_ai_insight_generate"
+    for runner, suffix in (
+        (runtime.ai, "ai_insight_generate"),
+        (runtime.weekly, "ai_weekly_generate"),
     ):
-        registry.async_remove(entity_id)
+        if runner is None and (
+            entity_id := registry.async_get_entity_id(
+                "button", DOMAIN, f"{entry.entry_id}_{suffix}"
+            )
+        ):
+            registry.async_remove(entity_id)
 
 
 class SuuntoAiInsightButton(ButtonEntity):
@@ -38,7 +46,6 @@ class SuuntoAiInsightButton(ButtonEntity):
 
     _attr_has_entity_name = True
     _attr_translation_key = "ai_insight_generate"
-    _attr_icon = "mdi:creation-outline"
 
     def __init__(self, insight: SuuntoAiInsight, entry: SuuntoAppConfigEntry) -> None:
         """Initialize the button."""
@@ -49,6 +56,23 @@ class SuuntoAiInsightButton(ButtonEntity):
     async def async_press(self) -> None:
         """Generate; a failure surfaces in the UI as an error toast."""
         await self._insight.async_generate()
+
+
+class SuuntoAiWeeklyButton(ButtonEntity):
+    """Write the weekly AI summary now, for the seven days ending today."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "ai_weekly_generate"
+
+    def __init__(self, weekly: SuuntoAiWeekly, entry: SuuntoAppConfigEntry) -> None:
+        """Initialize the button."""
+        self._weekly = weekly
+        self._attr_unique_id = f"{entry.entry_id}_ai_weekly_generate"
+        self._attr_device_info = suunto_device_info(entry)
+
+    async def async_press(self) -> None:
+        """Generate; a failure surfaces in the UI as an error toast."""
+        await self._weekly.async_generate()
 
 
 class SuuntoSyncButton(ButtonEntity):
@@ -62,7 +86,6 @@ class SuuntoSyncButton(ButtonEntity):
 
     _attr_has_entity_name = True
     _attr_translation_key = "sync_now"
-    _attr_icon = "mdi:sync"
 
     def __init__(self, entry: SuuntoAppConfigEntry) -> None:
         """Initialize the button."""

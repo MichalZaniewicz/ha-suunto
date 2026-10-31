@@ -26,6 +26,6 @@ triggers:
     to: "on"
 
 actions:
-  - !input notify_action
+  - sequence: !input notify_action
 
 mode: single

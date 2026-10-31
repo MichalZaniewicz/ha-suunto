@@ -72,6 +72,6 @@ actions:
         {{ states(weekly_distance_entity) }} km,
         {{ states(weekly_time_entity) }} h. Form (TSB):
         {{ states(form_tsb_entity) }}.
-  - !input notify_action
+  - sequence: !input notify_action
 
 mode: single

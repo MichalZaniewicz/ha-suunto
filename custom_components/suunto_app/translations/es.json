@@ -32,7 +32,7 @@
         "title": "Opciones de Suunto App",
         "menu_options": {
           "settings": "Intervalos y datos de combustible",
-          "ai": "Análisis diario con IA",
+          "ai": "Análisis diario y resumen semanal con IA",
           "gear_add": "Añadir equipo a seguir",
           "gear_service": "Marcar equipo como revisado (volver a 0 km)",
           "gear_remove": "Quitar equipo"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "Análisis diario con IA",
-        "description": "Una vez al día, el modelo de IA que elijas lee tus datos de sueño, recuperación y entrenamiento y escribe un breve resumen con consejos. Configura primero el proveedor de IA (Google Gemini, OpenAI, Anthropic, Ollama...) como una integración normal de Home Assistant: aquí no se guarda ninguna clave API. Tus datos de salud se envían a ese proveedor (un Ollama local los mantiene en casa). No es consejo médico.",
+        "title": "Análisis diario y resumen semanal con IA",
+        "description": "Una vez al día, el modelo de IA que elijas lee tus datos de sueño, recuperación y entrenamiento y escribe un breve resumen con consejos. Configura primero el proveedor de IA (Google Gemini, OpenAI, Anthropic, Ollama...) como una integración normal de Home Assistant: aquí no se guarda ninguna clave API. Tus datos de salud se envían a ese proveedor (un Ollama local los mantiene en casa). No es consejo médico. Una vez por semana (día y hora abajo) también escribe un resumen de la semana de entrenamiento con un plan para la siguiente.",
         "data": {
           "ai_task_entity": "Modelo de IA",
           "ai_extra_context": "Tus notas para la IA",
-          "ai_fallback_hour": "Hora de respaldo"
+          "ai_fallback_hour": "Hora de respaldo",
+          "ai_language": "Idioma",
+          "ai_weekly_day": "Día del resumen semanal",
+          "ai_weekly_hour": "Hora del resumen semanal"
         },
         "data_description": {
           "ai_task_entity": "La entidad AI Task que se usará. Déjalo vacío para desactivar la función.",
           "ai_extra_context": "Opcional, por ejemplo tu objetivo o una carrera próxima: \"Preparo un maratón el 12 de abril\".",
-          "ai_fallback_hour": "El análisis se ejecuta tras la sincronización matinal del reloj. Si a esta hora no ha llegado una noche nueva, se ejecuta igualmente. Si la última noche solo se ha sincronizado en parte (duermes hasta tarde), espera hasta 3 horas más."
+          "ai_fallback_hour": "El análisis se ejecuta tras la sincronización matinal del reloj. Si a esta hora no ha llegado una noche nueva, se ejecuta igualmente. Si la última noche solo se ha sincronizado en parte (duermes hasta tarde), espera hasta 3 horas más.",
+          "ai_language": "Automático sigue el idioma del servidor de Home Assistant (Ajustes > Sistema > General), no el de tu perfil.",
+          "ai_weekly_day": "El resumen cubre los siete días que terminan ese día. Páusalo con el interruptor Resumen semanal automático con IA.",
+          "ai_weekly_hour": "Si Home Assistant está apagado a esa hora, el resumen se hace en las 24 horas siguientes al arranque."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Patrones personales" },
       "commute_month": { "name": "Trayectos al trabajo este mes" },
       "commute_year": { "name": "Trayectos al trabajo este año" },
-      "ai_insight": { "name": "Análisis con IA" }
+      "ai_insight": { "name": "Análisis con IA" },
+      "ai_weekly_summary": { "name": "Resumen semanal con IA" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recuperando" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Entrenamientos" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Análisis automático con IA" }
+      "ai_insight_enabled": { "name": "Análisis automático con IA" },
+      "ai_weekly_enabled": { "name": "Resumen semanal automático con IA" }
     },
     "button": {
       "ai_insight_generate": { "name": "Generar análisis con IA" },
-      "sync_now": { "name": "Sincronizar ahora" }
+      "sync_now": { "name": "Sincronizar ahora" },
+      "ai_weekly_generate": { "name": "Generar resumen semanal con IA" }
+    },
+    "event": {
+      "workout": {
+        "name": "Entrenamiento",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Nuevo entrenamiento"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Mañana",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Despertar"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "Informe IA",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Análisis diario",
+              "weekly_summary": "Resumen semanal"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "El reloj Suunto no se ha sincronizado",
       "description": "No hay datos nuevos del reloj de **{account}** desde {last_sync} (hace {hours} horas). Abre la app Suunto en el móvil con el Bluetooth activado para sincronizar el reloj. Este aviso desaparece solo tras la próxima sincronización."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automático (idioma de Home Assistant)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Lunes",
+        "tue": "Martes",
+        "wed": "Miércoles",
+        "thu": "Jueves",
+        "fri": "Viernes",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      }
     }
   }
 }

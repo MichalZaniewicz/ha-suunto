@@ -32,7 +32,7 @@
         "title": "Options Suunto App",
         "menu_options": {
           "settings": "Intervalles et données carburant",
-          "ai": "Analyse IA quotidienne",
+          "ai": "Analyse IA quotidienne et bilan hebdomadaire",
           "gear_add": "Ajouter un équipement à suivre",
           "gear_service": "Marquer un équipement comme entretenu (remise à 0 km)",
           "gear_remove": "Supprimer un équipement"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "Analyse IA quotidienne",
-        "description": "Une fois par jour, le modèle d'IA de votre choix lit vos données de sommeil, de récupération et d'entraînement et rédige un bref bilan avec des conseils. Configurez d'abord le fournisseur d'IA (Google Gemini, OpenAI, Anthropic, Ollama...) comme une intégration Home Assistant normale - aucune clé API n'est stockée ici. Vos données de santé sont envoyées à ce fournisseur (un Ollama local les garde chez vous). Ce n'est pas un avis médical.",
+        "title": "Analyse IA quotidienne et bilan hebdomadaire",
+        "description": "Une fois par jour, le modèle d'IA de votre choix lit vos données de sommeil, de récupération et d'entraînement et rédige un bref bilan avec des conseils. Configurez d'abord le fournisseur d'IA (Google Gemini, OpenAI, Anthropic, Ollama...) comme une intégration Home Assistant normale - aucune clé API n'est stockée ici. Vos données de santé sont envoyées à ce fournisseur (un Ollama local les garde chez vous). Ce n'est pas un avis médical. Une fois par semaine (jour et heure ci-dessous), il rédige aussi un bilan de la semaine d'entraînement avec un plan pour la suivante.",
         "data": {
           "ai_task_entity": "Modèle d'IA",
           "ai_extra_context": "Vos notes pour l'IA",
-          "ai_fallback_hour": "Heure de secours"
+          "ai_fallback_hour": "Heure de secours",
+          "ai_language": "Langue",
+          "ai_weekly_day": "Jour du bilan hebdomadaire",
+          "ai_weekly_hour": "Heure du bilan hebdomadaire"
         },
         "data_description": {
           "ai_task_entity": "L'entité AI Task à utiliser. Laissez vide pour désactiver la fonction.",
           "ai_extra_context": "Facultatif, par exemple votre objectif ou une course à venir : \"Je prépare un marathon le 12 avril\".",
-          "ai_fallback_hour": "L'analyse se lance après la synchronisation matinale de la montre. Si aucune nouvelle nuit n'est arrivée à cette heure, elle se lance quand même. Si la dernière nuit n'est que partiellement synchronisée (grasse matinée), elle attend jusqu'à 3 heures de plus."
+          "ai_fallback_hour": "L'analyse se lance après la synchronisation matinale de la montre. Si aucune nouvelle nuit n'est arrivée à cette heure, elle se lance quand même. Si la dernière nuit n'est que partiellement synchronisée (grasse matinée), elle attend jusqu'à 3 heures de plus.",
+          "ai_language": "Automatique suit la langue du serveur Home Assistant (Paramètres > Système > Général), pas celle de votre profil.",
+          "ai_weekly_day": "Le bilan couvre les sept jours qui se terminent ce jour-là. Mettez-le en pause avec l'interrupteur Bilan IA hebdomadaire automatique.",
+          "ai_weekly_hour": "Si Home Assistant est éteint à cette heure-là, le bilan est fait dans les 24 heures après son démarrage."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Tendances personnelles" },
       "commute_month": { "name": "Trajets domicile-travail ce mois" },
       "commute_year": { "name": "Trajets domicile-travail cette année" },
-      "ai_insight": { "name": "Analyse IA" }
+      "ai_insight": { "name": "Analyse IA" },
+      "ai_weekly_summary": { "name": "Bilan IA de la semaine" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Récupération" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Séances" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Analyse IA automatique" }
+      "ai_insight_enabled": { "name": "Analyse IA automatique" },
+      "ai_weekly_enabled": { "name": "Bilan IA hebdomadaire automatique" }
     },
     "button": {
       "ai_insight_generate": { "name": "Générer l'analyse IA" },
-      "sync_now": { "name": "Synchroniser maintenant" }
+      "sync_now": { "name": "Synchroniser maintenant" },
+      "ai_weekly_generate": { "name": "Générer le bilan IA de la semaine" }
+    },
+    "event": {
+      "workout": {
+        "name": "Entraînement",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Nouvel entraînement"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Matin",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Réveil"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "Rapport IA",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Analyse du jour",
+              "weekly_summary": "Bilan de la semaine"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "La montre Suunto n'a pas été synchronisée",
       "description": "Aucune nouvelle donnée de la montre de **{account}** depuis {last_sync} (il y a {hours} heures). Ouvrez l'application Suunto sur votre téléphone avec le Bluetooth activé pour synchroniser la montre. Cet avis disparaît tout seul après la prochaine synchronisation."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatique (langue de Home Assistant)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Lundi",
+        "tue": "Mardi",
+        "wed": "Mercredi",
+        "thu": "Jeudi",
+        "fri": "Vendredi",
+        "sat": "Samedi",
+        "sun": "Dimanche"
+      }
     }
   }
 }

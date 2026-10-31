@@ -1,0 +1,441 @@
+{
+  "entity": {
+    "sensor": {
+      "acwr": {
+        "default": "mdi:scale-balance"
+      },
+      "aerobic_decoupling": {
+        "default": "mdi:heart-flash"
+      },
+      "ai_insight": {
+        "default": "mdi:creation"
+      },
+      "ai_weekly_summary": {
+        "default": "mdi:calendar-star"
+      },
+      "best_efforts": {
+        "default": "mdi:speedometer"
+      },
+      "bmr": {
+        "default": "mdi:human"
+      },
+      "commute_month": {
+        "default": "mdi:bike-fast"
+      },
+      "commute_year": {
+        "default": "mdi:bike-fast"
+      },
+      "current_hr": {
+        "default": "mdi:heart-pulse"
+      },
+      "current_streak": {
+        "default": "mdi:fire",
+        "range": {
+          "0": "mdi:fire-off",
+          "1": "mdi:fire"
+        }
+      },
+      "daily_brief": {
+        "default": "mdi:text-box-check-outline"
+      },
+      "daily_energy": {
+        "default": "mdi:fire"
+      },
+      "daily_steps": {
+        "default": "mdi:walk"
+      },
+      "daily_total_energy": {
+        "default": "mdi:fire-circle"
+      },
+      "days_since_last_workout": {
+        "default": "mdi:calendar-clock-outline",
+        "range": {
+          "0": "mdi:calendar-check",
+          "1": "mdi:calendar-clock-outline",
+          "4": "mdi:calendar-alert"
+        }
+      },
+      "estimated_vo2max": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "fatigue_atl": {
+        "default": "mdi:battery-charging-low"
+      },
+      "fitness_age": {
+        "default": "mdi:calendar-heart"
+      },
+      "fitness_ctl": {
+        "default": "mdi:arm-flex"
+      },
+      "form_forecast": {
+        "default": "mdi:chart-timeline-variant-shimmer"
+      },
+      "form_tsb": {
+        "default": "mdi:chart-bell-curve"
+      },
+      "hrv_baseline": {
+        "default": "mdi:heart-flash"
+      },
+      "hrv_status": {
+        "default": "mdi:heart-pulse",
+        "state": {
+          "low": "mdi:heart-minus",
+          "balanced": "mdi:heart-pulse",
+          "high": "mdi:heart-plus"
+        }
+      },
+      "last_activity": {
+        "default": "mdi:run"
+      },
+      "last_ascent": {
+        "default": "mdi:slope-uphill"
+      },
+      "last_ascent_rate": {
+        "default": "mdi:trending-up"
+      },
+      "last_ascent_time": {
+        "default": "mdi:arrow-up-bold"
+      },
+      "last_avg_hr": {
+        "default": "mdi:heart-pulse"
+      },
+      "last_avg_pace": {
+        "default": "mdi:run-fast"
+      },
+      "last_avg_speed": {
+        "default": "mdi:speedometer"
+      },
+      "last_cadence": {
+        "default": "mdi:rotate-right"
+      },
+      "last_cal_per_km": {
+        "default": "mdi:fire"
+      },
+      "last_descent": {
+        "default": "mdi:slope-downhill"
+      },
+      "last_descent_time": {
+        "default": "mdi:arrow-down-bold"
+      },
+      "last_duration": {
+        "default": "mdi:timer"
+      },
+      "last_epoc": {
+        "default": "mdi:lungs"
+      },
+      "last_feeling": {
+        "default": "mdi:emoticon-outline",
+        "range": {
+          "1": "mdi:emoticon-cry-outline",
+          "2": "mdi:emoticon-sad-outline",
+          "3": "mdi:emoticon-neutral-outline",
+          "4": "mdi:emoticon-happy-outline",
+          "5": "mdi:emoticon-excited-outline"
+        }
+      },
+      "last_max_altitude": {
+        "default": "mdi:summit"
+      },
+      "last_max_hr": {
+        "default": "mdi:heart-flash"
+      },
+      "last_min_altitude": {
+        "default": "mdi:arrow-collapse-down"
+      },
+      "last_pct_hrmax": {
+        "default": "mdi:percent"
+      },
+      "last_pte": {
+        "default": "mdi:lightning-bolt"
+      },
+      "last_stride": {
+        "default": "mdi:shoe-print"
+      },
+      "last_sync": {
+        "default": "mdi:watch-import"
+      },
+      "last_tss": {
+        "default": "mdi:gauge"
+      },
+      "last_workout_achievements": {
+        "default": "mdi:trophy",
+        "range": {
+          "0": "mdi:trophy-outline",
+          "1": "mdi:trophy"
+        }
+      },
+      "last_workout_laps": {
+        "default": "mdi:flag-checkered"
+      },
+      "last_workout_location": {
+        "default": "mdi:map-marker"
+      },
+      "last_workout_start": {
+        "default": "mdi:clock-start"
+      },
+      "last_workout_tags": {
+        "default": "mdi:tag-multiple"
+      },
+      "last_workout_weather": {
+        "default": "mdi:weather-partly-cloudy"
+      },
+      "last_zone0": {
+        "default": "mdi:heart-minus-outline"
+      },
+      "last_zone1": {
+        "default": "mdi:heart-outline"
+      },
+      "last_zone2": {
+        "default": "mdi:heart-outline"
+      },
+      "last_zone3": {
+        "default": "mdi:heart-half-full"
+      },
+      "last_zone4": {
+        "default": "mdi:heart"
+      },
+      "last_zone5": {
+        "default": "mdi:heart-flash"
+      },
+      "lifetime_by_activity": {
+        "default": "mdi:podium"
+      },
+      "lifetime_days": {
+        "default": "mdi:calendar-check"
+      },
+      "lifetime_distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "lifetime_energy": {
+        "default": "mdi:fire"
+      },
+      "lifetime_time": {
+        "default": "mdi:timer"
+      },
+      "lifetime_workouts": {
+        "default": "mdi:counter"
+      },
+      "month_active_days": {
+        "default": "mdi:calendar-check"
+      },
+      "month_distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "month_energy": {
+        "default": "mdi:fire"
+      },
+      "month_time": {
+        "default": "mdi:timer"
+      },
+      "month_workouts": {
+        "default": "mdi:counter"
+      },
+      "nap_duration": {
+        "default": "mdi:power-sleep"
+      },
+      "personal_insights": {
+        "default": "mdi:lightbulb-on-outline"
+      },
+      "readiness": {
+        "default": "mdi:gauge",
+        "range": {
+          "0": "mdi:gauge-empty",
+          "40": "mdi:gauge-low",
+          "60": "mdi:gauge",
+          "80": "mdi:gauge-full"
+        }
+      },
+      "recovery_balance": {
+        "default": "mdi:battery-heart-variant",
+        "range": {
+          "0": "mdi:battery-low",
+          "34": "mdi:battery-medium",
+          "67": "mdi:battery-high"
+        }
+      },
+      "recovery_time": {
+        "default": "mdi:timer-sand"
+      },
+      "recovery_until": {
+        "default": "mdi:bed-clock"
+      },
+      "resting_hr": {
+        "default": "mdi:heart"
+      },
+      "resting_hr_baseline": {
+        "default": "mdi:heart-outline"
+      },
+      "sleep_avg_hr": {
+        "default": "mdi:heart-pulse"
+      },
+      "sleep_deep": {
+        "default": "mdi:sleep"
+      },
+      "sleep_duration": {
+        "default": "mdi:sleep"
+      },
+      "sleep_hrv": {
+        "default": "mdi:heart-flash"
+      },
+      "sleep_light": {
+        "default": "mdi:sleep"
+      },
+      "sleep_min_hr": {
+        "default": "mdi:heart"
+      },
+      "sleep_quality": {
+        "default": "mdi:star-circle"
+      },
+      "sleep_regularity": {
+        "default": "mdi:bed-clock"
+      },
+      "sleep_rem": {
+        "default": "mdi:sleep"
+      },
+      "sleep_spo2": {
+        "default": "mdi:lungs"
+      },
+      "sleep_time": {
+        "default": "mdi:bed-clock"
+      },
+      "social_jetlag": {
+        "default": "mdi:airplane-clock"
+      },
+      "stress_state": {
+        "default": "mdi:head-flash-outline",
+        "range": {
+          "1": "mdi:battery-charging",
+          "2": "mdi:run",
+          "3": "mdi:sofa-outline",
+          "4": "mdi:head-flash-outline"
+        }
+      },
+      "stress_today": {
+        "default": "mdi:chart-donut"
+      },
+      "training_records": {
+        "default": "mdi:trophy-outline"
+      },
+      "training_records_month": {
+        "default": "mdi:trophy"
+      },
+      "training_records_year": {
+        "default": "mdi:trophy-variant"
+      },
+      "training_suggestion": {
+        "default": "mdi:compass-outline",
+        "state": {
+          "rest": "mdi:sofa-outline",
+          "easy": "mdi:walk",
+          "moderate": "mdi:run",
+          "hard": "mdi:run-fast"
+        }
+      },
+      "vo2max": {
+        "default": "mdi:lungs"
+      },
+      "wake_time": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "weekly_distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "weekly_steps": {
+        "default": "mdi:walk"
+      },
+      "weekly_time": {
+        "default": "mdi:timer"
+      },
+      "workouts_30d": {
+        "default": "mdi:calendar-month"
+      },
+      "workouts_7d": {
+        "default": "mdi:calendar-week"
+      },
+      "workouts_recent": {
+        "default": "mdi:format-list-bulleted"
+      },
+      "year_active_days": {
+        "default": "mdi:calendar-check"
+      },
+      "year_distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "year_energy": {
+        "default": "mdi:fire"
+      },
+      "year_time": {
+        "default": "mdi:timer"
+      },
+      "year_workouts": {
+        "default": "mdi:counter"
+      }
+    },
+    "binary_sensor": {
+      "is_recovering": {
+        "default": "mdi:bed-clock",
+        "state": {
+          "on": "mdi:bed-clock",
+          "off": "mdi:run"
+        }
+      },
+      "unusual_recovery": {
+        "default": "mdi:shield-alert-outline",
+        "state": {
+          "on": "mdi:shield-alert",
+          "off": "mdi:shield-check-outline"
+        }
+      },
+      "workout_today": {
+        "default": "mdi:calendar-check",
+        "state": {
+          "on": "mdi:calendar-check",
+          "off": "mdi:calendar-blank-outline"
+        }
+      }
+    },
+    "button": {
+      "ai_insight_generate": {
+        "default": "mdi:creation-outline"
+      },
+      "ai_weekly_generate": {
+        "default": "mdi:calendar-star"
+      },
+      "sync_now": {
+        "default": "mdi:sync"
+      }
+    },
+    "calendar": {
+      "workouts": {
+        "default": "mdi:calendar-check"
+      }
+    },
+    "event": {
+      "ai_report": {
+        "default": "mdi:creation"
+      },
+      "woke_up": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "workout": {
+        "default": "mdi:run"
+      }
+    },
+    "switch": {
+      "ai_insight_enabled": {
+        "default": "mdi:creation",
+        "state": {
+          "on": "mdi:creation",
+          "off": "mdi:creation-outline"
+        }
+      },
+      "ai_weekly_enabled": {
+        "default": "mdi:calendar-star",
+        "state": {
+          "on": "mdi:calendar-star",
+          "off": "mdi:calendar-remove-outline"
+        }
+      }
+    }
+  }
+}

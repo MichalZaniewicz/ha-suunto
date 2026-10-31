@@ -32,7 +32,7 @@
         "title": "Suunto App opties",
         "menu_options": {
           "settings": "Intervallen en brandstofgegevens",
-          "ai": "Dagelijkse AI-analyse",
+          "ai": "Dagelijkse AI-analyse en weekoverzicht",
           "gear_add": "Materiaal toevoegen om te volgen",
           "gear_service": "Materiaal als onderhouden markeren (terug naar 0 km)",
           "gear_remove": "Materiaal verwijderen"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "Dagelijkse AI-analyse",
-        "description": "Eén keer per dag leest een AI-model naar keuze je slaap-, herstel- en trainingsgegevens en schrijft een korte terugblik met adviezen. Stel de AI-aanbieder (Google Gemini, OpenAI, Anthropic, Ollama...) eerst in als gewone Home Assistant-integratie - hier wordt geen API-sleutel opgeslagen. Je gezondheidsgegevens gaan naar die aanbieder (een lokale Ollama houdt ze thuis). Geen medisch advies.",
+        "title": "Dagelijkse AI-analyse en weekoverzicht",
+        "description": "Eén keer per dag leest een AI-model naar keuze je slaap-, herstel- en trainingsgegevens en schrijft een korte terugblik met adviezen. Stel de AI-aanbieder (Google Gemini, OpenAI, Anthropic, Ollama...) eerst in als gewone Home Assistant-integratie - hier wordt geen API-sleutel opgeslagen. Je gezondheidsgegevens gaan naar die aanbieder (een lokale Ollama houdt ze thuis). Geen medisch advies. Eén keer per week (dag en uur hieronder) schrijft het ook een overzicht van de trainingsweek met een plan voor de volgende.",
         "data": {
           "ai_task_entity": "AI-model",
           "ai_extra_context": "Je notities voor de AI",
-          "ai_fallback_hour": "Terugvaluur"
+          "ai_fallback_hour": "Terugvaluur",
+          "ai_language": "Taal",
+          "ai_weekly_day": "Dag van het weekoverzicht",
+          "ai_weekly_hour": "Uur van het weekoverzicht"
         },
         "data_description": {
           "ai_task_entity": "De AI Task-entiteit die gebruikt wordt. Laat leeg om de functie uit te zetten.",
           "ai_extra_context": "Optioneel, bijvoorbeeld je doel of een komende wedstrijd: \"Ik bereid me voor op een marathon op 12 april\".",
-          "ai_fallback_hour": "De analyse draait na de ochtendsynchronisatie van het horloge. Is er op dit uur nog geen nieuwe nacht binnen, dan draait hij toch. Is de afgelopen nacht pas deels gesynchroniseerd (je slaapt uit), dan wacht hij tot 3 uur langer."
+          "ai_fallback_hour": "De analyse draait na de ochtendsynchronisatie van het horloge. Is er op dit uur nog geen nieuwe nacht binnen, dan draait hij toch. Is de afgelopen nacht pas deels gesynchroniseerd (je slaapt uit), dan wacht hij tot 3 uur langer.",
+          "ai_language": "Automatisch volgt de servertaal van Home Assistant (Instellingen > Systeem > Algemeen), niet die van je gebruikersprofiel.",
+          "ai_weekly_day": "Het overzicht beslaat de zeven dagen die op deze dag eindigen. Pauzeer het met de schakelaar Automatisch AI-weekoverzicht.",
+          "ai_weekly_hour": "Staat Home Assistant op dat moment uit, dan komt het overzicht binnen 24 uur na het opstarten."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Persoonlijke inzichten" },
       "commute_month": { "name": "Woon-werkafstand deze maand" },
       "commute_year": { "name": "Woon-werkafstand dit jaar" },
-      "ai_insight": { "name": "AI-analyse" }
+      "ai_insight": { "name": "AI-analyse" },
+      "ai_weekly_summary": { "name": "AI-weekoverzicht" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Aan het herstellen" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Trainingen" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Automatische AI-analyse" }
+      "ai_insight_enabled": { "name": "Automatische AI-analyse" },
+      "ai_weekly_enabled": { "name": "Automatisch AI-weekoverzicht" }
     },
     "button": {
       "ai_insight_generate": { "name": "AI-analyse maken" },
-      "sync_now": { "name": "Nu synchroniseren" }
+      "sync_now": { "name": "Nu synchroniseren" },
+      "ai_weekly_generate": { "name": "AI-weekoverzicht maken" }
+    },
+    "event": {
+      "workout": {
+        "name": "Training",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Nieuwe training"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Ochtend",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Wakker geworden"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "AI-rapport",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Dagelijkse analyse",
+              "weekly_summary": "Weekoverzicht"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "Suunto-horloge is niet gesynchroniseerd",
       "description": "Geen nieuwe gegevens van het horloge van **{account}** sinds {last_sync} ({hours} uur geleden). Open de Suunto-app op je telefoon met Bluetooth aan om het horloge te synchroniseren. Deze melding verdwijnt vanzelf na de volgende synchronisatie."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatisch (taal van Home Assistant)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Maandag",
+        "tue": "Dinsdag",
+        "wed": "Woensdag",
+        "thu": "Donderdag",
+        "fri": "Vrijdag",
+        "sat": "Zaterdag",
+        "sun": "Zondag"
+      }
     }
   }
 }

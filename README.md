@@ -11,7 +11,7 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/MichalZaniewicz/ha-suunto?style=for-the-badge&labelColor=0f3149&color=93aabf"></a>
 </p>
 
-Your **Suunto** watch data in Home Assistant, from the Suunto app (Sports Tracker). Sleep, HRV, recovery, training load and every workout become sensors, long-term statistics and a calendar, with notifications and an optional daily AI insight. Sign in with your Suunto email and password: no Docker, no partner keys.
+Your **Suunto** watch data in Home Assistant, from the Suunto app (Sports Tracker). Sleep, HRV, recovery, training load and every workout become sensors, long-term statistics and a calendar, with notifications and an optional daily AI insight and weekly AI summary. Sign in with your Suunto email and password: no Docker, no partner keys.
 
 > [!TIP]
 > ⭐ **Enjoying this integration?** Every star is real motivation for me to keep
@@ -55,8 +55,8 @@ which silently removes any <img> placed inside it. -->
 - 📈 **Training load.** Fitness, fatigue and form (CTL / ATL / TSB), the acute:chronic workload ratio, a suggestion for today (rest / easy / moderate / hard) and a 7-day form forecast.
 - 🚴 **Every workout.** Distance, duration, pace, speed, heart rate and time in zones 0-5 with their bpm ranges, TSS, Peak Training Effect, EPOC, your feeling, laps, the GPS route with per-point speed, weather, route achievements, best efforts from 1K to the marathon, and a workouts calendar.
 - 🏆 **Totals and records.** This month and this year, lifetime totals per sport, monthly, yearly and all-time records, VO2max and fitness age.
-- 🔔 **Notifications.** 8 ready-made blueprints: good morning (fires once you're actually up), new workout, long workout finished, low readiness, unusual recovery, a weekly digest, gear service and the AI insight report. One click to import each.
-- 🤖 **A daily AI insight.** The AI model you already use in Home Assistant reads your night, recovery and training each morning and writes a short verdict with advice for the day. Optional, with no API key of ours and no extra Suunto requests.
+- 🔔 **Notifications.** 9 ready-made blueprints: good morning (fires once you're actually up), new workout, long workout finished, low readiness, unusual recovery, a weekly digest, gear service, the AI insight report and the weekly AI summary report. One click to import each. A workout or a night that synced while Home Assistant was off is still announced after the restart, and every announcement is also an event entity you can pick in the automation editor.
+- 🤖 **A daily AI insight and a weekly AI summary.** The AI model you already use in Home Assistant reads your night, recovery and training each morning and writes a short verdict with advice for the day; once a week (Sunday evening by default) it reviews the whole week against the one before and plans the next. In the language you pick. Optional, with no API key of ours and no extra Suunto requests.
 - 🗣️ **Ask Assist.** *"How did I sleep?"* *"Can I train hard today?"* *"How far did I ride this month?"* - by voice or in the chat, with the AI model you already use in Home Assistant. Turn on the "Suunto" tools next to Assist in its options; answers come from data already downloaded.
 - 📊 **Curves that fill in later.** Hourly heart rate, steps, energy, recovery balance and stress as long-term statistics, plus daily sleep, readiness and load trends. A watch that syncs late backfills the gaps.
 - 🧭 **A daily brief.** One plain sentence about your sleep, HRV, readiness and form, in 8 languages.
@@ -82,7 +82,7 @@ https://github.com/user-attachments/assets/0e43480c-e3f6-4b18-b22a-8393331db2d5
   <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/ai-insight.webp" alt="Daily AI insight: every morning, your day read by AI" width="100%">
 </p>
 
-When you wake up, the AI model you already use in Home Assistant (Gemini, OpenAI, Claude, or a local Ollama) reads last night, your recovery and your training load, and writes a short verdict for sleep, recovery, training and activity with advice for the day. It runs through Home Assistant's AI Task: no API key here and no extra Suunto requests. Read it on the dashboard, get it as a notification with a blueprint, or press *Generate* any time. **[Setting it up](https://github.com/MichalZaniewicz/ha-suunto/wiki/AI-Insight)**
+When you wake up, the AI model you already use in Home Assistant (Gemini, OpenAI, Claude, or a local Ollama) reads last night, your recovery and your training load, and writes a short verdict for sleep, recovery, training and activity with advice for the day. Once a week, on the day and hour you choose, a second review looks back at the whole week: every workout, volume against last week and your 4-week average, the nights, readiness and daily steps, with a plan for the week ahead. Both run through Home Assistant's AI Task: no API key here and no extra Suunto requests. Read them on the dashboard, get them as a notification with a blueprint, or press *Generate* any time. **[Setting it up](https://github.com/MichalZaniewicz/ha-suunto/wiki/AI-Insight)**
 
 ## A dashboard in minutes
 
@@ -126,7 +126,7 @@ Then pick the [blueprints](https://github.com/MichalZaniewicz/ha-suunto/wiki/Blu
 Everything else is in the **[wiki](https://github.com/MichalZaniewicz/ha-suunto/wiki)**:
 
 - **Getting started:** [Installation](https://github.com/MichalZaniewicz/ha-suunto/wiki/Installation) · [Configuration](https://github.com/MichalZaniewicz/ha-suunto/wiki/Configuration) - refresh intervals, fuel figures for the commute savings, gear, the AI insight.
-- **Features:** [AI Insight](https://github.com/MichalZaniewicz/ha-suunto/wiki/AI-Insight) · [Blueprints](https://github.com/MichalZaniewicz/ha-suunto/wiki/Blueprints) (all 8, with import buttons) · [Automations & Templates](https://github.com/MichalZaniewicz/ha-suunto/wiki/Automations-&-Templates) · [Dashboard Examples](https://github.com/MichalZaniewicz/ha-suunto/wiki/Dashboard-Examples).
+- **Features:** [AI Insight](https://github.com/MichalZaniewicz/ha-suunto/wiki/AI-Insight) · [Blueprints](https://github.com/MichalZaniewicz/ha-suunto/wiki/Blueprints) (all 9, with import buttons) · [Automations & Templates](https://github.com/MichalZaniewicz/ha-suunto/wiki/Automations-&-Templates) · [Dashboard Examples](https://github.com/MichalZaniewicz/ha-suunto/wiki/Dashboard-Examples).
 - **Reference:** [Sensors](https://github.com/MichalZaniewicz/ha-suunto/wiki/Sensors) · [Derived Metrics](https://github.com/MichalZaniewicz/ha-suunto/wiki/Derived-Metrics) · [Long-term Statistics](https://github.com/MichalZaniewicz/ha-suunto/wiki/Long-term-Statistics) · [Workouts Calendar & Recent](https://github.com/MichalZaniewicz/ha-suunto/wiki/Workouts-Calendar-&-Recent) · [Activity Types](https://github.com/MichalZaniewicz/ha-suunto/wiki/Activity-Types) · [Data & Units](https://github.com/MichalZaniewicz/ha-suunto/wiki/Data-&-Units).
 - **Background:** [Architecture](https://github.com/MichalZaniewicz/ha-suunto/wiki/Architecture) · [Privacy & Disclaimer](https://github.com/MichalZaniewicz/ha-suunto/wiki/Privacy-&-Disclaimer) · [Troubleshooting & FAQ](https://github.com/MichalZaniewicz/ha-suunto/wiki/Troubleshooting-&-FAQ) · [Changelog](CHANGELOG.md).
 

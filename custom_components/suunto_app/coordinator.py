@@ -11,10 +11,11 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, CoreState, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -1820,12 +1821,21 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Workout keys already reported on the event bus. None = never populated,
         # i.e. the next cycle only seeds it (see EVENT_NEW_WORKOUT): the fetch
         # window is 90 days, so firing on first run would replay months of
-        # history as "new". In memory only, so a restart re-seeds and stays quiet.
+        # history as "new". Kept in the history Store, so a workout that synced
+        # while Home Assistant was off is still announced after the restart;
+        # only a fresh install (or one upgraded from before 1.0.38) seeds.
         self._known_workout_keys: set[str] | None = None
         # Newest sleep night already announced via EVENT_WOKE_UP, seeded on the
-        # first cycle after a restart (same reasoning as the workout keys).
-        self._known_night: Any = None
+        # first cycle when the Store has none (same reasoning as the keys).
+        self._known_night: date | None = None
         self._night_seeded = False
+        # Events found before Home Assistant has started (the first refresh runs
+        # during the start, before automations arm their triggers): held, saved
+        # with the Store, and fired once it has started (async_fire_event).
+        self._held_events: list[tuple[str, dict[str, Any]]] = []
+        self._fire_held_at_start: CALLBACK_TYPE | None = None
+        # Workout keys in this cycle's fetch window (what the Store keeps).
+        self._window_keys: set[str] = set()
         # "key:lastModified" -> normalized workout. The raw records are immutable
         # unless the user edits the workout, and `lastModified` changes when they
         # do, so an unchanged record is normalized once instead of on every
@@ -2483,7 +2493,29 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # The scan counts as done only together with what it produced.
         if self._last_records is not None:
             self._seeded_at = _parse_ts(stored.get("seeded_at"))
+        # What the events have announced (absent before 1.0.38: seed instead).
+        if isinstance(keys := stored.get("known_workout_keys"), list):
+            self._known_workout_keys = {key for key in keys if isinstance(key, str)}
+        if "known_night" in stored:
+            self._night_seeded = True
+            try:
+                self._known_night = date.fromisoformat(stored["known_night"])
+            except (TypeError, ValueError):
+                self._known_night = None
+        # Held events come from the raw payload: _decode_store would turn
+        # their ISO strings (start_time) into datetimes the bus cannot carry.
+        held = stored.get("held_events")
+        if isinstance(held, list):
+            self._held_events = [
+                (item["type"], item["data"])
+                for item in held
+                if isinstance(item, dict)
+                and isinstance(item.get("type"), str)
+                and isinstance(item.get("data"), dict)
+            ]
         self._store_saved = stored
+        if self._held_events:
+            self._async_fire_held_when_started()
 
     def _save_store(self) -> None:
         """Queue a Store write when its content changed since the last one."""
@@ -2497,12 +2529,84 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "year_workouts": list(self._year_workouts_cache.values()),
                 "best_efforts": self._best_efforts,
                 "decoupling": self._decoupling,
+                # Only the keys still in the fetch window (all of them before
+                # the first window is known): an older workout can never be
+                # announced again anyway (NEW_WORKOUT_MAX_AGE_DAYS).
+                "known_workout_keys": (
+                    sorted(
+                        self._known_workout_keys & self._window_keys
+                        if self._window_keys
+                        else self._known_workout_keys
+                    )
+                    if self._known_workout_keys is not None
+                    else None
+                ),
+                "known_night": (
+                    self._known_night.isoformat() if self._known_night else None
+                ),
+                "held_events": [
+                    {"type": event_type, "data": event_data}
+                    for event_type, event_data in self._held_events
+                ],
             }
         )
+        if not self._night_seeded:
+            del payload["known_night"]  # absent = seed on the next start
         if payload == self._store_saved:
             return
         self._store_saved = payload
         self._store.async_delay_save(lambda: payload, STORE_SAVE_DELAY_S)
+
+    @callback
+    def async_fire_event(self, event_type: str, event_data: dict[str, Any]) -> None:
+        """Fire one of this integration's bus events, or hold it until started.
+
+        The first refresh runs in async_setup_entry while Home Assistant is
+        still starting: automations arm their triggers only at the end of the
+        start, so an event fired then (a workout synced while HA was off)
+        would reach nobody. Held events go into the Store with the keys they
+        announce, so a reload or a stop before the start has finished does
+        not lose them: the next setup restores and fires them.
+        """
+        if self.hass.state not in (CoreState.not_running, CoreState.starting):
+            self.hass.bus.async_fire(event_type, event_data)
+            return
+        _LOGGER.debug("Holding %s until Home Assistant has started", event_type)
+        self._held_events.append((event_type, event_data))
+        self._save_store()
+        self._async_fire_held_when_started()
+
+    @callback
+    def _async_fire_held_when_started(self) -> None:
+        """Fire the held events once Home Assistant has started (at once if it has)."""
+        if self.hass.state not in (CoreState.not_running, CoreState.starting):
+            self._async_fire_held_events(self.hass)
+        elif self._fire_held_at_start is None:
+            self._fire_held_at_start = async_at_started(
+                self.hass, self._async_fire_held_events
+            )
+
+    @callback
+    def _async_fire_held_events(self, _hass: HomeAssistant) -> None:
+        """Home Assistant has started: fire what was held, in order."""
+        self._fire_held_at_start = None
+        held, self._held_events = self._held_events, []
+        if not held:
+            return
+        _LOGGER.debug("Home Assistant has started: firing %d held event(s)", len(held))
+        for event_type, event_data in held:
+            self.hass.bus.async_fire(event_type, event_data)
+        self._save_store()
+        # Listeners that act after an update (the AI insight on woke-up) saw
+        # that update before these events existed: give them another look.
+        self.async_update_listeners()
+
+    @callback
+    def async_cancel_held_events(self) -> None:
+        """Entry unload: fire nothing more; the Store keeps what is held."""
+        if self._fire_held_at_start is not None:
+            self._fire_held_at_start()
+            self._fire_held_at_start = None
 
     def _normalize_workouts(
         self, workouts: list[dict[str, Any]]
@@ -2542,15 +2646,17 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _fire_new_workout_events(self, workouts: list[dict[str, Any]]) -> None:
         """Fire ``suunto_app_new_workout`` for every not-yet-seen workout.
 
-        The first call after a restart only seeds the known-key set, because the
-        90-day fetch window would otherwise announce months of old workouts at
-        once. Events carry the summary an automation is likely to want, so a
+        The first call on a fresh install only seeds the known-key set, because
+        the 90-day fetch window would otherwise announce months of old workouts
+        at once. After that the set comes back from the Store on a restart. Events carry the summary an automation is likely to want, so a
         notification can be built without templating over a dozen sensors.
 
         Note this fires when the workout REACHES US (the daily poll after the
         watch has synced to the Suunto app), not when it ended.
         """
         keys = {w["key"] for w in workouts if w.get("key")}
+        if keys:
+            self._window_keys = keys
         if not keys:
             # An empty list is almost always a failed or flaky workouts fetch,
             # not an empty account. Seeding from it would mark the whole history
@@ -2565,7 +2671,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Union, not replace: keys are kept even after a workout ages out of the
         # 90-day window, so the eventually-consistent list (see the "notch" bug)
         # cannot re-announce a workout it briefly dropped. A few hundred short
-        # strings a year, discarded on restart.
+        # strings a year; the Store keeps only those still in the window.
         self._known_workout_keys = keys | self._known_workout_keys
         if not new_keys:
             return
@@ -2583,7 +2689,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if start is None or start < cutoff:
                 continue  # first seen now, but too old to be news
             announced += 1
-            self.hass.bus.async_fire(
+            self.async_fire_event(
                 EVENT_NEW_WORKOUT,
                 {
                     "entry_id": entry_id,
@@ -2614,7 +2720,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         Like the workout event, this fires when the night REACHES US - after
         the morning watch sync plus up to one poll - not at the actual wake-up.
-        The first cycle after a restart only records the newest night, and a
+        The first cycle with nothing stored only records the newest night, and a
         stale night (see _sleep_is_current) is never announced: an old night
         surfacing late is not "this morning". Neither is a night still in
         progress (see _night_finished): it waits, unrecorded, for the sync
@@ -2637,7 +2743,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         self._known_night = night
         wake = sleep.get("wake_time")
-        self.hass.bus.async_fire(
+        self.async_fire_event(
             EVENT_WOKE_UP,
             {
                 "entry_id": self.config_entry.entry_id if self.config_entry else None,

@@ -32,7 +32,7 @@
         "title": "Suunto App Optionen",
         "menu_options": {
           "settings": "Intervalle und Kraftstoffwerte",
-          "ai": "Tägliche KI-Analyse",
+          "ai": "KI-Analyse täglich und wöchentlich",
           "gear_add": "Ausrüstung hinzufügen",
           "gear_service": "Ausrüstung als gewartet markieren (auf 0 km)",
           "gear_remove": "Ausrüstung entfernen"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "Tägliche KI-Analyse",
-        "description": "Einmal am Tag liest ein KI-Modell deiner Wahl deine Schlaf-, Erholungs- und Trainingsdaten und schreibt eine kurze Auswertung mit Tipps. Richte den KI-Anbieter (Google Gemini, OpenAI, Anthropic, Ollama...) zuerst als normale Home-Assistant-Integration ein - hier wird kein API-Schlüssel gespeichert. Deine Gesundheitsdaten gehen an diesen Anbieter (ein lokales Ollama behält sie zu Hause). Keine medizinische Beratung.",
+        "title": "KI-Analyse täglich und wöchentlich",
+        "description": "Einmal am Tag liest ein KI-Modell deiner Wahl deine Schlaf-, Erholungs- und Trainingsdaten und schreibt eine kurze Auswertung mit Tipps. Richte den KI-Anbieter (Google Gemini, OpenAI, Anthropic, Ollama...) zuerst als normale Home-Assistant-Integration ein - hier wird kein API-Schlüssel gespeichert. Deine Gesundheitsdaten gehen an diesen Anbieter (ein lokales Ollama behält sie zu Hause). Keine medizinische Beratung. Einmal pro Woche (Tag und Uhrzeit unten) schreibt es außerdem einen Rückblick auf die Trainingswoche mit einem Plan für die nächste.",
         "data": {
           "ai_task_entity": "KI-Modell",
           "ai_extra_context": "Deine Hinweise für die KI",
-          "ai_fallback_hour": "Ausweich-Uhrzeit"
+          "ai_fallback_hour": "Ausweich-Uhrzeit",
+          "ai_language": "Sprache",
+          "ai_weekly_day": "Tag des Wochenrückblicks",
+          "ai_weekly_hour": "Uhrzeit des Wochenrückblicks"
         },
         "data_description": {
           "ai_task_entity": "Die zu verwendende AI-Task-Entität. Leer lassen, um die Funktion auszuschalten.",
           "ai_extra_context": "Optional, z. B. dein Ziel oder ein anstehender Wettkampf: \"Vorbereitung auf einen Marathon am 12. April\".",
-          "ai_fallback_hour": "Die Analyse läuft nach der morgendlichen Uhr-Synchronisierung. Ist bis zu dieser Stunde keine neue Nacht angekommen, läuft sie trotzdem. Ist die letzte Nacht erst teilweise synchronisiert (du schläfst länger), wartet sie bis zu 3 weitere Stunden."
+          "ai_fallback_hour": "Die Analyse läuft nach der morgendlichen Uhr-Synchronisierung. Ist bis zu dieser Stunde keine neue Nacht angekommen, läuft sie trotzdem. Ist die letzte Nacht erst teilweise synchronisiert (du schläfst länger), wartet sie bis zu 3 weitere Stunden.",
+          "ai_language": "Automatisch folgt der Serversprache von Home Assistant (Einstellungen > System > Allgemein), nicht der deines Benutzerprofils.",
+          "ai_weekly_day": "Der Rückblick umfasst die sieben Tage bis zu diesem Tag. Mit dem Schalter Automatischer KI-Wochenrückblick pausierst du ihn.",
+          "ai_weekly_hour": "Ist Home Assistant zu dieser Zeit aus, läuft der Rückblick innerhalb von 24 Stunden nach dem Start."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Persönliche Erkenntnisse" },
       "commute_month": { "name": "Pendelstrecke diesen Monat" },
       "commute_year": { "name": "Pendelstrecke dieses Jahr" },
-      "ai_insight": { "name": "KI-Analyse" }
+      "ai_insight": { "name": "KI-Analyse" },
+      "ai_weekly_summary": { "name": "KI-Wochenrückblick" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Erholung" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Trainings" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Automatische KI-Analyse" }
+      "ai_insight_enabled": { "name": "Automatische KI-Analyse" },
+      "ai_weekly_enabled": { "name": "Automatischer KI-Wochenrückblick" }
     },
     "button": {
       "ai_insight_generate": { "name": "KI-Analyse erstellen" },
-      "sync_now": { "name": "Jetzt synchronisieren" }
+      "sync_now": { "name": "Jetzt synchronisieren" },
+      "ai_weekly_generate": { "name": "KI-Wochenrückblick erstellen" }
+    },
+    "event": {
+      "workout": {
+        "name": "Training",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Neues Training"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Aufwachen",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Aufgewacht"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "KI-Bericht",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Tagesanalyse",
+              "weekly_summary": "Wochenrückblick"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "Suunto-Uhr wurde nicht synchronisiert",
       "description": "Keine neuen Daten von der Uhr von **{account}** seit {last_sync} (vor {hours} Stunden). Öffne die Suunto-App auf dem Handy mit eingeschaltetem Bluetooth, um die Uhr zu synchronisieren. Dieser Hinweis verschwindet nach der nächsten Synchronisierung von selbst."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatisch (Home-Assistant-Sprache)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
     }
   }
 }

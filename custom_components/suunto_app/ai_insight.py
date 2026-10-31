@@ -39,7 +39,8 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, EVENT_AI_INSIGHT, EVENT_WOKE_UP
+from .const import AI_LANGUAGE_AUTO, DOMAIN, EVENT_AI_INSIGHT, EVENT_WOKE_UP
+from .coordinator import SuuntoDailyCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -239,6 +240,89 @@ def labels_for(language: str | None) -> dict[str, Any]:
     return _LABELS.get((language or "en").split("-")[0].lower(), _LABELS["en"])
 
 
+def resolve_language(hass: HomeAssistant, option: str | None) -> str:
+    """The language the AI writes in: the option, or the server language.
+
+    "auto" (and no option, as before 1.0.38) follows Home Assistant's
+    server language (Settings > System > General), not the user profile's.
+    """
+    if option and option != AI_LANGUAGE_AUTO:
+        return option
+    return hass.config.language or "en"
+
+
+# How AI providers word "the answer hit the output limit" (Anthropic, OpenAI,
+# Google, Ollama...), lowercased.
+_TOKEN_LIMIT_MARKERS = (
+    "token limit",
+    "max_tokens",
+    "max_output_tokens",
+    "maximum tokens",
+    "max tokens",
+    "output limit",
+)
+TOKEN_LIMIT_HINT = (
+    "The AI ran out of room for its answer. In the settings of the AI Task entity"
+    " (Settings > Devices & services > your AI provider > AI Task > Configure),"
+    " untick the recommended settings and raise the maximum tokens (8000 is"
+    " plenty); turning off thinking also helps."
+)
+
+
+def explain_error(err: BaseException) -> str:
+    """The error text, with a hint when the model hit its output limit.
+
+    Claude's default of 3000 output tokens, with thinking counted in, is
+    often too little for four sections of 120-180 words.
+    """
+    text = str(err) or type(err).__name__
+    key = getattr(err, "translation_key", None) or ""
+    lowered = text.lower()
+    if key == "response_max_tokens" or any(m in lowered for m in _TOKEN_LIMIT_MARKERS):
+        return f"{text} {TOKEN_LIMIT_HINT}"
+    return text
+
+
+async def async_generate_data(
+    hass: HomeAssistant,
+    ai_task_entity: str,
+    task_name: str,
+    instructions: str,
+    structure: dict[str, dict[str, Any]],
+) -> Any:
+    """Call ``ai_task.generate_data`` and return its ``data`` (dict or text).
+
+    Structured first; a core whose ai_task has no ``structure`` support
+    rejects that before it reaches the model, so retrying as plain text is
+    free.
+    """
+    if not hass.services.has_service("ai_task", "generate_data"):
+        raise HomeAssistantError(
+            "The AI Task integration is not available (Home Assistant 2025.8 or newer is needed)"
+        )
+    service_data: dict[str, Any] = {
+        "task_name": task_name,
+        "entity_id": ai_task_entity,
+        "instructions": instructions,
+    }
+    try:
+        response = await hass.services.async_call(
+            "ai_task",
+            "generate_data",
+            {**service_data, "structure": structure},
+            blocking=True,
+            return_response=True,
+        )
+    except Exception as err:
+        if not _is_schema_error(err):
+            raise
+        _LOGGER.debug("Structured AI task rejected (%s), retrying as text", err)
+        response = await hass.services.async_call(
+            "ai_task", "generate_data", service_data, blocking=True, return_response=True
+        )
+    return (response or {}).get("data")
+
+
 def _is_schema_error(err: BaseException) -> bool:
     """Whether a service call was rejected by its schema, before running.
 
@@ -257,6 +341,39 @@ def _compact(values: dict[str, Any]) -> dict[str, Any]:
 
 def _round(value: Any, digits: int = 1) -> Any:
     return round(value, digits) if isinstance(value, float) else value
+
+
+def patterns_context(daily: dict[str, Any]) -> dict[str, Any]:
+    """Long-run patterns from the athlete's own history (patterns.py).
+
+    Correlations in a small sample: context for the advice, not facts.
+    """
+    return _compact(
+        {
+            "sleep_regularity_index": (daily.get("sleep_regularity") or {}).get("index"),
+            "social_jetlag_min": (daily.get("social_jetlag") or {}).get("minutes"),
+            "aerobic_decoupling_pct": (daily.get("decoupling") or {}).get("decoupling_pct"),
+            "personal_correlations": [
+                _compact(
+                    {
+                        "condition": item["condition"],
+                        "threshold": item.get("threshold"),
+                        "threshold_c": item.get("threshold_c"),
+                        "metric": item["metric"],
+                        "with": item["with"],
+                        "without": item["without"],
+                        "diff_pct": item["diff_pct"],
+                        "sport": item.get("activity"),
+                        ("workouts" if item.get("activity") else "nights"): (
+                            item["n_with"] + item["n_without"]
+                        ),
+                    }
+                )
+                for item in (daily.get("insights") or {}).get("insights") or []
+            ]
+            or None,
+        }
+    )
 
 
 def build_context(
@@ -360,36 +477,7 @@ def build_context(
                     "suggestion": load.get("suggestion"),
                 }
             ),
-            # Long-run patterns from the athlete's own history (patterns.py):
-            # correlations in a small sample, context for the advice, not facts.
-            "patterns": _compact(
-                {
-                    "sleep_regularity_index": (daily.get("sleep_regularity") or {}).get("index"),
-                    "social_jetlag_min": (daily.get("social_jetlag") or {}).get("minutes"),
-                    "aerobic_decoupling_pct": (daily.get("decoupling") or {}).get(
-                        "decoupling_pct"
-                    ),
-                    "personal_correlations": [
-                        _compact(
-                            {
-                                "condition": item["condition"],
-                                "threshold": item.get("threshold"),
-                                "threshold_c": item.get("threshold_c"),
-                                "metric": item["metric"],
-                                "with": item["with"],
-                                "without": item["without"],
-                                "diff_pct": item["diff_pct"],
-                                "sport": item.get("activity"),
-                                ("workouts" if item.get("activity") else "nights"): (
-                                    item["n_with"] + item["n_without"]
-                                ),
-                            }
-                        )
-                        for item in (daily.get("insights") or {}).get("insights") or []
-                    ]
-                    or None,
-                }
-            ),
+            "patterns": patterns_context(daily),
             "forecast": _compact(
                 {
                     "peak_tsb": forecast.get("peak_tsb"),
@@ -496,11 +584,12 @@ class SuuntoAiInsight:
         self,
         hass: HomeAssistant,
         entry: ConfigEntry,
-        daily: DataUpdateCoordinator[dict[str, Any]],
+        daily: SuuntoDailyCoordinator,
         fast: DataUpdateCoordinator[dict[str, Any]],
         ai_task_entity: str,
         extra_context: str | None,
         fallback_hour: int,
+        language: str | None = None,
     ) -> None:
         """Initialize; nothing runs until async_start."""
         self.hass = hass
@@ -510,6 +599,8 @@ class SuuntoAiInsight:
         self.ai_task_entity = ai_task_entity
         self._extra = extra_context
         self._hour = fallback_hour
+        # The language option (see resolve_language), read at every run.
+        self._language = language
         self._store: Store[dict[str, Any]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.ai_insight.{entry.entry_id}"
         )
@@ -681,7 +772,7 @@ class SuuntoAiInsight:
                 await self._async_save()
                 self._fire_event(manual=not wait)
             except Exception as err:  # noqa: BLE001 - any provider error ends up here
-                self.last_error = str(err) or type(err).__name__
+                self.last_error = explain_error(err)
                 _LOGGER.warning("AI insight failed: %s", self.last_error)
                 raise HomeAssistantError(f"AI insight failed: {self.last_error}") from err
             finally:
@@ -692,7 +783,9 @@ class SuuntoAiInsight:
     def _fire_event(self, manual: bool) -> None:
         """Announce a fresh insight; ``manual`` = started from the button."""
         result = self.result or {}
-        self.hass.bus.async_fire(
+        # Through the coordinator: a run right after a restart can finish
+        # before Home Assistant has started, and is then held until it has.
+        self._daily.async_fire_event(
             EVENT_AI_INSIGHT,
             {
                 "entry_id": self._entry.entry_id,
@@ -704,7 +797,7 @@ class SuuntoAiInsight:
                         "summary", "for_date", "sleep_night", "sleep_stale",
                     )
                 },
-                "labels": labels_for(self.hass.config.language),
+                "labels": labels_for(resolve_language(self.hass, self._language)),
             },
         )
 
@@ -712,37 +805,18 @@ class SuuntoAiInsight:
         daily = self._daily.data
         if not daily:
             raise HomeAssistantError("No Suunto data yet")
-        if not self.hass.services.has_service("ai_task", "generate_data"):
-            raise HomeAssistantError(
-                "The AI Task integration is not available (Home Assistant 2025.8 or newer is needed)"
-            )
         today = dt_util.now().date()
         context = build_context(daily, self._fast.data, today)
-        service_data: dict[str, Any] = {
-            "task_name": "Suunto daily insight",
-            "entity_id": self.ai_task_entity,
-            "instructions": build_instructions(
-                context, today, self.hass.config.language, self._extra
+        data = await async_generate_data(
+            self.hass,
+            self.ai_task_entity,
+            "Suunto daily insight",
+            build_instructions(
+                context, today, resolve_language(self.hass, self._language), self._extra
             ),
-        }
-        try:
-            response = await self.hass.services.async_call(
-                "ai_task",
-                "generate_data",
-                {**service_data, "structure": STRUCTURE},
-                blocking=True,
-                return_response=True,
-            )
-        except Exception as err:
-            if not _is_schema_error(err):
-                raise
-            # A core whose ai_task has no `structure` support rejects the call
-            # before it reaches the model, so retrying as plain text is free.
-            _LOGGER.debug("Structured AI task rejected (%s), retrying as text", err)
-            response = await self.hass.services.async_call(
-                "ai_task", "generate_data", service_data, blocking=True, return_response=True
-            )
-        parsed = parse_result((response or {}).get("data"))
+            STRUCTURE,
+        )
+        parsed = parse_result(data)
         if not parsed["headline"] and not parsed["sections"] and not parsed["summary"]:
             raise HomeAssistantError("The AI returned an empty answer")
         sleep = daily.get("sleep") or {}

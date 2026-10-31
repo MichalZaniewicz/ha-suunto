@@ -37,6 +37,6 @@ triggers:
 actions:
   - variables:
       readiness_value: "{{ trigger.to_state.state }}"
-  - !input notify_action
+  - sequence: !input notify_action
 
 mode: single

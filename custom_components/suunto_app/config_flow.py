@@ -38,9 +38,14 @@ from homeassistant.helpers.selector import (
 
 from .api import SuuntoAppAuthError, SuuntoAppError, async_login
 from .const import (
+    AI_LANGUAGES,
+    AI_LANGUAGE_AUTO,
     CONF_AI_CONTEXT,
     CONF_AI_HOUR,
+    CONF_AI_LANGUAGE,
     CONF_AI_TASK_ENTITY,
+    CONF_AI_WEEKLY_DAY,
+    CONF_AI_WEEKLY_HOUR,
     CONF_EMAIL,
     CONF_FAST_SCAN_INTERVAL,
     CONF_FUEL_CONSUMPTION,
@@ -50,6 +55,8 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
     DEFAULT_AI_HOUR,
+    DEFAULT_AI_WEEKLY_DAY,
+    DEFAULT_AI_WEEKLY_HOUR,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_FUEL_CONSUMPTION,
     DEFAULT_FUEL_PRICE,
@@ -57,6 +64,7 @@ from .const import (
     DOMAIN,
     MIN_FAST_SCAN_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
+    WEEKDAYS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -275,6 +283,13 @@ class SuuntoAppOptionsFlow(OptionsFlow):
                     CONF_AI_TASK_ENTITY: user_input.get(CONF_AI_TASK_ENTITY),
                     CONF_AI_CONTEXT: (user_input.get(CONF_AI_CONTEXT) or "").strip(),
                     CONF_AI_HOUR: int(user_input.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)),
+                    CONF_AI_LANGUAGE: user_input.get(CONF_AI_LANGUAGE, AI_LANGUAGE_AUTO),
+                    CONF_AI_WEEKLY_DAY: user_input.get(
+                        CONF_AI_WEEKLY_DAY, DEFAULT_AI_WEEKLY_DAY
+                    ),
+                    CONF_AI_WEEKLY_HOUR: int(
+                        user_input.get(CONF_AI_WEEKLY_HOUR, DEFAULT_AI_WEEKLY_HOUR)
+                    ),
                 }
             )
 
@@ -291,6 +306,35 @@ class SuuntoAppOptionsFlow(OptionsFlow):
                 ): TextSelector(TextSelectorConfig(multiline=True)),
                 vol.Required(
                     CONF_AI_HOUR, default=opts.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0, max=23, step=1, unit_of_measurement="h",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_AI_LANGUAGE,
+                    default=opts.get(CONF_AI_LANGUAGE, AI_LANGUAGE_AUTO),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[AI_LANGUAGE_AUTO, *AI_LANGUAGES],
+                        translation_key=CONF_AI_LANGUAGE,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(
+                    CONF_AI_WEEKLY_DAY,
+                    default=opts.get(CONF_AI_WEEKLY_DAY, DEFAULT_AI_WEEKLY_DAY),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=list(WEEKDAYS),
+                        translation_key=CONF_AI_WEEKLY_DAY,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(
+                    CONF_AI_WEEKLY_HOUR,
+                    default=opts.get(CONF_AI_WEEKLY_HOUR, DEFAULT_AI_WEEKLY_HOUR),
                 ): NumberSelector(
                     NumberSelectorConfig(
                         min=0, max=23, step=1, unit_of_measurement="h",

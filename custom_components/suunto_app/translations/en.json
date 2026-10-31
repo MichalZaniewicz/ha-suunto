@@ -32,7 +32,7 @@
         "title": "Suunto App options",
         "menu_options": {
           "settings": "Intervals and fuel figures",
-          "ai": "AI daily insight",
+          "ai": "AI daily insight and weekly summary",
           "gear_add": "Add gear to track",
           "gear_service": "Mark gear as serviced (reset to 0 km)",
           "gear_remove": "Remove gear"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "AI daily insight",
-        "description": "Once a day, an AI model of your choice reads your sleep, recovery and training data and writes a short review with advice. Set up the AI provider (Google Gemini, OpenAI, Anthropic, Ollama...) as a normal Home Assistant integration first - no API key is stored here. Your health data is sent to that provider (a local Ollama keeps it at home). Not medical advice.",
+        "title": "AI daily insight and weekly summary",
+        "description": "Once a day, an AI model of your choice reads your sleep, recovery and training data and writes a short review with advice. Set up the AI provider (Google Gemini, OpenAI, Anthropic, Ollama...) as a normal Home Assistant integration first - no API key is stored here. Your health data is sent to that provider (a local Ollama keeps it at home). Not medical advice. Once a week (day and hour below) it also writes a summary of the training week, with a plan for the next one.",
         "data": {
           "ai_task_entity": "AI model",
           "ai_extra_context": "Your notes for the AI",
-          "ai_fallback_hour": "Fallback hour"
+          "ai_fallback_hour": "Fallback hour",
+          "ai_language": "Language",
+          "ai_weekly_day": "Weekly summary day",
+          "ai_weekly_hour": "Weekly summary hour"
         },
         "data_description": {
           "ai_task_entity": "The AI Task entity to use. Leave empty to turn the feature off.",
           "ai_extra_context": "Optional, e.g. your goal or an upcoming race: \"Preparing for a marathon on 12 April\".",
-          "ai_fallback_hour": "The analysis runs after the morning watch sync. If no new night has arrived by this hour, it runs anyway. If last night has only partly synced (you are sleeping in), it waits up to 3 more hours."
+          "ai_fallback_hour": "The analysis runs after the morning watch sync. If no new night has arrived by this hour, it runs anyway. If last night has only partly synced (you are sleeping in), it waits up to 3 more hours.",
+          "ai_language": "Automatic follows Home Assistant's server language (Settings > System > General), not your user profile's.",
+          "ai_weekly_day": "The summary covers the seven days ending on this day. Pause it with the Automatic weekly AI summary switch.",
+          "ai_weekly_hour": "If Home Assistant is off at that time, the summary runs within 24 hours after it starts."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Personal insights" },
       "commute_month": { "name": "Commute distance this month" },
       "commute_year": { "name": "Commute distance this year" },
-      "ai_insight": { "name": "AI insight" }
+      "ai_insight": { "name": "AI insight" },
+      "ai_weekly_summary": { "name": "Weekly AI summary" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recovering" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Workouts" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Automatic AI insight" }
+      "ai_insight_enabled": { "name": "Automatic AI insight" },
+      "ai_weekly_enabled": { "name": "Automatic weekly AI summary" }
     },
     "button": {
       "ai_insight_generate": { "name": "Generate AI insight" },
-      "sync_now": { "name": "Sync now" }
+      "sync_now": { "name": "Sync now" },
+      "ai_weekly_generate": { "name": "Generate weekly AI summary" }
+    },
+    "event": {
+      "workout": {
+        "name": "Workout",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "New workout"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Morning",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Woke up"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "AI report",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Daily insight",
+              "weekly_summary": "Weekly summary"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "Suunto watch has not synced",
       "description": "No new data from the watch of **{account}** since {last_sync} ({hours} hours ago). Open the Suunto app on your phone with Bluetooth on to sync the watch. This notice disappears by itself after the next sync."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatic (Home Assistant language)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
     }
   }
 }

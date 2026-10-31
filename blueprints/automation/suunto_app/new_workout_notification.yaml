@@ -31,6 +31,6 @@ actions:
         in {{ trigger.event.data.duration_minutes }} min, avg HR
         {{ trigger.event.data.avg_hr_bpm }}, TSS {{ trigger.event.data.tss }},
         PTE {{ trigger.event.data.pte }}
-  - !input notify_action
+  - sequence: !input notify_action
 
 mode: single

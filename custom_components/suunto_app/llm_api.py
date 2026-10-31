@@ -586,10 +586,30 @@ def records_result(daily: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def insights_result(daily: dict[str, Any], ai_result: dict[str, Any] | None) -> dict[str, Any]:
+def _ai_report(result: dict[str, Any] | None) -> dict[str, Any]:
+    """An AI insight / weekly summary result, with the section texts only."""
+    ai = result or {}
+    return {
+        "for_date": ai.get("for_date"),
+        "headline": ai.get("headline"),
+        "status": ai.get("status"),
+        "sections": {
+            key: section.get("text")
+            for key, section in (ai.get("sections") or {}).items()
+            if isinstance(section, dict)
+        },
+        "advice": ai.get("advice"),
+        "warning": ai.get("warning"),
+    }
+
+
+def insights_result(
+    daily: dict[str, Any],
+    ai_result: dict[str, Any] | None,
+    weekly_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     insights = daily.get("insights") or {}
     decoupling = daily.get("decoupling") or {}
-    ai = ai_result or {}
     return {
         "brief": daily.get("brief"),
         "personal_patterns": [
@@ -635,17 +655,11 @@ def insights_result(daily: dict[str, Any], ai_result: dict[str, Any] | None) -> 
         ],
         "sleep_regularity": daily.get("sleep_regularity"),
         "social_jetlag": daily.get("social_jetlag"),
-        "ai_daily_insight": {
-            "for_date": ai.get("for_date"),
-            "headline": ai.get("headline"),
-            "status": ai.get("status"),
-            "sections": {
-                key: section.get("text")
-                for key, section in (ai.get("sections") or {}).items()
-                if isinstance(section, dict)
-            },
-            "advice": ai.get("advice"),
-            "warning": ai.get("warning"),
+        "ai_daily_insight": _ai_report(ai_result),
+        # The last weekly AI summary: the seven days up to for_date.
+        "ai_weekly_summary": {
+            "week_start": (weekly_result or {}).get("week_start"),
+            **_ai_report(weekly_result),
         },
     }
 
@@ -849,14 +863,18 @@ class InsightsTool(_SuuntoTool):
         "late workouts or training days change sleep, HRV or resting HR, and how "
         "heat or cold changes speed per heartbeat in a sport), aerobic "
         "decoupling of recent long workouts, sleep regularity, social jetlag, the "
-        "one-line daily brief and today's AI daily insight if one was generated. Use it "
-        "for 'what helps me sleep better', 'what works for me', 'any advice for today'."
+        "one-line daily brief, today's AI daily insight and the last weekly AI summary "
+        "if they were generated. Use it for 'what helps me sleep better', 'what works "
+        "for me', 'any advice for today', 'how was my week'."
     )
     parameters = _schema({"account": _ACCOUNT_FIELD})
 
     def build(self, runtime, now, args):
         ai = runtime.ai.result if getattr(runtime, "ai", None) is not None else None
-        return insights_result(runtime.daily.data, ai)
+        weekly = (
+            runtime.weekly.result if getattr(runtime, "weekly", None) is not None else None
+        )
+        return insights_result(runtime.daily.data, ai, weekly)
 
 
 TOOLS: tuple[type[_SuuntoTool], ...] = (

@@ -42,6 +42,6 @@ conditions:
       {{ trigger.event.data.duration_minutes | float(0) >= min_duration | float(0) }}
 
 actions:
-  - !input workout_action
+  - sequence: !input workout_action
 
 mode: queued

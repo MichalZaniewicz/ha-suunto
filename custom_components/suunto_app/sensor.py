@@ -23,6 +23,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from . import SuuntoAppConfigEntry, suunto_device_info
 from .ai_insight import MAX_STATE_LENGTH, SuuntoAiInsight
+from .ai_weekly import SuuntoAiWeekly
 from .const import CONF_GEAR, DOMAIN
 
 UNIT_BPM = "bpm"
@@ -505,7 +506,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         value_fn=_section("sleep", "duration_hours"),
         attributes_fn=_sleep_attrs,
     ),
@@ -514,7 +514,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_deep",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         value_fn=_section("sleep", "deep_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -522,7 +521,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_light",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         value_fn=_section("sleep", "light_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -530,7 +528,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_rem",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         value_fn=_section("sleep", "rem_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -538,7 +535,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_avg_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         value_fn=_section("sleep", "avg_hr_bpm"),
     ),
     SuuntoAppSensorDescription(
@@ -546,7 +542,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_min_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart",
         value_fn=_section("sleep", "min_hr_bpm"),
     ),
     SuuntoAppSensorDescription(
@@ -554,7 +549,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_quality",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:star-circle",
         value_fn=_section("sleep", "quality_pct"),
     ),
     SuuntoAppSensorDescription(
@@ -562,7 +556,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_spo2",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:lungs",
         value_fn=_section("sleep", "spo2_pct"),
     ),
     SuuntoAppSensorDescription(
@@ -570,21 +563,18 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="sleep_hrv",
         native_unit_of_measurement=UNIT_MS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-flash",
         value_fn=_section("sleep", "avg_hrv_ms"),
     ),
     SuuntoAppSensorDescription(
         key="sleep_time",
         translation_key="sleep_time",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:bed-clock",
         value_fn=_section("sleep", "timestamp"),
     ),
     SuuntoAppSensorDescription(
         key="wake_time",
         translation_key="wake_time",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:weather-sunset-up",
         value_fn=_section("sleep", "wake_time"),
     ),
     SuuntoAppSensorDescription(
@@ -593,7 +583,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:power-sleep",
         value_fn=_section("nap", "duration_minutes"),
         attributes_fn=_nap_attrs,
     ),
@@ -603,14 +592,12 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="recovery_balance",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-heart-variant",
         value_fn=_section("recovery", "balance_pct"),
     ),
     SuuntoAppSensorDescription(
         key="stress_state",
         translation_key="stress_state",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:head-flash-outline",
         value_fn=_section("recovery", "stress_state"),
         attributes_fn=_stress_state_attrs,
     ),
@@ -620,7 +607,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-donut",
         value_fn=lambda d: ((d.get("stress") or {}).get("today") or {}).get("stressed_minutes"),
         attributes_fn=_stress_today_attrs,
     ),
@@ -628,7 +614,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="last_sync",
         translation_key="last_sync",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:watch-import",
         value_fn=_section("sync", "last_sync"),
         attributes_fn=_attrs_except("sync", "last_sync"),
     ),
@@ -638,7 +623,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="daily_steps",
         native_unit_of_measurement=UNIT_STEPS,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:walk",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_steps"),
         attributes_fn=_goal_attrs_for("daily_steps"),
@@ -648,7 +632,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="daily_energy",
         native_unit_of_measurement=UNIT_KCAL,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:fire",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_energy_kcal"),
         attributes_fn=_goal_attrs_for("daily_energy_kcal"),
@@ -659,7 +642,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="daily_total_energy",
         native_unit_of_measurement=UNIT_KCAL,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:fire-circle",
         source=SOURCE_FAST,
         value_fn=_section("activity", "daily_total_energy_kcal"),
     ),
@@ -668,7 +650,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="bmr",
         native_unit_of_measurement=UNIT_KCAL_PER_DAY,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:human",
         source=SOURCE_FAST,
         value_fn=_section("profile", "bmr_kcal"),
         attributes_fn=_bmr_attrs,
@@ -678,7 +659,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="current_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         source=SOURCE_FAST,
         value_fn=_section("activity", "current_hr_bpm"),
         attributes_fn=_current_hr_attrs,
@@ -687,14 +667,12 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="last_activity",
         translation_key="last_activity",
-        icon="mdi:run",
         value_fn=_section("workout", "activity"),
     ),
     SuuntoAppSensorDescription(
         key="last_workout_start",
         translation_key="last_workout_start",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:clock-start",
         value_fn=_section("workout", "start_time"),
     ),
     SuuntoAppSensorDescription(
@@ -702,7 +680,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="days_since_last_workout",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:calendar-clock-outline",
         value_fn=_section("workout", "days_since"),
     ),
     # Start position of the last workout. The latitude/longitude attributes let
@@ -711,7 +688,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="last_workout_location",
         translation_key="last_workout_location",
-        icon="mdi:map-marker",
         value_fn=_workout_location_state,
         attributes_fn=_workout_location_attrs,
     ),
@@ -729,7 +705,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:timer",
         value_fn=_section("workout", "duration_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -738,7 +713,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:slope-uphill",
         value_fn=_section("workout", "ascent_meters"),
     ),
     SuuntoAppSensorDescription(
@@ -747,7 +721,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:slope-downhill",
         value_fn=_section("workout", "descent_meters"),
     ),
     SuuntoAppSensorDescription(
@@ -756,7 +729,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:arrow-up-bold",
         value_fn=_section("workout", "ascent_time_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -765,7 +737,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:arrow-down-bold",
         value_fn=_section("workout", "descent_time_minutes"),
     ),
     SuuntoAppSensorDescription(
@@ -774,7 +745,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:arrow-collapse-down",
         value_fn=_section("workout", "min_altitude_meters"),
     ),
     SuuntoAppSensorDescription(
@@ -783,7 +753,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:summit",
         value_fn=_section("workout", "max_altitude_meters"),
     ),
     # Peak Training Effect: Suunto's own 1..5 rating of the session's impact.
@@ -791,7 +760,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="last_pte",
         translation_key="last_pte",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:lightning-bolt",
         value_fn=_section("workout", "pte"),
     ),
     # Peak EPOC - the oxygen debt the session built up; PTE is derived from it.
@@ -800,7 +768,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_epoc",
         native_unit_of_measurement="ml/kg",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:lungs",
         value_fn=_section("workout", "epoc"),
     ),
     # The user's own 1..5 rating, only present when they rated it on the watch.
@@ -808,14 +775,12 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="last_feeling",
         translation_key="last_feeling",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:emoticon-outline",
         value_fn=_section("workout", "feeling"),
     ),
     # Suunto's own classification; the full raw list rides in the attributes.
     SuuntoAppSensorDescription(
         key="last_workout_tags",
         translation_key="last_workout_tags",
-        icon="mdi:tag-multiple",
         value_fn=_tags_state,
         attributes_fn=_tags_attrs,
     ),
@@ -827,7 +792,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:weather-partly-cloudy",
         value_fn=_section("workout", "weather_temp_c"),
         attributes_fn=_weather_attrs,
     ),
@@ -836,7 +800,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="last_workout_achievements",
         translation_key="last_workout_achievements",
-        icon="mdi:trophy",
         value_fn=lambda d: len((d.get("workout") or {}).get("achievements") or []),
         attributes_fn=_achievements_attrs,
     ),
@@ -846,7 +809,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:timer-sand",
         value_fn=_section("workout", "recovery_time_hours"),
         attributes_fn=_recovery_attrs,
     ),
@@ -855,7 +817,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="recovery_until",
         translation_key="recovery_until",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:bed-clock",
         value_fn=_section("workout", "recovered_at"),
         attributes_fn=_recovery_attrs,
     ),
@@ -864,7 +825,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_avg_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         value_fn=_section("workout", "avg_hr_bpm"),
     ),
     SuuntoAppSensorDescription(
@@ -872,7 +832,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_max_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-flash",
         value_fn=_section("workout", "max_hr_bpm"),
     ),
     SuuntoAppSensorDescription(
@@ -880,7 +839,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_avg_speed",
         native_unit_of_measurement="km/h",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:speedometer",
         value_fn=_section("workout", "avg_speed_kmh"),
     ),
     SuuntoAppSensorDescription(
@@ -888,7 +846,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_avg_pace",
         native_unit_of_measurement="min/km",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:run-fast",
         value_fn=_section("workout", "avg_pace_min_km"),
     ),
     SuuntoAppSensorDescription(
@@ -896,7 +853,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_cadence",
         native_unit_of_measurement="rpm",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:rotate-right",
         value_fn=_section("workout", "cadence"),
         attributes_fn=_cadence_attrs,
     ),
@@ -904,7 +860,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="last_tss",
         translation_key="last_tss",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:gauge",
         value_fn=_section("workout", "tss"),
         attributes_fn=_tss_attrs,
     ),
@@ -913,7 +868,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone0",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-minus-outline",
         value_fn=_section("workout", "zone0_min"),
         attributes_fn=_zone_attrs(0),
     ),
@@ -922,7 +876,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone1",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-outline",
         value_fn=_section("workout", "zone1_min"),
         attributes_fn=_zone_attrs(1),
     ),
@@ -931,7 +884,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone2",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-outline",
         value_fn=_section("workout", "zone2_min"),
         attributes_fn=_zone_attrs(2),
     ),
@@ -940,7 +892,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone3",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-half-full",
         value_fn=_section("workout", "zone3_min"),
         attributes_fn=_zone_attrs(3),
     ),
@@ -949,7 +900,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone4",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart",
         value_fn=_section("workout", "zone4_min"),
         attributes_fn=_zone_attrs(4),
     ),
@@ -958,7 +908,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_zone5",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-flash",
         value_fn=_section("workout", "zone5_min"),
         attributes_fn=_zone_attrs(5),
     ),
@@ -967,7 +916,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_workout_laps",
         native_unit_of_measurement=UNIT_LAPS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flag-checkered",
         value_fn=_laps_count,
         attributes_fn=_laps_attrs,
     ),
@@ -978,7 +926,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:map-marker-distance",
         value_fn=_section("stats", "distance_km"),
     ),
     SuuntoAppSensorDescription(
@@ -987,7 +934,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:timer",
         value_fn=_section("stats", "time_hours"),
     ),
     SuuntoAppSensorDescription(
@@ -995,7 +941,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="lifetime_energy",
         native_unit_of_measurement=UNIT_KCAL,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:fire",
         value_fn=_section("stats", "energy_kcal"),
     ),
     SuuntoAppSensorDescription(
@@ -1003,7 +948,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="lifetime_workouts",
         native_unit_of_measurement=UNIT_WORKOUTS,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
         value_fn=_section("stats", "workouts"),
     ),
     SuuntoAppSensorDescription(
@@ -1011,7 +955,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="lifetime_days",
         native_unit_of_measurement="d",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:calendar-check",
         value_fn=_section("stats", "active_days"),
     ),
     # Lifetime totals split per sport - state is the number of activity types,
@@ -1019,7 +962,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="lifetime_by_activity",
         translation_key="lifetime_by_activity",
-        icon="mdi:podium",
         value_fn=lambda d: len((d.get("stats") or {}).get("by_activity") or []),
         attributes_fn=lambda d: {
             "activities": (d.get("stats") or {}).get("by_activity") or []
@@ -1038,7 +980,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:map-marker-distance",
         value_fn=_section("year_totals", "distance_km"),
     ),
     SuuntoAppSensorDescription(
@@ -1047,7 +988,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:timer",
         value_fn=_section("year_totals", "time_hours"),
     ),
     SuuntoAppSensorDescription(
@@ -1055,7 +995,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="year_energy",
         native_unit_of_measurement=UNIT_KCAL,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:fire",
         value_fn=_section("year_totals", "energy_kcal"),
     ),
     # State is workout count; the year's single most-common activity rides in
@@ -1067,7 +1006,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="year_workouts",
         native_unit_of_measurement=UNIT_WORKOUTS,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
         value_fn=_section("year_totals", "workouts"),
         attributes_fn=lambda d: (
             {
@@ -1084,7 +1022,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="year_active_days",
         native_unit_of_measurement="d",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:calendar-check",
         value_fn=_section("year_totals", "active_days"),
     ),
     # --- This month's totals (same idea as "this year" above, shorter window) ---
@@ -1094,7 +1031,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:map-marker-distance",
         value_fn=_section("month_totals", "distance_km"),
     ),
     SuuntoAppSensorDescription(
@@ -1103,7 +1039,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:timer",
         value_fn=_section("month_totals", "time_hours"),
     ),
     SuuntoAppSensorDescription(
@@ -1111,7 +1046,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="month_energy",
         native_unit_of_measurement=UNIT_KCAL,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:fire",
         value_fn=_section("month_totals", "energy_kcal"),
     ),
     SuuntoAppSensorDescription(
@@ -1119,7 +1053,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="month_workouts",
         native_unit_of_measurement=UNIT_WORKOUTS,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
         value_fn=_section("month_totals", "workouts"),
         attributes_fn=lambda d: (
             {
@@ -1136,7 +1069,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="month_active_days",
         native_unit_of_measurement="d",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:calendar-check",
         value_fn=_section("month_totals", "active_days"),
     ),
     # All-time personal records - state is the longest streak (days); the
@@ -1148,7 +1080,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="training_records",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:trophy-outline",
         value_fn=_section("records", "longest_streak_days"),
         attributes_fn=_records_attrs,
     ),
@@ -1159,7 +1090,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="training_records_month",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:trophy",
         value_fn=_section("records_month", "longest_streak_days"),
         attributes_fn=_records_month_attrs,
     ),
@@ -1172,7 +1102,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="training_records_year",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:trophy-variant",
         value_fn=_section("records_year", "longest_streak_days"),
         attributes_fn=_records_year_attrs,
     ),
@@ -1184,7 +1113,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="current_streak",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:fire",
         value_fn=lambda d: d.get("current_streak"),
     ),
     # Standard-distance personal bests (1K/5K/10K/half/full marathon), foot
@@ -1194,7 +1122,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="best_efforts",
         translation_key="best_efforts",
-        icon="mdi:speedometer",
         value_fn=lambda d: len(d.get("best_efforts") or {}),
         attributes_fn=_best_effort_attrs,
     ),
@@ -1204,7 +1131,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_pct_hrmax",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:percent",
         value_fn=_section("workout", "pct_hrmax"),
     ),
     SuuntoAppSensorDescription(
@@ -1212,7 +1138,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_cal_per_km",
         native_unit_of_measurement="kcal/km",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:fire",
         value_fn=_section("workout", "cal_per_km"),
     ),
     SuuntoAppSensorDescription(
@@ -1220,7 +1145,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_ascent_rate",
         native_unit_of_measurement="m/h",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:trending-up",
         value_fn=_section("workout", "ascent_rate_m_h"),
     ),
     SuuntoAppSensorDescription(
@@ -1228,7 +1152,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="last_stride",
         native_unit_of_measurement=UnitOfLength.METERS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:shoe-print",
         value_fn=_section("workout", "stride_length_m"),
     ),
     # --- Training load ---
@@ -1236,28 +1159,24 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="fitness_ctl",
         translation_key="fitness_ctl",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:arm-flex",
         value_fn=_section("load", "ctl"),
     ),
     SuuntoAppSensorDescription(
         key="fatigue_atl",
         translation_key="fatigue_atl",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-charging-low",
         value_fn=_section("load", "atl"),
     ),
     SuuntoAppSensorDescription(
         key="form_tsb",
         translation_key="form_tsb",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-bell-curve",
         value_fn=_section("load", "tsb"),
     ),
     SuuntoAppSensorDescription(
         key="acwr",
         translation_key="acwr",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:scale-balance",
         value_fn=_section("load", "acwr"),
     ),
     SuuntoAppSensorDescription(
@@ -1265,7 +1184,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="training_suggestion",
         device_class=SensorDeviceClass.ENUM,
         options=["rest", "easy", "moderate", "hard"],
-        icon="mdi:compass-outline",
         value_fn=_section("load", "suggestion"),
     ),
     # Form (TSB) tomorrow if today is the last load, with the full rest
@@ -1274,7 +1192,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="form_forecast",
         translation_key="form_forecast",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-timeline-variant-shimmer",
         value_fn=_section("forecast", "tomorrow_tsb"),
         attributes_fn=_forecast_attrs,
     ),
@@ -1282,7 +1199,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="daily_brief",
         translation_key="daily_brief",
-        icon="mdi:text-box-check-outline",
         value_fn=lambda d: d.get("brief"),
     ),
     # --- Patterns in your own history (patterns.py) ---
@@ -1292,7 +1208,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="sleep_regularity",
         translation_key="sleep_regularity",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:bed-clock",
         value_fn=_section("sleep_regularity", "index"),
         attributes_fn=_attrs_except("sleep_regularity", "index"),
     ),
@@ -1302,7 +1217,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="social_jetlag",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:airplane-clock",
         value_fn=_section("social_jetlag", "minutes"),
         attributes_fn=_attrs_except("social_jetlag", "minutes"),
     ),
@@ -1313,7 +1227,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="aerobic_decoupling",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-flash",
         value_fn=_section("decoupling", "decoupling_pct"),
         attributes_fn=_decoupling_attrs,
     ),
@@ -1322,7 +1235,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
     SuuntoAppSensorDescription(
         key="personal_insights",
         translation_key="personal_insights",
-        icon="mdi:lightbulb-on-outline",
         value_fn=_insights_state,
         attributes_fn=_attrs_except("insights"),
     ),
@@ -1333,7 +1245,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:bike-fast",
         value_fn=lambda d: ((d.get("commute") or {}).get("month") or {}).get("distance_km"),
         attributes_fn=_commute_attrs_for("month"),
     ),
@@ -1343,7 +1254,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:bike-fast",
         value_fn=lambda d: ((d.get("commute") or {}).get("year") or {}).get("distance_km"),
         attributes_fn=_commute_attrs_for("year"),
     ),
@@ -1353,7 +1263,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="readiness",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:gauge",
         value_fn=_section("baseline", "readiness"),
         attributes_fn=_readiness_attrs,
     ),
@@ -1362,7 +1271,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="hrv_baseline",
         native_unit_of_measurement=UNIT_MS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-flash",
         value_fn=_section("baseline", "hrv_baseline"),
     ),
     SuuntoAppSensorDescription(
@@ -1370,7 +1278,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="hrv_status",
         device_class=SensorDeviceClass.ENUM,
         options=["low", "balanced", "high"],
-        icon="mdi:heart-pulse",
         value_fn=_section("baseline", "hrv_status"),
     ),
     SuuntoAppSensorDescription(
@@ -1378,7 +1285,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="resting_hr",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart",
         value_fn=_section("baseline", "resting_hr"),
     ),
     SuuntoAppSensorDescription(
@@ -1386,7 +1292,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="resting_hr_baseline",
         native_unit_of_measurement=UNIT_BPM,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-outline",
         value_fn=_section("baseline", "resting_hr_baseline"),
     ),
     # --- Fitness (VO2max / fitness age) ---
@@ -1397,7 +1302,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="vo2max",
         native_unit_of_measurement=UNIT_VO2MAX,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:lungs",
         value_fn=_section("fitness", "vo2max"),
         attributes_fn=_fitness_attrs,
     ),
@@ -1406,7 +1310,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="estimated_vo2max",
         native_unit_of_measurement=UNIT_VO2MAX,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:chart-bell-curve",
         value_fn=_section("fitness", "estimated_vo2max"),
         attributes_fn=_fitness_attrs,
     ),
@@ -1415,7 +1318,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="fitness_age",
         native_unit_of_measurement=UNIT_YEARS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:calendar-heart",
         value_fn=_section("fitness", "fitness_age"),
         attributes_fn=_fitness_attrs,
     ),
@@ -1426,7 +1328,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:map-marker-distance",
         value_fn=_section("weekly", "distance_km"),
     ),
     SuuntoAppSensorDescription(
@@ -1435,7 +1336,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:timer",
         value_fn=_section("weekly", "time_hours"),
     ),
     # Rolling 7-day step total - read back from the "steps" long-term
@@ -1448,7 +1348,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="weekly_steps",
         native_unit_of_measurement=UNIT_STEPS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:walk",
         value_fn=_section("weekly", "steps"),
     ),
     # --- Counts ---
@@ -1457,7 +1356,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="workouts_7d",
         native_unit_of_measurement=UNIT_WORKOUTS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:calendar-week",
         value_fn=lambda d: d.get("count_7d"),
     ),
     SuuntoAppSensorDescription(
@@ -1465,7 +1363,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         translation_key="workouts_30d",
         native_unit_of_measurement=UNIT_WORKOUTS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:calendar-month",
         value_fn=lambda d: d.get("count_30d"),
     ),
     # Recent workouts list - state is the count, the list rides in attributes
@@ -1474,7 +1371,6 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="workouts_recent",
         translation_key="workouts_recent",
         native_unit_of_measurement=UNIT_WORKOUTS,
-        icon="mdi:format-list-bulleted",
         value_fn=lambda d: len(d.get("recent_workouts") or []),
         attributes_fn=lambda d: {"workouts": d.get("recent_workouts") or []},
     ),
@@ -1505,13 +1401,19 @@ async def async_setup_entry(
     for registered in er.async_entries_for_config_entry(registry, entry.entry_id):
         if registered.unique_id.startswith(prefix) and registered.unique_id not in wanted:
             registry.async_remove(registered.entity_id)
-    # The AI insight exists only while an ai_task entity is picked in the options.
+    # The AI insight and weekly summary exist only while an ai_task entity is
+    # picked in the options.
     if runtime.ai is not None:
         async_add_entities([SuuntoAiInsightSensor(runtime.ai, entry)])
-    elif entity_id := registry.async_get_entity_id(
-        "sensor", DOMAIN, f"{entry.entry_id}_ai_insight"
-    ):
-        registry.async_remove(entity_id)
+    if runtime.weekly is not None:
+        async_add_entities([SuuntoAiWeeklySensor(runtime.weekly, entry)])
+    for runner, suffix in ((runtime.ai, "ai_insight"), (runtime.weekly, "ai_weekly_summary")):
+        if runner is None and (
+            entity_id := registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{entry.entry_id}_{suffix}"
+            )
+        ):
+            registry.async_remove(entity_id)
 
 
 class SuuntoAppSensor(
@@ -1617,7 +1519,6 @@ class SuuntoAiInsightSensor(SensorEntity):
 
     _attr_has_entity_name = True
     _attr_translation_key = "ai_insight"
-    _attr_icon = "mdi:creation"
     _attr_should_poll = False
     # Long text is only useful live on a card, never worth keeping in history.
     _unrecorded_attributes = frozenset(
@@ -1663,4 +1564,57 @@ class SuuntoAiInsightSensor(SensorEntity):
             # The "Automatic AI insight" switch is off: no automatic runs.
             "paused": not self._insight.enabled,
             "error": self._insight.last_error,
+        }
+
+
+class SuuntoAiWeeklySensor(SensorEntity):
+    """The weekly AI summary: headline as the state, the rest as attributes.
+
+    Same attribute shape as the daily AI insight sensor, so the same card
+    shows either; ``week_start``/``for_date`` bound the week it covers.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "ai_weekly_summary"
+    _attr_should_poll = False
+    _unrecorded_attributes = frozenset(
+        {"sections", "summary", "advice", "warning", "error"}
+    )
+
+    def __init__(self, weekly: SuuntoAiWeekly, entry: SuuntoAppConfigEntry) -> None:
+        """Initialize the sensor."""
+        self._weekly = weekly
+        self._attr_unique_id = f"{entry.entry_id}_ai_weekly_summary"
+        self._attr_device_info = suunto_device_info(entry)
+
+    async def async_added_to_hass(self) -> None:
+        """Follow the summary's updates."""
+        self.async_on_remove(self._weekly.async_add_listener(self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the headline."""
+        result = self._weekly.result or {}
+        headline = result.get("headline") or result.get("summary")
+        return headline[:MAX_STATE_LENGTH] if headline else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the full summary plus the week and the schedule."""
+        result = self._weekly.result or {}
+        return {
+            "status": result.get("status"),
+            "sections": result.get("sections") or {},
+            "summary": result.get("summary"),
+            "advice": result.get("advice") or [],
+            "warning": result.get("warning"),
+            "week_start": result.get("week_start"),
+            "for_date": result.get("for_date"),
+            "generated_at": result.get("generated_at"),
+            "weekday": self._weekly.weekday,
+            "hour": self._weekly.hour,
+            "ai_task_entity": self._weekly.ai_task_entity,
+            "generating": self._weekly.running,
+            "paused": not self._weekly.enabled,
+            "error": self._weekly.last_error,
         }

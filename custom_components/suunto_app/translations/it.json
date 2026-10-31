@@ -32,7 +32,7 @@
         "title": "Opzioni Suunto App",
         "menu_options": {
           "settings": "Intervalli e dati carburante",
-          "ai": "Analisi IA giornaliera",
+          "ai": "Analisi IA giornaliera e riepilogo settimanale",
           "gear_add": "Aggiungi attrezzatura da monitorare",
           "gear_service": "Segna attrezzatura come revisionata (azzera a 0 km)",
           "gear_remove": "Rimuovi attrezzatura"
@@ -54,17 +54,23 @@
         }
       },
       "ai": {
-        "title": "Analisi IA giornaliera",
-        "description": "Una volta al giorno, il modello di IA che scegli legge i tuoi dati di sonno, recupero e allenamento e scrive un breve resoconto con consigli. Configura prima il fornitore di IA (Google Gemini, OpenAI, Anthropic, Ollama...) come una normale integrazione di Home Assistant: qui non viene salvata nessuna chiave API. I tuoi dati sulla salute vengono inviati a quel fornitore (un Ollama locale li tiene in casa). Non è un consiglio medico.",
+        "title": "Analisi IA giornaliera e riepilogo settimanale",
+        "description": "Una volta al giorno, il modello di IA che scegli legge i tuoi dati di sonno, recupero e allenamento e scrive un breve resoconto con consigli. Configura prima il fornitore di IA (Google Gemini, OpenAI, Anthropic, Ollama...) come una normale integrazione di Home Assistant: qui non viene salvata nessuna chiave API. I tuoi dati sulla salute vengono inviati a quel fornitore (un Ollama locale li tiene in casa). Non è un consiglio medico. Una volta alla settimana (giorno e ora qui sotto) scrive anche un riepilogo della settimana di allenamento con un piano per la successiva.",
         "data": {
           "ai_task_entity": "Modello di IA",
           "ai_extra_context": "Le tue note per l'IA",
-          "ai_fallback_hour": "Ora di riserva"
+          "ai_fallback_hour": "Ora di riserva",
+          "ai_language": "Lingua",
+          "ai_weekly_day": "Giorno del riepilogo settimanale",
+          "ai_weekly_hour": "Ora del riepilogo settimanale"
         },
         "data_description": {
           "ai_task_entity": "L'entità AI Task da usare. Lascia vuoto per disattivare la funzione.",
           "ai_extra_context": "Facoltativo, ad esempio il tuo obiettivo o una gara in arrivo: \"Mi preparo per una maratona il 12 aprile\".",
-          "ai_fallback_hour": "L'analisi parte dopo la sincronizzazione mattutina dell'orologio. Se entro quest'ora non è arrivata una nuova notte, parte comunque. Se l'ultima notte è sincronizzata solo in parte (dormi più a lungo), aspetta fino a 3 ore in più."
+          "ai_fallback_hour": "L'analisi parte dopo la sincronizzazione mattutina dell'orologio. Se entro quest'ora non è arrivata una nuova notte, parte comunque. Se l'ultima notte è sincronizzata solo in parte (dormi più a lungo), aspetta fino a 3 ore in più.",
+          "ai_language": "Automatico segue la lingua del server di Home Assistant (Impostazioni > Sistema > Generale), non quella del tuo profilo.",
+          "ai_weekly_day": "Il riepilogo copre i sette giorni che terminano quel giorno. Mettilo in pausa con l'interruttore Riepilogo settimanale IA automatico.",
+          "ai_weekly_hour": "Se Home Assistant è spento a quell'ora, il riepilogo viene fatto entro 24 ore dall'avvio."
         }
       },
       "gear_add": {
@@ -222,7 +228,8 @@
       "personal_insights": { "name": "Schemi personali" },
       "commute_month": { "name": "Tragitti casa-lavoro questo mese" },
       "commute_year": { "name": "Tragitti casa-lavoro quest'anno" },
-      "ai_insight": { "name": "Analisi IA" }
+      "ai_insight": { "name": "Analisi IA" },
+      "ai_weekly_summary": { "name": "Riepilogo settimanale IA" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "In recupero" },
@@ -233,17 +240,78 @@
       "workouts": { "name": "Allenamenti" }
     },
     "switch": {
-      "ai_insight_enabled": { "name": "Analisi IA automatica" }
+      "ai_insight_enabled": { "name": "Analisi IA automatica" },
+      "ai_weekly_enabled": { "name": "Riepilogo settimanale IA automatico" }
     },
     "button": {
       "ai_insight_generate": { "name": "Genera analisi IA" },
-      "sync_now": { "name": "Sincronizza ora" }
+      "sync_now": { "name": "Sincronizza ora" },
+      "ai_weekly_generate": { "name": "Genera riepilogo settimanale IA" }
+    },
+    "event": {
+      "workout": {
+        "name": "Allenamento",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Nuovo allenamento"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Mattina",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Risveglio"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "Report IA",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Analisi giornaliera",
+              "weekly_summary": "Riepilogo settimanale"
+            }
+          }
+        }
+      }
     }
   },
   "issues": {
     "watch_not_synced": {
       "title": "L'orologio Suunto non si è sincronizzato",
       "description": "Nessun nuovo dato dall'orologio di **{account}** dal {last_sync} ({hours} ore fa). Apri l'app Suunto sul telefono con il Bluetooth attivo per sincronizzare l'orologio. Questo avviso scompare da solo dopo la prossima sincronizzazione."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatico (lingua di Home Assistant)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Lunedì",
+        "tue": "Martedì",
+        "wed": "Mercoledì",
+        "thu": "Giovedì",
+        "fri": "Venerdì",
+        "sat": "Sabato",
+        "sun": "Domenica"
+      }
     }
   }
 }

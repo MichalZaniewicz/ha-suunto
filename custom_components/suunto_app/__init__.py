@@ -14,15 +14,21 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 
 from .ai_insight import SuuntoAiInsight
+from .ai_weekly import SuuntoAiWeekly
 from .api import SportsTrackerClient
 from .const import (
     CONF_AI_CONTEXT,
     CONF_AI_HOUR,
+    CONF_AI_LANGUAGE,
     CONF_AI_TASK_ENTITY,
+    CONF_AI_WEEKLY_DAY,
+    CONF_AI_WEEKLY_HOUR,
     CONF_FAST_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
     DEFAULT_AI_HOUR,
+    DEFAULT_AI_WEEKLY_DAY,
+    DEFAULT_AI_WEEKLY_HOUR,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -40,6 +46,7 @@ class SuuntoAppRuntimeData:
     daily: SuuntoDailyCoordinator
     # Only when an ai_task entity is picked in the options.
     ai: SuuntoAiInsight | None = None
+    weekly: SuuntoAiWeekly | None = None
 
 
 type SuuntoAppConfigEntry = ConfigEntry[SuuntoAppRuntimeData]
@@ -102,7 +109,9 @@ async def async_setup_entry(
             raise result
 
     ai: SuuntoAiInsight | None = None
+    weekly: SuuntoAiWeekly | None = None
     if ai_task_entity := entry.options.get(CONF_AI_TASK_ENTITY):
+        language = entry.options.get(CONF_AI_LANGUAGE)
         ai = SuuntoAiInsight(
             hass,
             entry,
@@ -111,13 +120,29 @@ async def async_setup_entry(
             ai_task_entity,
             entry.options.get(CONF_AI_CONTEXT),
             int(entry.options.get(CONF_AI_HOUR, DEFAULT_AI_HOUR)),
+            language,
+        )
+        weekly = SuuntoAiWeekly(
+            hass,
+            entry,
+            daily,
+            fast,
+            ai_task_entity,
+            entry.options.get(CONF_AI_CONTEXT),
+            entry.options.get(CONF_AI_WEEKLY_DAY, DEFAULT_AI_WEEKLY_DAY),
+            int(entry.options.get(CONF_AI_WEEKLY_HOUR, DEFAULT_AI_WEEKLY_HOUR)),
+            language,
         )
 
-    entry.runtime_data = SuuntoAppRuntimeData(fast=fast, daily=daily, ai=ai)
+    entry.runtime_data = SuuntoAppRuntimeData(
+        fast=fast, daily=daily, ai=ai, weekly=weekly
+    )
+    entry.async_on_unload(daily.async_cancel_held_events)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-    if ai is not None:
-        await ai.async_start()
-        entry.async_on_unload(ai.async_stop)
+    for runner in (ai, weekly):
+        if runner is not None:
+            await runner.async_start()
+            entry.async_on_unload(runner.async_stop)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # The "Suunto" tool set for conversation agents (llm_api.py).
@@ -148,6 +173,7 @@ async def async_remove_entry(
     for key in (
         f"{DOMAIN}.history.{entry.entry_id}",
         f"{DOMAIN}.ai_insight.{entry.entry_id}",
+        f"{DOMAIN}.ai_weekly.{entry.entry_id}",
     ):
         await Store(hass, 1, key).async_remove()
     ir.async_delete_issue(hass, DOMAIN, f"watch_not_synced_{entry.entry_id}")
