@@ -38,13 +38,13 @@ which silently removes any <img> placed inside it. -->
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/stats.svg" alt="106 sensors, 8 blueprints, 67 cards, 8 languages, 0 partner keys" width="100%">
+  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/stats.svg" alt="106 sensors, 9 blueprints, 67 cards, 8 languages, 0 partner keys" width="100%">
 </p>
 
 ## What it does
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/features.svg" alt="Sleep and readiness, training load, every workout, 8 ready-made notifications, daily AI insight, hourly curves that fill in later" width="100%">
+  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/features.svg" alt="Sleep and readiness, training load, every workout, 9 ready-made notifications, daily and weekly AI insight, hourly curves that fill in later" width="100%">
 </p>
 
 <details>
