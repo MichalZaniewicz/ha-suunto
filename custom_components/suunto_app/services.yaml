@@ -1,12 +1,10 @@
-.config_entry_id: &config_entry_id
-  required: false
-  selector:
-    config_entry:
-      integration: suunto_app
-
 get_readiness:
   fields:
-    config_entry_id: *config_entry_id
+    config_entry_id: &config_entry_id
+      required: false
+      selector:
+        config_entry:
+          integration: suunto_app
 
 get_sleep:
   fields:
