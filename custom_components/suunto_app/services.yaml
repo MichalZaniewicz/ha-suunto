@@ -1,0 +1,97 @@
+.config_entry_id: &config_entry_id
+  required: false
+  selector:
+    config_entry:
+      integration: suunto_app
+
+get_readiness:
+  fields:
+    config_entry_id: *config_entry_id
+
+get_sleep:
+  fields:
+    config_entry_id: *config_entry_id
+    nights:
+      required: false
+      example: 7
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          mode: box
+
+get_workouts:
+  fields:
+    config_entry_id: *config_entry_id
+    start_date:
+      required: false
+      selector:
+        date:
+    end_date:
+      required: false
+      selector:
+        date:
+    days:
+      required: false
+      example: 7
+      selector:
+        number:
+          min: 1
+          max: 90
+          step: 1
+          mode: box
+    activity:
+      required: false
+      example: Cycling
+      selector:
+        text:
+    limit:
+      required: false
+      example: 20
+      selector:
+        number:
+          min: 1
+          max: 50
+          step: 1
+          mode: box
+
+get_training_load:
+  fields:
+    config_entry_id: *config_entry_id
+    weeks:
+      required: false
+      example: 4
+      selector:
+        number:
+          min: 1
+          max: 12
+          step: 1
+          mode: box
+
+get_today:
+  fields:
+    config_entry_id: *config_entry_id
+
+get_totals:
+  fields:
+    config_entry_id: *config_entry_id
+    period:
+      required: false
+      selector:
+        select:
+          translation_key: totals_period
+          options:
+            - last_7_days
+            - month
+            - year
+            - lifetime
+            - gear
+
+get_records:
+  fields:
+    config_entry_id: *config_entry_id
+
+get_insights:
+  fields:
+    config_entry_id: *config_entry_id

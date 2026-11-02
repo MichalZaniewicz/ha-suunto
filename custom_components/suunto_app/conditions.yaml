@@ -1,0 +1,88 @@
+.config_entry: &config_entry
+  required: false
+  selector:
+    config_entry:
+      integration: suunto_app
+
+.above: &above
+  required: false
+  selector:
+    number:
+      min: 0
+      max: 100
+      step: 1
+      mode: box
+
+.hours: &hours
+  required: false
+  selector:
+    number:
+      min: 0
+      max: 16
+      step: 0.25
+      unit_of_measurement: h
+      mode: box
+
+is_recovering:
+  fields:
+    config_entry: *config_entry
+
+workout_today:
+  fields:
+    config_entry: *config_entry
+    activity:
+      required: false
+      selector:
+        select:
+          multiple: true
+          custom_value: true
+          sort: true
+          options:
+            - Walking
+            - Running
+            - Trail running
+            - Treadmill running
+            - Cycling
+            - Mountain biking
+            - Indoor cycling
+            - Hiking
+            - Trekking
+            - Nordic walking
+            - Swimming
+            - Gym
+            - Strength training
+            - Yoga
+            - Cross-country skiing
+            - Alpine skiing
+            - Snowboarding
+            - Paddling
+            - Rowing
+            - Kayaking
+            - Climbing
+
+readiness:
+  fields:
+    config_entry: *config_entry
+    above: *above
+    below: *above
+
+training_suggestion:
+  fields:
+    config_entry: *config_entry
+    suggestion:
+      required: true
+      selector:
+        select:
+          multiple: true
+          translation_key: training_suggestion
+          options:
+            - rest
+            - easy
+            - moderate
+            - hard
+
+last_night_sleep:
+  fields:
+    config_entry: *config_entry
+    above: *hours
+    below: *hours

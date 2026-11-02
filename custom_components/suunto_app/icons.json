@@ -437,5 +437,59 @@
         }
       }
     }
+  },
+  "triggers": {
+    "new_workout": {
+      "trigger": "mdi:run"
+    },
+    "woke_up": {
+      "trigger": "mdi:weather-sunset-up"
+    },
+    "ai_report": {
+      "trigger": "mdi:creation"
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "condition": "mdi:bed-clock"
+    },
+    "workout_today": {
+      "condition": "mdi:calendar-check"
+    },
+    "readiness": {
+      "condition": "mdi:gauge"
+    },
+    "training_suggestion": {
+      "condition": "mdi:compass-outline"
+    },
+    "last_night_sleep": {
+      "condition": "mdi:sleep"
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "service": "mdi:gauge"
+    },
+    "get_sleep": {
+      "service": "mdi:sleep"
+    },
+    "get_workouts": {
+      "service": "mdi:format-list-bulleted"
+    },
+    "get_training_load": {
+      "service": "mdi:chart-bell-curve"
+    },
+    "get_today": {
+      "service": "mdi:calendar-today"
+    },
+    "get_totals": {
+      "service": "mdi:sigma"
+    },
+    "get_records": {
+      "service": "mdi:trophy-outline"
+    },
+    "get_insights": {
+      "service": "mdi:lightbulb-on-outline"
+    }
   }
 }

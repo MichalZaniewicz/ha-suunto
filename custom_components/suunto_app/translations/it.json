@@ -312,6 +312,316 @@
         "sat": "Sabato",
         "sun": "Domenica"
       }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Con gli spostamenti",
+        "only": "Solo spostamenti",
+        "exclude": "Senza spostamenti"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Qualsiasi",
+        "daily": "Analisi giornaliera",
+        "weekly": "Riepilogo settimanale"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Riposo",
+        "easy": "Leggero",
+        "moderate": "Moderato",
+        "hard": "Intenso"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Ultimi 7 giorni",
+        "month": "Questo mese",
+        "year": "Quest'anno",
+        "lifetime": "Di sempre",
+        "gear": "Attrezzatura"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "Nuovo allenamento",
+      "description": "Si attiva quando un nuovo allenamento arriva in Home Assistant, dopo che l'orologio si è sincronizzato con l'app Suunto.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Solo questi sport. Vuoto per qualsiasi sport."
+        },
+        "min_distance_km": {
+          "name": "Distanza minima",
+          "description": "Solo allenamenti di almeno questa distanza."
+        },
+        "min_duration_minutes": {
+          "name": "Durata minima",
+          "description": "Solo allenamenti di almeno questa durata."
+        },
+        "commute": {
+          "name": "Spostamenti",
+          "description": "Se contano gli spostamenti casa-lavoro."
+        },
+        "with_achievement": {
+          "name": "Solo con record di percorso",
+          "description": "Solo allenamenti con un piazzamento sul percorso, come il tempo più veloce su questo percorso."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Sveglia",
+      "description": "Si attiva quando arriva il sonno della scorsa notte: dopo la sincronizzazione mattutina dell'orologio, non al momento del risveglio.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "sleep_below_hours": {
+          "name": "Dormito meno di",
+          "description": "Solo se la scorsa notte è stata più breve."
+        },
+        "sleep_above_hours": {
+          "name": "Dormito più di",
+          "description": "Solo se la scorsa notte è stata più lunga."
+        },
+        "readiness_below": {
+          "name": "Prontezza sotto",
+          "description": "Solo se la prontezza è sotto questo valore."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "Rapporto IA pronto",
+      "description": "Si attiva quando è pronta l'analisi IA del giorno o il riepilogo IA della settimana.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "report": {
+          "name": "Rapporto",
+          "description": "Quale rapporto."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "In recupero",
+      "description": "Verifica se il tempo di recupero dell'ultimo allenamento è ancora in corso.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Allenamento oggi",
+      "description": "Verifica se oggi è stato registrato un allenamento.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Contano solo questi sport. Vuoto per qualsiasi sport."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Prontezza",
+      "description": "Verifica la prontezza di oggi (0-100). Una prontezza sconosciuta non passa.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "above": {
+          "name": "Sopra",
+          "description": "Passa quando il valore è sopra."
+        },
+        "below": {
+          "name": "Sotto",
+          "description": "Passa quando il valore è sotto."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Suggerimento di allenamento",
+      "description": "Verifica il suggerimento di allenamento di oggi.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "suggestion": {
+          "name": "Suggerimento",
+          "description": "Passa quando il suggerimento è uno di questi."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Sonno della scorsa notte",
+      "description": "Verifica quanto hai dormito la scorsa notte. Una notte non ancora sincronizzata non passa.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per qualsiasi account."
+        },
+        "above": {
+          "name": "Più di",
+          "description": "Passa quando la scorsa notte è stata più lunga."
+        },
+        "below": {
+          "name": "Meno di",
+          "description": "Passa quando la scorsa notte è stata più breve."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Ottieni prontezza",
+      "description": "Restituisce la prontezza di oggi, il suggerimento di allenamento, HRV e frequenza cardiaca a riposo rispetto alla tua norma, il bilancio di recupero, la forma e il tempo di recupero dell'ultimo allenamento.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Ottieni sonno",
+      "description": "Restituisce il dettaglio della scorsa notte, i pisolini, le ultime notti con le medie, l'obiettivo di sonno, le norme e la regolarità del sonno.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        },
+        "nights": {
+          "name": "Notti",
+          "description": "Quante notti recenti elencare e mediare (7 predefinito)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Ottieni allenamenti",
+      "description": "Restituisce gli allenamenti di un intervallo di date, dal più recente, con i totali. Copre gli ultimi 90 giorni.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        },
+        "start_date": {
+          "name": "Data di inizio",
+          "description": "Primo giorno. Vuoto per contare i Giorni a ritroso dalla data di fine."
+        },
+        "end_date": {
+          "name": "Data di fine",
+          "description": "Ultimo giorno. Predefinito oggi."
+        },
+        "days": {
+          "name": "Giorni",
+          "description": "Giorni a ritroso dalla data di fine quando manca la data di inizio (7 predefinito)."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Solo questo sport, con il suo nome Suunto o una parte, per esempio Cycling."
+        },
+        "limit": {
+          "name": "Limite",
+          "description": "Quanti allenamenti elencare (20 predefinito). I totali coprono sempre tutto l'intervallo."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Ottieni carico di allenamento",
+      "description": "Restituisce condizione, fatica e forma, ACWR, l'obiettivo settimanale e una tabella settimana per settimana.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        },
+        "weeks": {
+          "name": "Settimane",
+          "description": "Quante settimane di calendario nella tabella (4 predefinito)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Ottieni oggi",
+      "description": "Restituisce passi e calorie di oggi rispetto agli obiettivi, l'ultima frequenza cardiaca, gli allenamenti di oggi, lo stress e l'ultima sincronizzazione dell'orologio.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Ottieni totali",
+      "description": "Restituisce i totali degli ultimi 7 giorni, di questo mese, di quest'anno, di sempre e per attrezzatura.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        },
+        "period": {
+          "name": "Periodo",
+          "description": "Solo una parte. Vuoto per tutte."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Ottieni record",
+      "description": "Restituisce i record personali, le migliori prestazioni sulle distanze standard, il VO2max e l'età fisica.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Ottieni analisi",
+      "description": "Restituisce i tuoi schemi personali, il disaccoppiamento aerobico, la regolarità del sonno, il riepilogo del giorno e gli ultimi rapporti IA.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "API Sports Tracker raggiungibile",
+      "wellness_reachable": "Server dati 24/7 raggiungibile",
+      "accounts_loaded": "Account caricati",
+      "account_state": "Stato dell'account",
+      "daily_update": "Aggiornamento dati giornalieri",
+      "activity_update": "Aggiornamento attività",
+      "watch_last_synced": "Ultima sincronizzazione dell'orologio",
+      "workouts_in_window": "Allenamenti (ultimi 90 giorni)",
+      "ai_configured": "IA configurata"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "Nessun dato Suunto ancora disponibile. Attendi il primo aggiornamento dopo la configurazione."
+    },
+    "unknown_entry": {
+      "message": "Nessun account Suunto con ID {entry_id}."
     }
   }
 }

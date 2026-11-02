@@ -1,0 +1,190 @@
+blueprint:
+  name: "Suunto: Good Weather For A Workout"
+  description: >
+    Once a day, at the time you pick, checks the forecast of a Home Assistant
+    weather entity for today or tomorrow, and runs your action when the
+    weather is right for training outside AND your body is ready: Suunto's
+    training suggestion is one you accept and readiness is high enough. For
+    example "Tomorrow: 18 degrees, 10% rain, a good day for a hard session".
+
+
+    Readiness and the suggestion are today's values. Checked in the evening
+    for tomorrow, they tell you how you are now, not after tonight's sleep.
+    Inside the action, use `{{ forecast_text }}` for a ready-made summary,
+    or `{{ day_forecast }}` (the forecast for that day: temperature,
+    precipitation_probability, wind_speed, condition...), `{{ readiness }}`
+    and `{{ suggestion }}`.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/good_weather_workout.yaml
+  input:
+    weather_entity:
+      name: Weather
+      description: A weather entity with a daily forecast.
+      selector:
+        entity:
+          domain: weather
+    check_time:
+      name: Check at
+      default: "20:00:00"
+      selector:
+        time: {}
+    day:
+      name: Which day
+      default: tomorrow
+      selector:
+        select:
+          options:
+            - label: Today
+              value: today
+            - label: Tomorrow
+              value: tomorrow
+    min_temperature:
+      name: Minimum temperature
+      description: In the weather entity's unit.
+      default: 8
+      selector:
+        number:
+          min: -30
+          max: 40
+          step: 1
+    max_temperature:
+      name: Maximum temperature
+      description: In the weather entity's unit.
+      default: 28
+      selector:
+        number:
+          min: -30
+          max: 45
+          step: 1
+    max_precipitation_probability:
+      name: Maximum chance of rain
+      description: Forecasts without a chance of rain are not checked for it.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+    max_wind_speed:
+      name: Maximum wind speed
+      description: In the weather entity's unit. Forecasts without wind are not checked for it.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 150
+          step: 1
+    readiness_entity:
+      name: Readiness sensor
+      description: Your Suunto "Readiness" sensor.
+      selector:
+        entity:
+          domain: sensor
+    min_readiness:
+      name: Minimum readiness
+      description: An unknown readiness does not pass.
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    suggestion_entity:
+      name: Training suggestion sensor
+      description: Your Suunto "Training suggestion" sensor.
+      selector:
+        entity:
+          domain: sensor
+    accepted_suggestions:
+      name: Accepted suggestions
+      description: Run only when the training suggestion is one of these.
+      default:
+        - moderate
+        - hard
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Rest
+              value: rest
+            - label: Easy
+              value: easy
+            - label: Moderate
+              value: moderate
+            - label: Hard
+              value: hard
+    good_weather_action:
+      name: Action
+      description: What to do when both the weather and your body say yes.
+      selector:
+        action: {}
+
+triggers:
+  - trigger: time
+    at: !input check_time
+
+variables:
+  weather_entity: !input weather_entity
+  day: !input day
+  min_temperature: !input min_temperature
+  max_temperature: !input max_temperature
+  max_rain: !input max_precipitation_probability
+  max_wind: !input max_wind_speed
+  readiness_entity: !input readiness_entity
+  min_readiness: !input min_readiness
+  suggestion_entity: !input suggestion_entity
+  accepted: !input accepted_suggestions
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ states(suggestion_entity) in accepted
+         and states(readiness_entity) | is_number
+         and states(readiness_entity) | float >= min_readiness | float }}
+
+actions:
+  - action: weather.get_forecasts
+    target:
+      entity_id: "{{ weather_entity }}"
+    data:
+      type: daily
+    response_variable: forecasts
+  - variables:
+      target_date: >-
+        {{ (now() + timedelta(days=1 if day == 'tomorrow' else 0)).date() | string }}
+      day_forecast: >-
+        {%- set ns = namespace(found=none) -%}
+        {%- for item in forecasts[weather_entity].forecast
+           if ns.found is none
+           and (as_local(as_datetime(item.datetime)).date() | string) == target_date -%}
+          {%- set ns.found = item -%}
+        {%- endfor -%}
+        {{ ns.found }}
+      readiness: "{{ states(readiness_entity) }}"
+      suggestion: "{{ states(suggestion_entity) }}"
+  - condition: template
+    value_template: >-
+      {% set f = day_forecast %}
+      {{ f is mapping
+         and f.temperature is number
+         and min_temperature | float <= f.temperature <= max_temperature | float
+         and (f.precipitation_probability is not number
+              or f.precipitation_probability <= max_rain | float)
+         and (f.wind_speed is not number or f.wind_speed <= max_wind | float) }}
+  - variables:
+      forecast_text: >-
+        {{ 'Tomorrow' if day == 'tomorrow' else 'Today' }}:
+        {{ day_forecast.temperature | round(0) }}
+        {{ state_attr(weather_entity, 'temperature_unit') or '' }}
+        {%- if day_forecast.precipitation_probability is number -%}
+        , {{ day_forecast.precipitation_probability | round(0) }}% chance of rain
+        {%- endif -%}
+        {%- if day_forecast.wind_speed is number -%}
+        , wind {{ day_forecast.wind_speed | round(0) }}
+        {{ state_attr(weather_entity, 'wind_speed_unit') or '' }}
+        {%- endif -%}
+        . Readiness {{ readiness | round(0) }}, suggestion: {{ suggestion }}.
+  - sequence: !input good_weather_action
+
+mode: single

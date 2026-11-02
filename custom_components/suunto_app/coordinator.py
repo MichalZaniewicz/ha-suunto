@@ -2705,6 +2705,8 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "pte": workout.get("pte"),
                     "recovery_time_hours": workout.get("recovery_time_hours"),
                     "tags": workout.get("tags"),
+                    # Route rankings ("Fastest time on this route"...).
+                    "achievement_count": len(workout.get("achievements") or []),
                 },
             )
         _LOGGER.debug(

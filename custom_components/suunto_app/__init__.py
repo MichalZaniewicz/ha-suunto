@@ -9,9 +9,10 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers import config_validation as cv, issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.typing import ConfigType
 
 from .ai_insight import SuuntoAiInsight
 from .ai_weekly import SuuntoAiWeekly
@@ -36,6 +37,9 @@ from .const import (
 )
 from .coordinator import SuuntoActivityCoordinator, SuuntoDailyCoordinator
 from .llm_api import async_setup_llm_api, async_unload_llm_api
+from .services import async_setup_services
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 @dataclass
@@ -71,6 +75,12 @@ def suunto_device_info(entry: SuuntoAppConfigEntry) -> DeviceInfo:
         manufacturer=device.get("manufacturer") or "Suunto",
         model=device.get("model") or "Suunto App (unofficial)",
     )
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the read-only actions (services.py), once for all accounts."""
+    async_setup_services(hass)
+    return True
 
 
 async def async_setup_entry(

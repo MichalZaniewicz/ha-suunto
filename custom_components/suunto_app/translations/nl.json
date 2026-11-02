@@ -312,6 +312,316 @@
         "sat": "Zaterdag",
         "sun": "Zondag"
       }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Met woon-werkritten",
+        "only": "Alleen woon-werkritten",
+        "exclude": "Zonder woon-werkritten"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Elk",
+        "daily": "Dagelijkse analyse",
+        "weekly": "Weekoverzicht"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Rust",
+        "easy": "Licht",
+        "moderate": "Matig",
+        "hard": "Intensief"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Laatste 7 dagen",
+        "month": "Deze maand",
+        "year": "Dit jaar",
+        "lifetime": "Altijd",
+        "gear": "Uitrusting"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "Nieuwe training",
+      "description": "Wordt geactiveerd wanneer een nieuwe training Home Assistant bereikt, nadat het horloge met de Suunto-app heeft gesynchroniseerd.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Alleen deze sporten. Leeg voor elke sport."
+        },
+        "min_distance_km": {
+          "name": "Minimale afstand",
+          "description": "Alleen trainingen van minstens deze afstand."
+        },
+        "min_duration_minutes": {
+          "name": "Minimale duur",
+          "description": "Alleen trainingen van minstens deze duur."
+        },
+        "commute": {
+          "name": "Woon-werkritten",
+          "description": "Of woon-werkritten meetellen."
+        },
+        "with_achievement": {
+          "name": "Alleen met routerecord",
+          "description": "Alleen trainingen met een routeklassering, zoals de snelste tijd op deze route."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Wakker",
+      "description": "Wordt geactiveerd wanneer de slaap van afgelopen nacht binnen is: na de ochtendsynchronisatie van het horloge, niet op het moment van wakker worden.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "sleep_below_hours": {
+          "name": "Korter geslapen dan",
+          "description": "Alleen als afgelopen nacht korter was."
+        },
+        "sleep_above_hours": {
+          "name": "Langer geslapen dan",
+          "description": "Alleen als afgelopen nacht langer was."
+        },
+        "readiness_below": {
+          "name": "Gereedheid onder",
+          "description": "Alleen als de gereedheid onder deze waarde ligt."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "AI-rapport klaar",
+      "description": "Wordt geactiveerd wanneer de dagelijkse AI-analyse of de wekelijkse AI-samenvatting klaar is.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "report": {
+          "name": "Rapport",
+          "description": "Welk rapport."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "Aan het herstellen",
+      "description": "Controleert of de hersteltijd van de laatste training nog loopt.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Training vandaag",
+      "description": "Controleert of er vandaag een training is vastgelegd.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Alleen deze sporten tellen. Leeg voor elke sport."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Gereedheid",
+      "description": "Controleert de gereedheid van vandaag (0-100). Een onbekende gereedheid slaagt niet.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "above": {
+          "name": "Boven",
+          "description": "Slaagt wanneer de waarde erboven ligt."
+        },
+        "below": {
+          "name": "Onder",
+          "description": "Slaagt wanneer de waarde eronder ligt."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Trainingsadvies",
+      "description": "Controleert het trainingsadvies van vandaag.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "suggestion": {
+          "name": "Advies",
+          "description": "Slaagt wanneer het advies een van deze is."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Slaap afgelopen nacht",
+      "description": "Controleert hoe lang je afgelopen nacht hebt geslapen. Een nog niet gesynchroniseerde nacht slaagt niet.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor elk account."
+        },
+        "above": {
+          "name": "Meer dan",
+          "description": "Slaagt wanneer afgelopen nacht langer was."
+        },
+        "below": {
+          "name": "Minder dan",
+          "description": "Slaagt wanneer afgelopen nacht korter was."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Gereedheid ophalen",
+      "description": "Geeft de gereedheid van vandaag, het trainingsadvies, HRV en rusthartslag ten opzichte van je norm, de herstelbalans, de vorm en de hersteltijd van de laatste training.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Slaap ophalen",
+      "description": "Geeft afgelopen nacht in detail, dutjes, recente nachten met gemiddelden, het slaapdoel, de normen en de slaapregelmaat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        },
+        "nights": {
+          "name": "Nachten",
+          "description": "Hoeveel recente nachten tonen en middelen (standaard 7)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Trainingen ophalen",
+      "description": "Geeft de trainingen in een datumbereik, nieuwste eerst, met totalen. Beslaat de laatste 90 dagen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        },
+        "start_date": {
+          "name": "Startdatum",
+          "description": "Eerste dag. Leeg om Dagen terug te tellen vanaf de einddatum."
+        },
+        "end_date": {
+          "name": "Einddatum",
+          "description": "Laatste dag. Standaard vandaag."
+        },
+        "days": {
+          "name": "Dagen",
+          "description": "Dagen terug vanaf de einddatum als er geen startdatum is (standaard 7)."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Alleen deze sport, op de Suunto-naam of een deel ervan, bijvoorbeeld Cycling."
+        },
+        "limit": {
+          "name": "Limiet",
+          "description": "Hoeveel trainingen tonen (standaard 20). De totalen beslaan altijd het hele bereik."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Trainingsbelasting ophalen",
+      "description": "Geeft fitheid, vermoeidheid en vorm, ACWR, het weekdoel en een tabel week voor week.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        },
+        "weeks": {
+          "name": "Weken",
+          "description": "Hoeveel kalenderweken in de tabel (standaard 4)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Vandaag ophalen",
+      "description": "Geeft de stappen en calorieën van vandaag ten opzichte van de doelen, de laatste hartslag, de trainingen van vandaag, stress en de laatste synchronisatie van het horloge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Totalen ophalen",
+      "description": "Geeft totalen voor de laatste 7 dagen, deze maand, dit jaar, altijd en per uitrusting.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        },
+        "period": {
+          "name": "Periode",
+          "description": "Alleen één deel. Leeg voor alle."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Records ophalen",
+      "description": "Geeft persoonlijke records, beste prestaties op standaardafstanden, VO2max en fitheidsleeftijd.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Inzichten ophalen",
+      "description": "Geeft je persoonlijke patronen, aerobe ontkoppeling, slaapregelmaat, de dagelijkse samenvatting en de laatste AI-rapporten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "Sports Tracker-API bereikbaar",
+      "wellness_reachable": "24/7-dataserver bereikbaar",
+      "accounts_loaded": "Geladen accounts",
+      "account_state": "Accountstatus",
+      "daily_update": "Update dagelijkse gegevens",
+      "activity_update": "Update activiteit",
+      "watch_last_synced": "Laatste synchronisatie horloge",
+      "workouts_in_window": "Trainingen (laatste 90 dagen)",
+      "ai_configured": "AI ingesteld"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "Er zijn nog geen Suunto-gegevens. Wacht op de eerste update na de installatie."
+    },
+    "unknown_entry": {
+      "message": "Geen Suunto-account met ID {entry_id}."
     }
   }
 }

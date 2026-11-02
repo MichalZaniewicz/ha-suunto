@@ -110,20 +110,23 @@ def _when(moment: datetime | None) -> str | None:
     return f"{_dated(local.date())} {local.strftime('%H:%M')}"
 
 
-def _clean(value: Any) -> Any:
+def _clean(value: Any, iso: bool = False) -> Any:
     """JSON-ready copy: dates and times readable, floats rounded, and every
-    unknown value dropped so the model is not told about fields with no data."""
+    unknown value dropped so the model is not told about fields with no data.
+
+    ``iso`` (the actions in services.py): dates and local times as ISO 8601
+    instead, so templates can parse them."""
     if isinstance(value, datetime):
-        return _when(value)
+        return dt_util.as_local(value).isoformat() if iso else _when(value)
     if isinstance(value, date):
-        return _dated(value)
+        return value.isoformat() if iso else _dated(value)
     if isinstance(value, float):
         return round(value, 2)
     if isinstance(value, dict):
-        out = {key: _clean(item) for key, item in value.items()}
+        out = {key: _clean(item, iso) for key, item in value.items()}
         return {key: item for key, item in out.items() if item not in (None, "", [], {})}
     if isinstance(value, (list, tuple)):
-        return [_clean(item) for item in value]
+        return [_clean(item, iso) for item in value]
     return value
 
 

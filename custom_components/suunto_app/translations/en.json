@@ -312,6 +312,316 @@
         "sat": "Saturday",
         "sun": "Sunday"
       }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Include commutes",
+        "only": "Only commutes",
+        "exclude": "Without commutes"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Any",
+        "daily": "Daily insight",
+        "weekly": "Weekly summary"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Rest",
+        "easy": "Easy",
+        "moderate": "Moderate",
+        "hard": "Hard"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Last 7 days",
+        "month": "This month",
+        "year": "This year",
+        "lifetime": "Lifetime",
+        "gear": "Gear"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "New workout",
+      "description": "Triggers when a new workout reaches Home Assistant, after the watch has synced to the Suunto app.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Only these sports. Leave empty for any sport."
+        },
+        "min_distance_km": {
+          "name": "Minimum distance",
+          "description": "Only workouts at least this far."
+        },
+        "min_duration_minutes": {
+          "name": "Minimum duration",
+          "description": "Only workouts at least this long."
+        },
+        "commute": {
+          "name": "Commutes",
+          "description": "Whether commutes count."
+        },
+        "with_achievement": {
+          "name": "Only with a route record",
+          "description": "Only workouts that earned a route ranking, such as the fastest time on this route."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Woke up",
+      "description": "Triggers when last night's sleep has synced in: after the morning watch sync, not at the moment you wake up.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "sleep_below_hours": {
+          "name": "Slept less than",
+          "description": "Only when last night was shorter than this."
+        },
+        "sleep_above_hours": {
+          "name": "Slept more than",
+          "description": "Only when last night was longer than this."
+        },
+        "readiness_below": {
+          "name": "Readiness below",
+          "description": "Only when readiness is below this value."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "AI report ready",
+      "description": "Triggers when the daily AI insight or the weekly AI summary is ready.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "report": {
+          "name": "Report",
+          "description": "Which report."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "Recovering",
+      "description": "Tests if the recovery time of the last workout is still running.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Workout today",
+      "description": "Tests if a workout has been logged today.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Only these sports count. Leave empty for any sport."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Readiness",
+      "description": "Tests today's readiness (0-100). Unknown readiness does not pass.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "above": {
+          "name": "Above",
+          "description": "Passes when the value is above this."
+        },
+        "below": {
+          "name": "Below",
+          "description": "Passes when the value is below this."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Training suggestion",
+      "description": "Tests today's training suggestion.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "suggestion": {
+          "name": "Suggestion",
+          "description": "Passes when the suggestion is one of these."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Last night's sleep",
+      "description": "Tests how long you slept last night. A night that has not synced yet does not pass.",
+      "fields": {
+        "config_entry": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for any account."
+        },
+        "above": {
+          "name": "More than",
+          "description": "Passes when last night was longer than this."
+        },
+        "below": {
+          "name": "Less than",
+          "description": "Passes when last night was shorter than this."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Get readiness",
+      "description": "Returns today's readiness, the training suggestion, HRV and resting heart rate against your baselines, recovery balance, form and the recovery time of the last workout.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Get sleep",
+      "description": "Returns last night in detail, naps, recent nights with averages, the sleep goal, baselines and sleep regularity.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        },
+        "nights": {
+          "name": "Nights",
+          "description": "How many recent nights to list and average (default 7)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Get workouts",
+      "description": "Returns the workouts in a date range, newest first, with totals. Covers the last 90 days.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        },
+        "start_date": {
+          "name": "Start date",
+          "description": "First day. Leave empty to count Days back from the end date."
+        },
+        "end_date": {
+          "name": "End date",
+          "description": "Last day. Defaults to today."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Days back from the end date when no start date is set (default 7)."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Only this sport, by its Suunto name or part of it, for example Cycling."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "How many workouts to list (default 20). The totals always cover the whole range."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Get training load",
+      "description": "Returns fitness, fatigue and form, ACWR, the weekly goal and a week-by-week table.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        },
+        "weeks": {
+          "name": "Weeks",
+          "description": "How many calendar weeks in the table (default 4)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Get today",
+      "description": "Returns today's steps and calories against the goals, the latest heart rate, today's workouts, stress and the last watch sync.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Get totals",
+      "description": "Returns totals for the last 7 days, this month, this year, lifetime and per piece of gear.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        },
+        "period": {
+          "name": "Period",
+          "description": "Only one part. Leave empty for all of them."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Get records",
+      "description": "Returns personal records, best efforts for standard distances, VO2max and fitness age.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Get insights",
+      "description": "Returns your personal patterns, aerobic decoupling, sleep regularity, the daily brief and the latest AI reports.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "Sports Tracker API reachable",
+      "wellness_reachable": "24/7 data server reachable",
+      "accounts_loaded": "Accounts loaded",
+      "account_state": "Account state",
+      "daily_update": "Daily data update",
+      "activity_update": "Activity update",
+      "watch_last_synced": "Watch last synced",
+      "workouts_in_window": "Workouts (last 90 days)",
+      "ai_configured": "AI configured"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "No Suunto data is available yet. Wait for the first update after setup."
+    },
+    "unknown_entry": {
+      "message": "No Suunto account with the ID {entry_id}."
     }
   }
 }

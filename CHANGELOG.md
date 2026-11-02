@@ -3,6 +3,44 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.39b1
+- **Suunto triggers and conditions in the automation editor.** Add trigger
+  and Add condition now list Suunto's own entries, with fields instead of
+  event names and templates (Home Assistant 2025.12 or newer). Triggers:
+  **New workout** (sport, minimum distance, minimum duration, commutes
+  only/excluded, only with a route record), **Woke up** (slept less or
+  more than, readiness below) and **AI report ready** (daily, weekly or
+  either). Conditions: **Recovering**, **Workout today** (optionally a
+  sport), **Readiness** (above/below), **Training suggestion** (one of
+  rest/easy/moderate/hard) and **Last night's sleep** (more/less than; a
+  night not synced yet does not pass). Each takes an optional account. The
+  `suunto_app_*` events stay as they were; the triggers listen to them and
+  give the same data as `trigger.data` and `trigger.event.data`. The
+  new-workout event gained `achievement_count`.
+- **Read-only actions with a response.** `suunto_app.get_workouts`,
+  `get_sleep`, `get_readiness`, `get_training_load`, `get_today`,
+  `get_totals`, `get_records` and `get_insights` return the same answers
+  Assist gets from its Suunto tools, for scripts and templates
+  (`response_variable`). Dates and times come as ISO 8601 in local time.
+  No request to Suunto, nothing changed.
+- **Logbook entries.** New workouts, wake-ups and AI reports show up as one
+  readable line in the logbook, e.g. "new workout: Cycling, 32.4 km,
+  1:12 h, TSS 85" or "woke up after 7:40 h of sleep, readiness 72", in the
+  server language, under the matching event entity.
+- **System information.** Settings > System > Repairs > System information
+  has a Suunto section: whether both Sports Tracker servers are reachable,
+  how many accounts are loaded, whether the last daily and activity updates
+  worked, when the watch last synced, the workouts in the 90-day window
+  and whether the AI is set up. No account name or e-mail, so it is safe
+  to paste into an issue.
+- **Two new blueprints (11 now).** **Bedtime Reminder** counts back from
+  the next alarm on your phone (the Companion app's "Next alarm" sensor)
+  by your sleep goal plus the time to fall asleep and reminds you in time
+  to wind down. **Good Weather For A Workout** checks a weather entity's
+  forecast for today or tomorrow at the hour you pick and runs your action
+  when the temperature, rain and wind are right and your training
+  suggestion and readiness agree.
+
 ## 1.0.38
 - **Weekly AI summary.** Once a week, on the day and hour you choose under
   Configure > AI (default Sunday 19:00), the AI model you picked for the

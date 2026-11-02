@@ -1,0 +1,94 @@
+blueprint:
+  name: "Suunto: Bedtime Reminder"
+  description: >
+    Reminds you to go to bed in time to get your usual sleep before the next
+    alarm on your phone. Reads the "Next alarm" sensor of the Home Assistant
+    Companion app, works back by your sleep goal plus the time you need to
+    fall asleep, and runs your action a bit earlier, so there is time to wind
+    down. Use it for a notification, to dim the lights, or both.
+
+
+    Your sleep goal from the Suunto app is the `goal_sleep_hours` attribute
+    of the Suunto "Basal metabolic rate" sensor. Inside the action, use
+    `{{ lights_out }}` (the time to be asleep by, e.g. 22:45),
+    `{{ alarm_time }}` and `{{ sleep_goal }}`. Runs at most once per alarm.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/bedtime_reminder.yaml
+  input:
+    next_alarm:
+      name: Next alarm sensor
+      description: >-
+        The Companion app's "Next alarm" sensor on your phone
+        (sensor.<phone>_next_alarm). Android only.
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    sleep_goal:
+      name: Sleep goal
+      description: How long you want to sleep.
+      default: 8
+      selector:
+        number:
+          min: 4
+          max: 12
+          step: 0.25
+          unit_of_measurement: h
+    fall_asleep_minutes:
+      name: Time to fall asleep
+      description: Added on top of the sleep goal.
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 5
+          unit_of_measurement: min
+    wind_down_minutes:
+      name: Remind me this much earlier
+      description: How long before lights-out the action runs.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 5
+          unit_of_measurement: min
+    reminder_action:
+      name: Reminder action
+      description: >-
+        What to do, e.g. a notification "Lights out at {{ lights_out }} for
+        {{ sleep_goal }} h of sleep before your {{ alarm_time }} alarm".
+      selector:
+        action: {}
+
+trigger_variables:
+  alarm_entity: !input next_alarm
+  goal_hours: !input sleep_goal
+  fall_asleep: !input fall_asleep_minutes
+  wind_down: !input wind_down_minutes
+
+triggers:
+  # now() makes Home Assistant re-check this every minute; it fires once when
+  # it turns true, and again only for a new alarm.
+  - trigger: template
+    value_template: >-
+      {% set alarm = states(alarm_entity) | as_datetime(none) %}
+      {% if alarm is none or alarm <= now() %}
+        false
+      {% else %}
+        {{ now() >= alarm - timedelta(hours=goal_hours | float(8),
+             minutes=fall_asleep | float(0) + wind_down | float(0)) }}
+      {% endif %}
+
+actions:
+  - variables:
+      alarm_time: "{{ as_local(states(alarm_entity) | as_datetime).strftime('%H:%M') }}"
+      sleep_goal: "{{ goal_hours }}"
+      lights_out: >-
+        {{ as_local((states(alarm_entity) | as_datetime)
+           - timedelta(hours=goal_hours | float(8), minutes=fall_asleep | float(0))
+           ).strftime('%H:%M') }}
+  - sequence: !input reminder_action
+
+mode: single
