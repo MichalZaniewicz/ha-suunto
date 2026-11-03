@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.39b1
+## 1.0.39
 - **Suunto triggers and conditions in the automation editor.** Add trigger
   and Add condition now list Suunto's own entries, with fields instead of
   event names and templates (Home Assistant 2025.12 or newer). Triggers:
