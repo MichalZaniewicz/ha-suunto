@@ -31,7 +31,7 @@
       "init": {
         "title": "Opciones de Suunto App",
         "menu_options": {
-          "settings": "Intervalos y datos de combustible",
+          "settings": "Ajustes generales",
           "ai": "Análisis diario y resumen semanal con IA",
           "gear_add": "Añadir equipo a seguir",
           "gear_service": "Marcar equipo como revisado (volver a 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervalos y datos de combustible",
+        "title": "Ajustes generales",
         "data": {
           "fast_scan_interval": "Intervalo de datos en vivo (minutos)",
           "scan_interval": "Intervalo de datos históricos (minutos)",
           "fuel_l_per_100km": "Consumo del coche",
-          "fuel_price_per_litre": "Precio del combustible por litro"
+          "fuel_price_per_litre": "Precio del combustible por litro",
+          "calendar_feed_enabled": "Enlace de calendario para otros",
+          "sport_colors": "Colores de los deportes"
         },
         "data_description": {
           "fast_scan_interval": "Cada cuánto actualizar los datos en vivo (frecuencia cardiaca, pasos y energía del día).",
           "scan_interval": "Cada cuánto actualizar los datos históricos (sueño, entrenamientos, carga, líneas base). Mantenlo moderado, es una API no oficial.",
           "fuel_l_per_100km": "Para el ahorro de los trayectos: el combustible que habría gastado tu coche en la misma distancia.",
-          "fuel_price_per_litre": "En tu moneda. Para el dinero ahorrado en los trayectos."
+          "fuel_price_per_litre": "En tu moneda. Para el dinero ahorrado en los trayectos.",
+          "calendar_feed_enabled": "Un enlace .ics privado al calendario de entrenamientos (últimos 90 días) para un entrenador o una pareja, sin cuenta de Home Assistant. El enlace aparece en el sensor Enlace del calendario. Quien tenga el enlace ve los entrenamientos, nunca la ruta, el sueño ni la preparación. Desactivarlo y volver a activarlo da un enlace nuevo y el anterior deja de funcionar.",
+          "sport_colors": "Opcional. Un deporte por línea, con su nombre tal como lo muestran las tarjetas y un color, por ejemplo \"Cycling: #2e7e9e\" o \"Running: orange\". Cada deporte ya tiene su color en todas las tarjetas; estas líneas lo sustituyen. Vacío: colores automáticos."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Trayectos al trabajo este mes" },
       "commute_year": { "name": "Trayectos al trabajo este año" },
       "ai_insight": { "name": "Análisis con IA" },
-      "ai_weekly_summary": { "name": "Resumen semanal con IA" }
+      "ai_weekly_summary": { "name": "Resumen semanal con IA" },
+      "calendar_feed": { "name": "Enlace del calendario" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recuperando" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "El reloj Suunto no se ha sincronizado",
       "description": "No hay datos nuevos del reloj de **{account}** desde {last_sync} (hace {hours} horas). Abre la app Suunto en el móvil con el Bluetooth activado para sincronizar el reloj. Este aviso desaparece solo tras la próxima sincronización."
+    },
+    "sport_colors_unmatched": {
+      "title": "Colores de los deportes de Suunto: algunas líneas no coinciden con ningún deporte",
+      "description": "Estas líneas de Configurar > Ajustes generales > Colores de los deportes de **{account}** no coinciden con ningún deporte: {lines}. Escribe el nombre del deporte tal como lo muestran las tarjetas, luego dos puntos y un color. Deportes conocidos: {sports}. Este aviso desaparece cuando todas las líneas coinciden."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

@@ -31,7 +31,7 @@
       "init": {
         "title": "Suunto App Optionen",
         "menu_options": {
-          "settings": "Intervalle und Kraftstoffwerte",
+          "settings": "Allgemeine Einstellungen",
           "ai": "KI-Analyse täglich und wöchentlich",
           "gear_add": "Ausrüstung hinzufügen",
           "gear_service": "Ausrüstung als gewartet markieren (auf 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervalle und Kraftstoffwerte",
+        "title": "Allgemeine Einstellungen",
         "data": {
           "fast_scan_interval": "Intervall für Live-Daten (Minuten)",
           "scan_interval": "Intervall für Verlaufsdaten (Minuten)",
           "fuel_l_per_100km": "Kraftstoffverbrauch des Autos",
-          "fuel_price_per_litre": "Kraftstoffpreis pro Liter"
+          "fuel_price_per_litre": "Kraftstoffpreis pro Liter",
+          "calendar_feed_enabled": "Kalenderlink für andere",
+          "sport_colors": "Sportarten-Farben"
         },
         "data_description": {
           "fast_scan_interval": "Wie oft Live-Daten aktualisiert werden (aktuelle Herzfrequenz, Schritte und Energie des Tages).",
           "scan_interval": "Wie oft Verlaufsdaten aktualisiert werden (Schlaf, Workouts, Trainingslast, Basiswerte). Maßvoll halten, es ist eine inoffizielle API.",
           "fuel_l_per_100km": "Für die Pendel-Ersparnis: der Kraftstoff, den dein Auto auf derselben Strecke verbraucht hätte.",
-          "fuel_price_per_litre": "In deiner Währung. Für das beim Pendeln gesparte Geld."
+          "fuel_price_per_litre": "In deiner Währung. Für das beim Pendeln gesparte Geld.",
+          "calendar_feed_enabled": "Ein privater .ics-Link zum Trainingskalender (letzte 90 Tage) für einen Trainer oder Partner, ohne Home-Assistant-Konto. Der Link erscheint im Sensor Kalenderlink. Wer den Link hat, sieht die Trainings, nie die Route, den Schlaf oder die Bereitschaft. Aus- und wieder Einschalten erzeugt einen neuen Link, der alte funktioniert dann nicht mehr.",
+          "sport_colors": "Optional. Eine Sportart pro Zeile, mit dem Namen wie in den Karten und einer Farbe, z. B. \"Cycling: #2e7e9e\" oder \"Running: orange\". Jede Sportart hat in allen Karten schon ihre eigene Farbe, diese Zeilen ersetzen sie. Leer: automatische Farben."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Pendelstrecke diesen Monat" },
       "commute_year": { "name": "Pendelstrecke dieses Jahr" },
       "ai_insight": { "name": "KI-Analyse" },
-      "ai_weekly_summary": { "name": "KI-Wochenrückblick" }
+      "ai_weekly_summary": { "name": "KI-Wochenrückblick" },
+      "calendar_feed": { "name": "Kalenderlink" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Erholung" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "Suunto-Uhr wurde nicht synchronisiert",
       "description": "Keine neuen Daten von der Uhr von **{account}** seit {last_sync} (vor {hours} Stunden). Öffne die Suunto-App auf dem Handy mit eingeschaltetem Bluetooth, um die Uhr zu synchronisieren. Dieser Hinweis verschwindet nach der nächsten Synchronisierung von selbst."
+    },
+    "sport_colors_unmatched": {
+      "title": "Suunto-Sportarten-Farben: manche Zeilen passen zu keiner Sportart",
+      "description": "Diese Zeilen unter Konfigurieren > Allgemeine Einstellungen > Sportarten-Farben von **{account}** passen zu keiner Sportart: {lines}. Schreibe den Namen der Sportart wie in den Karten, dann einen Doppelpunkt und eine Farbe. Bekannte Sportarten: {sports}. Dieser Hinweis verschwindet, sobald jede Zeile passt."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

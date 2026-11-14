@@ -22,6 +22,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -46,6 +47,7 @@ from .const import (
     CONF_AI_TASK_ENTITY,
     CONF_AI_WEEKLY_DAY,
     CONF_AI_WEEKLY_HOUR,
+    CONF_CALENDAR_FEED_ENABLED,
     CONF_EMAIL,
     CONF_FAST_SCAN_INTERVAL,
     CONF_FUEL_CONSUMPTION,
@@ -54,9 +56,11 @@ from .const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
+    CONF_SPORT_COLORS,
     DEFAULT_AI_HOUR,
     DEFAULT_AI_WEEKLY_DAY,
     DEFAULT_AI_WEEKLY_HOUR,
+    DEFAULT_CALENDAR_FEED_ENABLED,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_FUEL_CONSUMPTION,
     DEFAULT_FUEL_PRICE,
@@ -214,6 +218,8 @@ class SuuntoAppOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Polling intervals and the fuel figures behind the commute savings."""
         if user_input is not None:
+            # An emptied text field is left out of user_input: clear it then.
+            user_input.setdefault(CONF_SPORT_COLORS, "")
             return self._save(**user_input)
 
         opts = self.config_entry.options
@@ -265,6 +271,16 @@ class SuuntoAppOptionsFlow(OptionsFlow):
                         min=0, max=100, step=0.01, mode=NumberSelectorMode.BOX
                     )
                 ),
+                vol.Required(
+                    CONF_CALENDAR_FEED_ENABLED,
+                    default=opts.get(
+                        CONF_CALENDAR_FEED_ENABLED, DEFAULT_CALENDAR_FEED_ENABLED
+                    ),
+                ): BooleanSelector(),
+                vol.Optional(
+                    CONF_SPORT_COLORS,
+                    description={"suggested_value": opts.get(CONF_SPORT_COLORS)},
+                ): TextSelector(TextSelectorConfig(multiline=True)),
             }
         )
         return self.async_show_form(step_id="settings", data_schema=schema)

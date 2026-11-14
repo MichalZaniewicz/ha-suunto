@@ -68,6 +68,13 @@ _LANGUAGE_NAMES = {
     "it": "Italian",
     "nl": "Dutch",
     "pt": "Portuguese",
+    "uk": "Ukrainian",
+    "ru": "Russian",
+    "fi": "Finnish",
+    "sv": "Swedish",
+    "da": "Danish",
+    "nb": "Norwegian (Bokmål)",
+    "cs": "Czech",
 }
 
 # Per-section call, so a card can color each section on its own.
@@ -231,6 +238,125 @@ _LABELS: dict[str, dict[str, Any]] = {
         "statuses": {"good": "Bom", "ok": "OK", "caution": "Cuidado", "rest": "Descanso"},
         "sections": {"sleep": "Sono", "recovery": "Saúde e recuperação",
                      "training": "Treino", "activity": "Atividade diária"},
+    },
+    "uk": {
+        "title": "Аналіз ШІ",
+        "advice": "Поради",
+        "warning": "Увага",
+        "statuses": {
+            "good": "Добре",
+            "ok": "OK",
+            "caution": "Обережно",
+            "rest": "Відпочинок",
+        },
+        "sections": {
+            "sleep": "Сон",
+            "recovery": "Здоров'я та відновлення",
+            "training": "Тренування",
+            "activity": "Денна активність",
+        },
+    },
+    "ru": {
+        "title": "Анализ ИИ",
+        "advice": "Советы",
+        "warning": "Внимание",
+        "statuses": {
+            "good": "Хорошо",
+            "ok": "Норма",
+            "caution": "Осторожно",
+            "rest": "Отдых",
+        },
+        "sections": {
+            "sleep": "Сон",
+            "recovery": "Здоровье и восстановление",
+            "training": "Тренировки",
+            "activity": "Дневная активность",
+        },
+    },
+    "fi": {
+        "title": "AI-analyysi",
+        "advice": "Neuvot",
+        "warning": "Huomio",
+        "statuses": {
+            "good": "Hyvä",
+            "ok": "OK",
+            "caution": "Varovasti",
+            "rest": "Lepo",
+        },
+        "sections": {
+            "sleep": "Uni",
+            "recovery": "Terveys ja palautuminen",
+            "training": "Harjoittelu",
+            "activity": "Päivän aktiivisuus",
+        },
+    },
+    "sv": {
+        "title": "AI-analys",
+        "advice": "Råd",
+        "warning": "Varning",
+        "statuses": {
+            "good": "Bra",
+            "ok": "OK",
+            "caution": "Försiktigt",
+            "rest": "Vila",
+        },
+        "sections": {
+            "sleep": "Sömn",
+            "recovery": "Hälsa och återhämtning",
+            "training": "Träning",
+            "activity": "Daglig aktivitet",
+        },
+    },
+    "da": {
+        "title": "AI-analyse",
+        "advice": "Råd",
+        "warning": "Advarsel",
+        "statuses": {
+            "good": "Godt",
+            "ok": "OK",
+            "caution": "Forsigtig",
+            "rest": "Hvile",
+        },
+        "sections": {
+            "sleep": "Søvn",
+            "recovery": "Sundhed og restitution",
+            "training": "Træning",
+            "activity": "Daglig aktivitet",
+        },
+    },
+    "nb": {
+        "title": "AI-analyse",
+        "advice": "Råd",
+        "warning": "Advarsel",
+        "statuses": {
+            "good": "Bra",
+            "ok": "OK",
+            "caution": "Forsiktig",
+            "rest": "Hvile",
+        },
+        "sections": {
+            "sleep": "Søvn",
+            "recovery": "Helse og restitusjon",
+            "training": "Trening",
+            "activity": "Daglig aktivitet",
+        },
+    },
+    "cs": {
+        "title": "AI analýza",
+        "advice": "Rady",
+        "warning": "Pozor",
+        "statuses": {
+            "good": "Dobré",
+            "ok": "OK",
+            "caution": "Opatrně",
+            "rest": "Odpočinek",
+        },
+        "sections": {
+            "sleep": "Spánek",
+            "recovery": "Zdraví a zotavení",
+            "training": "Trénink",
+            "activity": "Denní aktivita",
+        },
     },
 }
 

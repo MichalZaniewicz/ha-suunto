@@ -37,7 +37,9 @@ DEFAULT_AI_HOUR = 10
 # (Settings > System > General), not the user profile's; or one of these.
 CONF_AI_LANGUAGE = "ai_language"
 AI_LANGUAGE_AUTO = "auto"
-AI_LANGUAGES = ("en", "pl", "de", "fr", "es", "it", "nl", "pt")
+AI_LANGUAGES = (
+    "en", "pl", "de", "fr", "es", "it", "nl", "pt", "uk", "ru", "fi", "sv", "da", "nb", "cs",
+)
 # Weekly AI summary (ai_weekly.py): the weekday and hour it runs at, through
 # the same ai_task entity. Paused with its own switch, like the daily one.
 CONF_AI_WEEKLY_DAY = "ai_weekly_day"
@@ -45,6 +47,21 @@ CONF_AI_WEEKLY_HOUR = "ai_weekly_hour"
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 DEFAULT_AI_WEEKLY_DAY = "sun"
 DEFAULT_AI_WEEKLY_HOUR = 19
+
+# "Calendar link for others" (calendar_feed.py): a private .ics link to the
+# workouts calendar for a coach or a partner without a Home Assistant
+# account. Off by default. The link's secret lives in the entry's data while
+# the option is on; turning it off drops it, so off and on again gives a new
+# link and the old one stops working.
+# Sport colours (Configure): one "Cycling: #2e7e9e" a line, overriding the
+# automatic colour the cards give each sport (see coordinator._sport_colors).
+CONF_SPORT_COLORS = "sport_colors"
+# Size of the cards' sport palette: --sc-sport-1 .. --sc-sport-12.
+SPORT_PALETTE_SIZE = 12
+
+CONF_CALENDAR_FEED_ENABLED = "calendar_feed_enabled"
+DEFAULT_CALENDAR_FEED_ENABLED = False
+CONF_CALENDAR_FEED_TOKEN = "calendar_feed_token"
 
 # Defaults - two cadences: live data (HR/steps) refreshes often; heavy history
 # (sleep, workouts, derived metrics) refreshes infrequently.

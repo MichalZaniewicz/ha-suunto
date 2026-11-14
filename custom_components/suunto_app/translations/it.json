@@ -31,7 +31,7 @@
       "init": {
         "title": "Opzioni Suunto App",
         "menu_options": {
-          "settings": "Intervalli e dati carburante",
+          "settings": "Impostazioni generali",
           "ai": "Analisi IA giornaliera e riepilogo settimanale",
           "gear_add": "Aggiungi attrezzatura da monitorare",
           "gear_service": "Segna attrezzatura come revisionata (azzera a 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervalli e dati carburante",
+        "title": "Impostazioni generali",
         "data": {
           "fast_scan_interval": "Intervallo dati in tempo reale (minuti)",
           "scan_interval": "Intervallo dati storici (minuti)",
           "fuel_l_per_100km": "Consumo dell'auto",
-          "fuel_price_per_litre": "Prezzo del carburante al litro"
+          "fuel_price_per_litre": "Prezzo del carburante al litro",
+          "calendar_feed_enabled": "Link al calendario per altri",
+          "sport_colors": "Colori degli sport"
         },
         "data_description": {
           "fast_scan_interval": "Ogni quanto aggiornare i dati in tempo reale (frequenza cardiaca, passi ed energia del giorno).",
           "scan_interval": "Ogni quanto aggiornare i dati storici (sonno, allenamenti, carico, valori di base). Tienilo moderato, è un'API non ufficiale.",
           "fuel_l_per_100km": "Per il risparmio dei tragitti: il carburante che l'auto avrebbe consumato sulla stessa distanza.",
-          "fuel_price_per_litre": "Nella tua valuta. Per il denaro risparmiato nei tragitti."
+          "fuel_price_per_litre": "Nella tua valuta. Per il denaro risparmiato nei tragitti.",
+          "calendar_feed_enabled": "Un link .ics privato al calendario degli allenamenti (ultimi 90 giorni) per un allenatore o un partner, senza account Home Assistant. Il link compare nel sensore Link al calendario. Chiunque abbia il link vede gli allenamenti, mai il percorso, il sonno o la prontezza. Disattivarlo e riattivarlo genera un nuovo link e quello vecchio smette di funzionare.",
+          "sport_colors": "Facoltativo. Uno sport per riga, con il nome come lo mostrano le schede e un colore, per esempio \"Cycling: #2e7e9e\" o \"Running: orange\". Ogni sport ha già il suo colore in tutte le schede, queste righe lo sostituiscono. Vuoto: colori automatici."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Tragitti casa-lavoro questo mese" },
       "commute_year": { "name": "Tragitti casa-lavoro quest'anno" },
       "ai_insight": { "name": "Analisi IA" },
-      "ai_weekly_summary": { "name": "Riepilogo settimanale IA" }
+      "ai_weekly_summary": { "name": "Riepilogo settimanale IA" },
+      "calendar_feed": { "name": "Link al calendario" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "In recupero" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "L'orologio Suunto non si è sincronizzato",
       "description": "Nessun nuovo dato dall'orologio di **{account}** dal {last_sync} ({hours} ore fa). Apri l'app Suunto sul telefono con il Bluetooth attivo per sincronizzare l'orologio. Questo avviso scompare da solo dopo la prossima sincronizzazione."
+    },
+    "sport_colors_unmatched": {
+      "title": "Colori degli sport Suunto: alcune righe non corrispondono a nessuno sport",
+      "description": "Queste righe in Configura > Impostazioni generali > Colori degli sport di **{account}** non corrispondono a nessuno sport: {lines}. Scrivi il nome dello sport come lo mostrano le schede, poi i due punti e un colore. Sport noti: {sports}. Questo avviso scompare quando ogni riga corrisponde."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

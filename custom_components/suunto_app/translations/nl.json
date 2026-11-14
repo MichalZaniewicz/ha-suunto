@@ -31,7 +31,7 @@
       "init": {
         "title": "Suunto App opties",
         "menu_options": {
-          "settings": "Intervallen en brandstofgegevens",
+          "settings": "Algemene instellingen",
           "ai": "Dagelijkse AI-analyse en weekoverzicht",
           "gear_add": "Materiaal toevoegen om te volgen",
           "gear_service": "Materiaal als onderhouden markeren (terug naar 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervallen en brandstofgegevens",
+        "title": "Algemene instellingen",
         "data": {
           "fast_scan_interval": "Interval live gegevens (minuten)",
           "scan_interval": "Interval historische gegevens (minuten)",
           "fuel_l_per_100km": "Brandstofverbruik van de auto",
-          "fuel_price_per_litre": "Brandstofprijs per liter"
+          "fuel_price_per_litre": "Brandstofprijs per liter",
+          "calendar_feed_enabled": "Agendalink voor anderen",
+          "sport_colors": "Sportkleuren"
         },
         "data_description": {
           "fast_scan_interval": "Hoe vaak live gegevens worden vernieuwd (hartslag, stappen en energie van vandaag).",
           "scan_interval": "Hoe vaak historische gegevens worden vernieuwd (slaap, trainingen, belasting, basiswaarden). Houd dit bescheiden, het is een onofficiële API.",
           "fuel_l_per_100km": "Voor de woon-werkbesparing: de brandstof die je auto op dezelfde afstand zou verbruiken.",
-          "fuel_price_per_litre": "In je eigen valuta. Voor het geld dat je met woon-werkritten bespaart."
+          "fuel_price_per_litre": "In je eigen valuta. Voor het geld dat je met woon-werkritten bespaart.",
+          "calendar_feed_enabled": "Een privé .ics-link naar de trainingsagenda (laatste 90 dagen) voor een coach of partner, zonder Home Assistant-account. De link staat in de sensor Agendalink. Iedereen met de link ziet de trainingen, nooit de route, de slaap of de paraatheid. Uit- en weer aanzetten geeft een nieuwe link en de oude werkt dan niet meer.",
+          "sport_colors": "Optioneel. Eén sport per regel, met de naam zoals de kaarten hem tonen en een kleur, bijvoorbeeld \"Cycling: #2e7e9e\" of \"Running: orange\". Elke sport heeft al een eigen kleur in alle kaarten; deze regels vervangen die. Leeg: automatische kleuren."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Woon-werkafstand deze maand" },
       "commute_year": { "name": "Woon-werkafstand dit jaar" },
       "ai_insight": { "name": "AI-analyse" },
-      "ai_weekly_summary": { "name": "AI-weekoverzicht" }
+      "ai_weekly_summary": { "name": "AI-weekoverzicht" },
+      "calendar_feed": { "name": "Agendalink" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Aan het herstellen" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "Suunto-horloge is niet gesynchroniseerd",
       "description": "Geen nieuwe gegevens van het horloge van **{account}** sinds {last_sync} ({hours} uur geleden). Open de Suunto-app op je telefoon met Bluetooth aan om het horloge te synchroniseren. Deze melding verdwijnt vanzelf na de volgende synchronisatie."
+    },
+    "sport_colors_unmatched": {
+      "title": "Suunto-sportkleuren: sommige regels passen bij geen enkele sport",
+      "description": "Deze regels onder Configureren > Algemene instellingen > Sportkleuren van **{account}** passen bij geen enkele sport: {lines}. Schrijf de naam van de sport zoals de kaarten hem tonen, dan een dubbele punt en een kleur. Bekende sporten: {sports}. Deze melding verdwijnt zodra elke regel past."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

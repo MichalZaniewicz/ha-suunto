@@ -1,0 +1,643 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (epävirallinen)",
+        "description": "Kirjaudu Suunto-sovelluksen (Sports Tracker) tililläsi. Integraatio käyttää Suunnon yksityistä sovellusrajapintaa ja voi rikkoa Suunnon käyttöehtoja - käytä omaa tiliäsi omalla vastuullasi. Salasanaa käytetään vain istuntotunnuksen hakemiseen eikä sitä tallenneta; tallennetaan vain peruttavissa oleva istuntotunnus.",
+        "data": {
+          "email": "Sähköposti",
+          "password": "Salasana"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Kirjaudu Suuntoon uudelleen",
+        "description": "Tilin {email} istunto on vanhentunut. Anna salasana uudelleen uutta istuntotunnusta varten (salasanaa ei tallenneta).",
+        "data": {
+          "password": "Salasana"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Kirjautuminen hylättiin. Tarkista sähköposti ja salasana (myös tilin kaksivaiheinen tunnistautuminen voi estää kirjautumisen).",
+      "cannot_connect": "Suunnon/Sports Trackerin palvelimiin ei saatu yhteyttä."
+    },
+    "abort": {
+      "already_configured": "Tämä Suunto-tili on jo määritetty.",
+      "reauth_successful": "Uudelleenkirjautuminen onnistui."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Suunto App -asetukset",
+        "menu_options": {
+          "settings": "Yleiset asetukset",
+          "ai": "Päivittäinen AI-analyysi ja viikkoyhteenveto",
+          "gear_add": "Lisää seurattava varuste",
+          "gear_service": "Merkitse varuste huolletuksi (nollaa 0 km:iin)",
+          "gear_remove": "Poista varuste"
+        }
+      },
+      "settings": {
+        "title": "Yleiset asetukset",
+        "data": {
+          "fast_scan_interval": "Reaaliaikaisten tietojen väli (minuuttia)",
+          "scan_interval": "Historiatietojen väli (minuuttia)",
+          "fuel_l_per_100km": "Auton polttoaineenkulutus",
+          "fuel_price_per_litre": "Polttoaineen litrahinta",
+          "calendar_feed_enabled": "Kalenterilinkki muille",
+          "sport_colors": "Lajien värit"
+        },
+        "data_description": {
+          "fast_scan_interval": "Kuinka usein reaaliaikaiset tiedot päivitetään (nykyinen syke, päivän askeleet ja energia).",
+          "scan_interval": "Kuinka usein historiaan perustuvat tiedot päivitetään (uni, harjoitukset, harjoituskuorma, perustasot). Pidä väli maltillisena - kyseessä on epävirallinen rajapinta.",
+          "fuel_l_per_100km": "Käytetään työmatkasäästöjen laskemiseen: polttoaine, jonka auto olisi kuluttanut samalla matkalla.",
+          "fuel_price_per_litre": "Omassa valuutassasi. Käytetään työmatkapyöräilyllä säästetyn rahan laskemiseen.",
+          "calendar_feed_enabled": "Yksityinen .ics-linkki harjoituskalenteriin (viimeiset 90 päivää) valmentajalle tai kumppanille ilman Home Assistant -tiliä. Linkki näkyy Kalenterilinkki-anturissa. Linkin haltija näkee harjoitukset, mutta ei koskaan reittiä, unta tai valmiutta. Kun asetus kytketään pois ja takaisin päälle, syntyy uusi linkki ja vanha lakkaa toimimasta.",
+          "sport_colors": "Valinnainen. Yksi laji riviä kohden: lajin nimi niin kuin kortit sen näyttävät ja väri, esimerkiksi \"Cycling: #2e7e9e\" tai \"Running: orange\". Jokaisella lajilla on jo oma värinsä kaikissa korteissa; nämä rivit korvaavat sen. Tyhjä: automaattiset värit."
+        }
+      },
+      "ai": {
+        "title": "Päivittäinen AI-analyysi ja viikkoyhteenveto",
+        "description": "Kerran päivässä valitsemasi AI-malli lukee uni-, palautumis- ja harjoitustietosi ja kirjoittaa lyhyen katsauksen neuvoineen. Määritä AI-palveluntarjoaja (Google Gemini, OpenAI, Anthropic, Ollama...) ensin tavallisena Home Assistant -integraationa - API-avainta ei tallenneta tänne. Terveystietosi lähetetään kyseiselle palveluntarjoajalle (paikallinen Ollama pitää ne kotona). Ei lääketieteellinen neuvo. Kerran viikossa (päivä ja tunti alla) se kirjoittaa myös yhteenvedon harjoitusviikosta ja suunnitelman seuraavalle viikolle.",
+        "data": {
+          "ai_task_entity": "AI-malli",
+          "ai_extra_context": "Omat huomiosi AI:lle",
+          "ai_fallback_hour": "Varakellonaika",
+          "ai_language": "Kieli",
+          "ai_weekly_day": "Viikkoyhteenvedon päivä",
+          "ai_weekly_hour": "Viikkoyhteenvedon tunti"
+        },
+        "data_description": {
+          "ai_task_entity": "Käytettävä AI Task -entiteetti. Jätä tyhjäksi, jos haluat poistaa toiminnon käytöstä.",
+          "ai_extra_context": "Valinnainen, esim. tavoitteesi tai tuleva kilpailu: \"Valmistaudun maratoniin 12. huhtikuuta\".",
+          "ai_fallback_hour": "Analyysi tehdään aamun kellosynkronoinnin jälkeen. Jos uutta yötä ei ole tullut tähän tuntiin mennessä, analyysi tehdään silti. Jos viime yö on synkronoitu vain osittain (nukut pitkään), se odottaa vielä enintään 3 tuntia.",
+          "ai_language": "Automaattinen seuraa Home Assistantin palvelimen kieltä (Asetukset > Järjestelmä > Yleiset), ei käyttäjäprofiilisi kieltä.",
+          "ai_weekly_day": "Yhteenveto kattaa seitsemän päivää, jotka päättyvät tähän päivään. Keskeytä se Automaattinen viikoittainen AI-yhteenveto -kytkimellä.",
+          "ai_weekly_hour": "Jos Home Assistant on tuolloin pois päältä, yhteenveto tehdään 24 tunnin kuluessa käynnistyksestä."
+        }
+      },
+      "gear_add": {
+        "title": "Lisää varuste",
+        "description": "Seuraa ketjun, renkaiden, kenkien tai minkä tahansa muun matkaa yhden lajin mukaan. Jokainen kyseisen lajin kilometri lasketaan tästä eteenpäin.",
+        "data": {
+          "name": "Nimi",
+          "activity": "Laji",
+          "start_km": "Jo kertynyt matka",
+          "interval_km": "Huoltoväli"
+        },
+        "data_description": {
+          "interval_km": "Anturi ilmoittaa huollon olevan ajankohtainen, kun tämä matka täyttyy. Anna 0, jos huoltoväliä ei ole."
+        }
+      },
+      "gear_service": {
+        "title": "Merkitse huolletuksi",
+        "description": "Nollaa valitun varusteen 0 km:iin ja aloittaa laskennan alusta.",
+        "data": {
+          "gear": "Varuste"
+        }
+      },
+      "gear_remove": {
+        "title": "Poista varuste",
+        "data": {
+          "gear": "Varuste"
+        }
+      }
+    },
+    "abort": {
+      "no_activities": "Kokonaistilastoja ei ole vielä. Odota ensimmäistä tietojen päivitystä ja yritä uudelleen.",
+      "no_ai_task": "AI Task -integraatio ei ole käytettävissä. Määritä ensin AI-palveluntarjoaja (Google Gemini, OpenAI, Anthropic, Ollama...) Home Assistantin versiossa 2025.8 tai uudemmassa."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Unen kesto" },
+      "sleep_deep": { "name": "Syvä uni" },
+      "sleep_light": { "name": "Kevyt uni" },
+      "sleep_rem": { "name": "REM-uni" },
+      "sleep_avg_hr": { "name": "Unen keskisyke" },
+      "sleep_min_hr": { "name": "Unen alin syke" },
+      "sleep_quality": { "name": "Unen laatu" },
+      "sleep_spo2": { "name": "Unen veren happipitoisuus" },
+      "sleep_hrv": { "name": "Unen HRV" },
+      "sleep_time": { "name": "Nukahtamisaika" },
+      "wake_time": { "name": "Heräämisaika" },
+      "nap_duration": { "name": "Päiväunien kesto" },
+      "recovery_balance": { "name": "Palautumistasapaino" },
+      "stress_state": { "name": "Stressitila" },
+      "stress_today": { "name": "Stressi tänään" },
+      "last_sync": { "name": "Kellon viimeisin synkronointi" },
+      "daily_steps": { "name": "Päivän askeleet" },
+      "daily_energy": { "name": "Päivän energia" },
+      "daily_total_energy": { "name": "Päivän kokonaisenergia" },
+      "bmr": { "name": "Perusaineenvaihdunta" },
+      "current_hr": { "name": "Nykyinen syke" },
+      "last_activity": { "name": "Viimeisin laji" },
+      "last_workout_start": { "name": "Viimeisimmän harjoituksen alku" },
+      "days_since_last_workout": { "name": "Päiviä edellisestä harjoituksesta" },
+      "last_workout_location": { "name": "Viimeisimmän harjoituksen sijainti" },
+      "last_distance": { "name": "Viimeisimmän harjoituksen matka" },
+      "last_duration": { "name": "Viimeisimmän harjoituksen kesto" },
+      "last_ascent": { "name": "Viimeisimmän harjoituksen nousu" },
+      "last_descent": { "name": "Viimeisimmän harjoituksen lasku" },
+      "last_ascent_time": { "name": "Viimeisimmän harjoituksen nousuaika" },
+      "last_descent_time": { "name": "Viimeisimmän harjoituksen laskuaika" },
+      "last_min_altitude": { "name": "Viimeisimmän harjoituksen alin korkeus" },
+      "last_max_altitude": { "name": "Viimeisimmän harjoituksen ylin korkeus" },
+      "last_pte": { "name": "Viimeisimmän harjoituksen harjoitusvaikutus (PTE)" },
+      "last_epoc": { "name": "Viimeisimmän harjoituksen EPOC-huippu" },
+      "last_feeling": { "name": "Viimeisimmän harjoituksen tuntemus" },
+      "last_workout_tags": { "name": "Viimeisimmän harjoituksen tyyppi" },
+      "last_workout_weather": { "name": "Viimeisimmän harjoituksen sää" },
+      "last_workout_achievements": { "name": "Viimeisimmän harjoituksen saavutukset" },
+      "recovery_time": { "name": "Harjoituksen palautumisaika" },
+      "recovery_until": { "name": "Palautuminen valmis" },
+      "last_avg_hr": { "name": "Viimeisimmän harjoituksen keskisyke" },
+      "last_max_hr": { "name": "Viimeisimmän harjoituksen maksimisyke" },
+      "last_avg_speed": { "name": "Viimeisimmän harjoituksen keskinopeus" },
+      "last_avg_pace": { "name": "Viimeisimmän harjoituksen keskivauhti" },
+      "last_cadence": { "name": "Viimeisimmän harjoituksen kadenssi" },
+      "last_tss": { "name": "Viimeisimmän harjoituksen kuormitus (TSS)" },
+      "last_zone0": { "name": "Viimeisin harjoitus: aika sykealueen 1 alapuolella" },
+      "last_zone1": { "name": "Viimeisin harjoitus: aika sykealueella 1" },
+      "last_zone2": { "name": "Viimeisin harjoitus: aika sykealueella 2" },
+      "last_zone3": { "name": "Viimeisin harjoitus: aika sykealueella 3" },
+      "last_zone4": { "name": "Viimeisin harjoitus: aika sykealueella 4" },
+      "last_zone5": { "name": "Viimeisin harjoitus: aika sykealueella 5" },
+      "last_workout_laps": { "name": "Viimeisimmän harjoituksen kierrokset" },
+      "lifetime_distance": { "name": "Kokonaismatka" },
+      "lifetime_time": { "name": "Kokonaisharjoitusaika" },
+      "lifetime_energy": { "name": "Kokonaisenergia" },
+      "lifetime_workouts": { "name": "Harjoituksia yhteensä" },
+      "lifetime_days": { "name": "Aktiivisia päiviä yhteensä" },
+      "lifetime_by_activity": { "name": "Kokonaistilastot lajeittain" },
+      "year_distance": { "name": "Matka tänä vuonna" },
+      "year_time": { "name": "Harjoitusaika tänä vuonna" },
+      "year_energy": { "name": "Energia tänä vuonna" },
+      "year_workouts": { "name": "Harjoitukset tänä vuonna" },
+      "year_active_days": { "name": "Aktiiviset päivät tänä vuonna" },
+      "month_distance": { "name": "Matka tässä kuussa" },
+      "month_time": { "name": "Harjoitusaika tässä kuussa" },
+      "month_energy": { "name": "Energia tässä kuussa" },
+      "month_workouts": { "name": "Harjoitukset tässä kuussa" },
+      "month_active_days": { "name": "Aktiiviset päivät tässä kuussa" },
+      "training_records": { "name": "Harjoitusennätykset" },
+      "training_records_month": { "name": "Harjoitusennätykset (tämä kuukausi)" },
+      "training_records_year": { "name": "Harjoitusennätykset (tämä vuosi)" },
+      "current_streak": { "name": "Nykyinen putki" },
+      "best_efforts": { "name": "Parhaat suoritukset" },
+      "last_pct_hrmax": { "name": "Viimeisin harjoitus: % maksimisykkeestä" },
+      "last_cal_per_km": { "name": "Viimeisin harjoitus: kaloria per km" },
+      "last_ascent_rate": { "name": "Viimeisimmän harjoituksen nousunopeus" },
+      "last_stride": { "name": "Viimeisimmän harjoituksen askelpituus" },
+      "fitness_ctl": { "name": "Kunto (CTL)" },
+      "fatigue_atl": { "name": "Väsymys (ATL)" },
+      "form_tsb": { "name": "Vire (TSB)" },
+      "acwr": { "name": "Akuutin ja kroonisen kuorman suhde" },
+      "training_suggestion": {
+        "name": "Harjoitussuositus",
+        "state": {
+          "rest": "Lepo",
+          "easy": "Kevyt",
+          "moderate": "Kohtalainen",
+          "hard": "Kova"
+        }
+      },
+      "readiness": { "name": "Valmius" },
+      "hrv_baseline": { "name": "HRV-perustaso" },
+      "hrv_status": {
+        "name": "HRV-tila",
+        "state": {
+          "low": "Matala",
+          "balanced": "Tasapainossa",
+          "high": "Korkea"
+        }
+      },
+      "resting_hr": { "name": "Leposyke" },
+      "resting_hr_baseline": { "name": "Leposykkeen perustaso" },
+      "vo2max": { "name": "VO2max" },
+      "estimated_vo2max": { "name": "Arvioitu VO2max" },
+      "fitness_age": { "name": "Kuntoikä" },
+      "weekly_distance": { "name": "Matka (7 päivää)" },
+      "weekly_time": { "name": "Harjoitusaika (7 päivää)" },
+      "weekly_steps": { "name": "Askeleet (7 päivää)" },
+      "workouts_7d": { "name": "Harjoitukset (7 päivää)" },
+      "workouts_30d": { "name": "Harjoitukset (30 päivää)" },
+      "workouts_recent": { "name": "Viimeisimmät harjoitukset" },
+      "form_forecast": { "name": "Vireennuste" },
+      "daily_brief": { "name": "Päivän katsaus" },
+      "sleep_regularity": { "name": "Unen säännöllisyys" },
+      "social_jetlag": { "name": "Sosiaalinen jetlag" },
+      "aerobic_decoupling": { "name": "Aerobinen irtikytkeytyminen" },
+      "personal_insights": { "name": "Henkilökohtaiset havainnot" },
+      "commute_month": { "name": "Työmatkat tässä kuussa" },
+      "commute_year": { "name": "Työmatkat tänä vuonna" },
+      "ai_insight": { "name": "AI-analyysi" },
+      "ai_weekly_summary": { "name": "Viikoittainen AI-yhteenveto" },
+      "calendar_feed": { "name": "Kalenterilinkki" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Palautumassa" },
+      "workout_today": { "name": "Harjoitus tänään" },
+      "unusual_recovery": { "name": "Poikkeava palautuminen" }
+    },
+    "calendar": {
+      "workouts": { "name": "Harjoitukset" }
+    },
+    "switch": {
+      "ai_insight_enabled": { "name": "Automaattinen AI-analyysi" },
+      "ai_weekly_enabled": { "name": "Automaattinen viikoittainen AI-yhteenveto" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "Luo AI-analyysi" },
+      "sync_now": { "name": "Synkronoi nyt" },
+      "ai_weekly_generate": { "name": "Luo viikoittainen AI-yhteenveto" }
+    },
+    "event": {
+      "workout": {
+        "name": "Harjoitus",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Uusi harjoitus"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Aamu",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Heräsi"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "AI-raportti",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Päivittäinen analyysi",
+              "weekly_summary": "Viikkoyhteenveto"
+            }
+          }
+        }
+      }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Suunto-kello ei ole synkronoinut",
+      "description": "Tilin **{account}** kellosta ei ole tullut uusia tietoja. Viimeisin synkronointi: {last_sync} ({hours} tuntia sitten). Avaa Suunto-sovellus puhelimessa Bluetooth päällä synkronoidaksesi kellon. Tämä ilmoitus häviää itsestään seuraavan synkronoinnin jälkeen."
+    },
+    "sport_colors_unmatched": {
+      "title": "Suunnon lajivärit: osa riveistä ei vastaa mitään lajia",
+      "description": "Nämä tilin **{account}** rivit kohdassa Määritä > Yleiset asetukset > Lajien värit eivät vastaa mitään lajia: {lines}. Kirjoita lajin nimi niin kuin kortit sen näyttävät, sitten kaksoispiste ja väri. Tunnetut lajit: {sports}. Tämä ilmoitus häviää, kun jokainen rivi vastaa lajia."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automaattinen (Home Assistantin kieli)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Maanantai",
+        "tue": "Tiistai",
+        "wed": "Keskiviikko",
+        "thu": "Torstai",
+        "fri": "Perjantai",
+        "sat": "Lauantai",
+        "sun": "Sunnuntai"
+      }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Työmatkat mukaan",
+        "only": "Vain työmatkat",
+        "exclude": "Ilman työmatkoja"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Mikä tahansa",
+        "daily": "Päivittäinen analyysi",
+        "weekly": "Viikkoyhteenveto"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Lepo",
+        "easy": "Kevyt",
+        "moderate": "Kohtalainen",
+        "hard": "Kova"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Viimeiset 7 päivää",
+        "month": "Tämä kuukausi",
+        "year": "Tämä vuosi",
+        "lifetime": "Kaikkiaan",
+        "gear": "Varusteet"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "Uusi harjoitus",
+      "description": "Laukeaa, kun uusi harjoitus saapuu Home Assistantiin kellon synkronoiduttua Suunto-sovellukseen.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "activity": {
+          "name": "Laji",
+          "description": "Vain nämä lajit. Jätä tyhjäksi, jos mikä tahansa laji käy."
+        },
+        "min_distance_km": {
+          "name": "Vähimmäismatka",
+          "description": "Vain harjoitukset, jotka ovat vähintään näin pitkiä."
+        },
+        "min_duration_minutes": {
+          "name": "Vähimmäiskesto",
+          "description": "Vain harjoitukset, jotka kestävät vähintään näin kauan."
+        },
+        "commute": {
+          "name": "Työmatkat",
+          "description": "Lasketaanko työmatkat mukaan."
+        },
+        "with_achievement": {
+          "name": "Vain reittiennätyksen kanssa",
+          "description": "Vain harjoitukset, joista on saatu reittisijoitus, kuten nopein aika tällä reitillä."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Heräsi",
+      "description": "Laukeaa, kun viime yön uni on synkronoitu: aamun kellosynkronoinnin jälkeen, ei heräämishetkellä.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "sleep_below_hours": {
+          "name": "Nukuttu alle",
+          "description": "Vain kun viime yö oli tätä lyhyempi."
+        },
+        "sleep_above_hours": {
+          "name": "Nukuttu yli",
+          "description": "Vain kun viime yö oli tätä pidempi."
+        },
+        "readiness_below": {
+          "name": "Valmius alle",
+          "description": "Vain kun valmius on alle tämän arvon."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "AI-raportti valmis",
+      "description": "Laukeaa, kun päivittäinen AI-analyysi tai viikoittainen AI-yhteenveto on valmis.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "report": {
+          "name": "Raportti",
+          "description": "Mikä raportti."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "Palautumassa",
+      "description": "Tarkistaa, onko viimeisimmän harjoituksen palautumisaika vielä käynnissä.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Harjoitus tänään",
+      "description": "Tarkistaa, onko tänään kirjattu harjoitus.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "activity": {
+          "name": "Laji",
+          "description": "Vain nämä lajit lasketaan. Jätä tyhjäksi, jos mikä tahansa laji käy."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Valmius",
+      "description": "Tarkistaa tämän päivän valmiuden (0-100). Tuntematon valmius ei täytä ehtoa.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "above": {
+          "name": "Yli",
+          "description": "Täyttyy, kun arvo on tätä suurempi."
+        },
+        "below": {
+          "name": "Alle",
+          "description": "Täyttyy, kun arvo on tätä pienempi."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Harjoitussuositus",
+      "description": "Tarkistaa tämän päivän harjoitussuosituksen.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "suggestion": {
+          "name": "Suositus",
+          "description": "Täyttyy, kun suositus on jokin näistä."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Viime yön uni",
+      "description": "Tarkistaa, kuinka kauan nukuit viime yönä. Yö, jota ei ole vielä synkronoitu, ei täytä ehtoa.",
+      "fields": {
+        "config_entry": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos mikä tahansa tili käy."
+        },
+        "above": {
+          "name": "Yli",
+          "description": "Täyttyy, kun viime yö oli tätä pidempi."
+        },
+        "below": {
+          "name": "Alle",
+          "description": "Täyttyy, kun viime yö oli tätä lyhyempi."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Hae valmius",
+      "description": "Palauttaa tämän päivän valmiuden, harjoitussuosituksen, HRV:n ja leposykkeen suhteessa perustasoihisi, palautumistasapainon, vireen ja viimeisimmän harjoituksen palautumisajan.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Hae uni",
+      "description": "Palauttaa viime yön yksityiskohtaisesti, päiväunet, viimeisimmät yöt keskiarvoineen, unitavoitteen, perustasot ja unen säännöllisyyden.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        },
+        "nights": {
+          "name": "Yöt",
+          "description": "Kuinka monta viimeisintä yötä listataan ja keskiarvotetaan (oletus 7)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Hae harjoitukset",
+      "description": "Palauttaa aikavälin harjoitukset uusimmasta alkaen sekä yhteenlasketut arvot. Kattaa viimeiset 90 päivää.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        },
+        "start_date": {
+          "name": "Alkupäivä",
+          "description": "Ensimmäinen päivä. Jätä tyhjäksi, jos haluat laskea Päivät-kentän verran taaksepäin loppupäivästä."
+        },
+        "end_date": {
+          "name": "Loppupäivä",
+          "description": "Viimeinen päivä. Oletuksena tänään."
+        },
+        "days": {
+          "name": "Päivät",
+          "description": "Päiviä taaksepäin loppupäivästä, kun alkupäivää ei ole asetettu (oletus 7)."
+        },
+        "activity": {
+          "name": "Laji",
+          "description": "Vain tämä laji, sen Suunto-nimellä tai osalla siitä, esimerkiksi Cycling."
+        },
+        "limit": {
+          "name": "Raja",
+          "description": "Kuinka monta harjoitusta listataan (oletus 20). Yhteenlasketut arvot kattavat aina koko aikavälin."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Hae harjoituskuorma",
+      "description": "Palauttaa kunnon, väsymyksen ja vireen, ACWR:n, viikkotavoitteen ja viikoittaisen taulukon.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        },
+        "weeks": {
+          "name": "Viikot",
+          "description": "Kuinka monta kalenteriviikkoa taulukossa on (oletus 4)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Hae tämä päivä",
+      "description": "Palauttaa tämän päivän askeleet ja kalorit suhteessa tavoitteisiin, viimeisimmän sykkeen, päivän harjoitukset, stressin ja kellon viimeisimmän synkronoinnin.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Hae yhteenvedot",
+      "description": "Palauttaa yhteenlasketut arvot viimeisiltä 7 päivältä, tältä kuukaudelta, tältä vuodelta, kaikkiaan ja varusteittain.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        },
+        "period": {
+          "name": "Jakso",
+          "description": "Vain yksi osa. Jätä tyhjäksi, jos haluat kaikki."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Hae ennätykset",
+      "description": "Palauttaa henkilökohtaiset ennätykset, parhaat suoritukset vakiomatkoilla, VO2maxin ja kuntoiän.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Hae havainnot",
+      "description": "Palauttaa henkilökohtaiset kaavasi, aerobisen irtikytkeytymisen, unen säännöllisyyden, päivän katsauksen ja viimeisimmät AI-raportit.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "Sports Tracker API tavoitettavissa",
+      "wellness_reachable": "24/7-tietopalvelin tavoitettavissa",
+      "accounts_loaded": "Ladatut tilit",
+      "account_state": "Tilin tila",
+      "daily_update": "Päivittäisten tietojen päivitys",
+      "activity_update": "Aktiivisuuden päivitys",
+      "watch_last_synced": "Kellon viimeisin synkronointi",
+      "workouts_in_window": "Harjoitukset (viimeiset 90 päivää)",
+      "ai_configured": "AI määritetty"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "Suunto-tietoja ei ole vielä saatavilla. Odota ensimmäistä päivitystä määrityksen jälkeen."
+    },
+    "unknown_entry": {
+      "message": "Suunto-tiliä tunnuksella {entry_id} ei ole."
+    }
+  }
+}

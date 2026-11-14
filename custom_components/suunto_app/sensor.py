@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
@@ -24,7 +25,14 @@ from homeassistant.helpers.update_coordinator import (
 from . import SuuntoAppConfigEntry, suunto_device_info
 from .ai_insight import MAX_STATE_LENGTH, SuuntoAiInsight
 from .ai_weekly import SuuntoAiWeekly
-from .const import CONF_GEAR, DOMAIN
+from .calendar_feed import feed_url
+from .const import (
+    CONF_CALENDAR_FEED_ENABLED,
+    CONF_CALENDAR_FEED_TOKEN,
+    CONF_GEAR,
+    DEFAULT_CALENDAR_FEED_ENABLED,
+    DOMAIN,
+)
 
 UNIT_BPM = "bpm"
 UNIT_KCAL = "kcal"
@@ -963,8 +971,14 @@ SENSORS: tuple[SuuntoAppSensorDescription, ...] = (
         key="lifetime_by_activity",
         translation_key="lifetime_by_activity",
         value_fn=lambda d: len((d.get("stats") or {}).get("by_activity") or []),
+        # The sports' colours ride here too, for the cards: sport_palette is
+        # each sport's slot 1-12 (kept for good), sport_colors your own ones
+        # from Configure, sport_colors_unmatched the lines that matched nothing.
         attributes_fn=lambda d: {
-            "activities": (d.get("stats") or {}).get("by_activity") or []
+            "activities": (d.get("stats") or {}).get("by_activity") or [],
+            "sport_palette": (d.get("sports") or {}).get("palette") or {},
+            "sport_colors": (d.get("sports") or {}).get("colors") or {},
+            "sport_colors_unmatched": (d.get("sports") or {}).get("unmatched") or [],
         },
     ),
     # --- This year's totals (a "year in review" snapshot) ---
@@ -1414,6 +1428,15 @@ async def async_setup_entry(
             )
         ):
             registry.async_remove(entity_id)
+    # The calendar feed's link - only while "Calendar link for others" is on.
+    if entry.options.get(
+        CONF_CALENDAR_FEED_ENABLED, DEFAULT_CALENDAR_FEED_ENABLED
+    ) and entry.data.get(CONF_CALENDAR_FEED_TOKEN):
+        async_add_entities([SuuntoCalendarFeedSensor(entry)])
+    elif entity_id := registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_calendar_feed"
+    ):
+        registry.async_remove(entity_id)
 
 
 class SuuntoAppSensor(
@@ -1618,3 +1641,30 @@ class SuuntoAiWeeklySensor(SensorEntity):
             "paused": not self._weekly.enabled,
             "error": self._weekly.last_error,
         }
+
+
+class SuuntoCalendarFeedSensor(SensorEntity):
+    """The link to the workouts calendar feed (calendar_feed.py), to paste
+    into a phone's or Google's "subscribe to a calendar". Exists only while
+    "Calendar link for others" is on; anyone with the link sees the workouts
+    of the last 90 days."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "calendar_feed"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_should_poll = False
+
+    def __init__(self, entry: SuuntoAppConfigEntry) -> None:
+        """Initialize the sensor."""
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_calendar_feed"
+        self._attr_device_info = suunto_device_info(entry)
+
+    @property
+    def available(self) -> bool:
+        return bool(self._entry.data.get(CONF_CALENDAR_FEED_TOKEN))
+
+    @property
+    def native_value(self) -> str | None:
+        token = self._entry.data.get(CONF_CALENDAR_FEED_TOKEN)
+        return feed_url(self.hass, token) if token else None

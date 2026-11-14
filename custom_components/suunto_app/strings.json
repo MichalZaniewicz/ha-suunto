@@ -31,7 +31,7 @@
       "init": {
         "title": "Suunto App options",
         "menu_options": {
-          "settings": "Intervals and fuel figures",
+          "settings": "General settings",
           "ai": "AI daily insight and weekly summary",
           "gear_add": "Add gear to track",
           "gear_service": "Mark gear as serviced (reset to 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervals and fuel figures",
+        "title": "General settings",
         "data": {
           "fast_scan_interval": "Live data interval (minutes)",
           "scan_interval": "History interval (minutes)",
           "fuel_l_per_100km": "Car fuel consumption",
-          "fuel_price_per_litre": "Fuel price per litre"
+          "fuel_price_per_litre": "Fuel price per litre",
+          "calendar_feed_enabled": "Calendar link for others",
+          "sport_colors": "Sport colours"
         },
         "data_description": {
           "fast_scan_interval": "How often to refresh live data (current heart rate, daily steps/energy).",
           "scan_interval": "How often to refresh history-based data (sleep, workouts, training load, baselines). Keep this modest - it is an unofficial API.",
           "fuel_l_per_100km": "Used for the commute savings: the fuel your car would have burned on the same distance.",
-          "fuel_price_per_litre": "In your own currency. Used for the money saved by commuting."
+          "fuel_price_per_litre": "In your own currency. Used for the money saved by commuting.",
+          "calendar_feed_enabled": "A private .ics link to the workouts calendar (last 90 days) for a coach or a partner, without a Home Assistant account. The link appears in the Calendar link sensor. Anyone with the link sees the workouts, never the route, the sleep or the readiness. Turning this off and on again gives a new link and the old one stops working.",
+          "sport_colors": "Optional. One sport a line, with its name as the cards show it and a colour, for example \"Cycling: #2e7e9e\" or \"Running: orange\". Every sport already has its own colour in every card; these lines replace it. Empty: automatic colours."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Commute distance this month" },
       "commute_year": { "name": "Commute distance this year" },
       "ai_insight": { "name": "AI insight" },
-      "ai_weekly_summary": { "name": "Weekly AI summary" }
+      "ai_weekly_summary": { "name": "Weekly AI summary" },
+      "calendar_feed": { "name": "Calendar link" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Recovering" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "Suunto watch has not synced",
       "description": "No new data from the watch of **{account}** since {last_sync} ({hours} hours ago). Open the Suunto app on your phone with Bluetooth on to sync the watch. This notice disappears by itself after the next sync."
+    },
+    "sport_colors_unmatched": {
+      "title": "Suunto sport colours: some lines match no sport",
+      "description": "These lines under Configure > General settings > Sport colours of **{account}** match no sport: {lines}. Write the sport's name as the cards show it, then a colon and a colour. Known sports: {sports}. This notice disappears once every line matches."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

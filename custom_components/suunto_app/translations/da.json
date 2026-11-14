@@ -1,0 +1,643 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (uofficiel)",
+        "description": "Log ind med din konto til Suunto-appen (Sports Tracker). Dette bruger Suuntos private app-API og kan være i strid med Suuntos servicevilkår - brug din egen konto på eget ansvar. Din adgangskode bruges kun til at hente en sessionstoken og gemmes IKKE; kun sessionstokenen, som kan tilbagekaldes, gemmes.",
+        "data": {
+          "email": "E-mail",
+          "password": "Adgangskode"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Godkend Suunto igen",
+        "description": "Sessionen for {email} er udløbet. Indtast din adgangskode igen for at få en ny sessionstoken (adgangskoden gemmes ikke).",
+        "data": {
+          "password": "Adgangskode"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login blev afvist. Tjek din e-mail/adgangskode (2FA på kontoen kan også blokere dette).",
+      "cannot_connect": "Kunne ikke få forbindelse til Suunto/Sports Tracker-serverne."
+    },
+    "abort": {
+      "already_configured": "Denne Suunto-konto er allerede konfigureret.",
+      "reauth_successful": "Godkendelsen lykkedes."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Indstillinger for Suunto App",
+        "menu_options": {
+          "settings": "Generelle indstillinger",
+          "ai": "Daglig AI-analyse og ugentlig opsummering",
+          "gear_add": "Tilføj udstyr, der skal følges",
+          "gear_service": "Markér udstyr som serviceret (nulstil til 0 km)",
+          "gear_remove": "Fjern udstyr"
+        }
+      },
+      "settings": {
+        "title": "Generelle indstillinger",
+        "data": {
+          "fast_scan_interval": "Interval for live-data (minutter)",
+          "scan_interval": "Interval for historik (minutter)",
+          "fuel_l_per_100km": "Bilens brændstofforbrug",
+          "fuel_price_per_litre": "Brændstofpris pr. liter",
+          "calendar_feed_enabled": "Kalenderlink til andre",
+          "sport_colors": "Sportsfarver"
+        },
+        "data_description": {
+          "fast_scan_interval": "Hvor ofte live-data opdateres (aktuel puls, daglige skridt/energi).",
+          "scan_interval": "Hvor ofte historikbaserede data opdateres (søvn, træninger, træningsbelastning, basislinjer). Hold det moderat - det er en uofficiel API.",
+          "fuel_l_per_100km": "Bruges til pendlerbesparelsen: det brændstof, din bil ville have brugt på samme strækning.",
+          "fuel_price_per_litre": "I din egen valuta. Bruges til de penge, du sparer ved at pendle.",
+          "calendar_feed_enabled": "Et privat .ics-link til træningskalenderen (seneste 90 dage) til en træner eller en partner uden en Home Assistant-konto. Linket vises i sensoren Kalenderlink. Alle med linket kan se træningerne, men aldrig ruten, søvnen eller parathed. Slår du det fra og til igen, får du et nyt link, og det gamle holder op med at virke.",
+          "sport_colors": "Valgfrit. Én sport pr. linje med navnet, som kortene viser det, og en farve, for eksempel \"Cycling: #2e7e9e\" eller \"Running: orange\". Hver sport har allerede sin egen farve på alle kort; disse linjer erstatter den. Tom: automatiske farver."
+        }
+      },
+      "ai": {
+        "title": "Daglig AI-analyse og ugentlig opsummering",
+        "description": "En gang om dagen læser en AI-model efter eget valg dine data om søvn, restitution og træning og skriver en kort gennemgang med råd. Opsæt først AI-udbyderen (Google Gemini, OpenAI, Anthropic, Ollama...) som en almindelig Home Assistant-integration - der gemmes ingen API-nøgle her. Dine sundhedsdata sendes til den udbyder (en lokal Ollama holder dem hjemme). Ikke medicinsk rådgivning. En gang om ugen (dag og tidspunkt nedenfor) skriver den også en opsummering af træningsugen med en plan for den næste.",
+        "data": {
+          "ai_task_entity": "AI-model",
+          "ai_extra_context": "Dine noter til AI'en",
+          "ai_fallback_hour": "Reservetidspunkt",
+          "ai_language": "Sprog",
+          "ai_weekly_day": "Dag for ugentlig opsummering",
+          "ai_weekly_hour": "Tidspunkt for ugentlig opsummering"
+        },
+        "data_description": {
+          "ai_task_entity": "Den AI Task-enhed, der skal bruges. Lad feltet stå tomt for at slå funktionen fra.",
+          "ai_extra_context": "Valgfrit, f.eks. dit mål eller et kommende løb: \"Forbereder mig til et maraton den 12. april\".",
+          "ai_fallback_hour": "Analysen kører efter urets morgensynkronisering. Er der ikke kommet en ny nat inden dette tidspunkt, kører den alligevel. Er sidste nat kun delvist synkroniseret (du sover længe), venter den op til 3 timer mere.",
+          "ai_language": "Automatisk følger Home Assistants serversprog (Indstillinger > System > Generelt), ikke sproget i din brugerprofil.",
+          "ai_weekly_day": "Opsummeringen dækker de syv dage, der slutter på denne dag. Sæt den på pause med kontakten Automatisk ugentlig AI-opsummering.",
+          "ai_weekly_hour": "Er Home Assistant slukket på det tidspunkt, kører opsummeringen inden for 24 timer efter opstart."
+        }
+      },
+      "gear_add": {
+        "title": "Tilføj udstyr",
+        "description": "Følg distancen på en kæde, dæk, sko eller andet for én sport. Den tæller hver kilometer i den sport fra nu af.",
+        "data": {
+          "name": "Navn",
+          "activity": "Sport",
+          "start_km": "Distance, det allerede har kørt",
+          "interval_km": "Serviceinterval"
+        },
+        "data_description": {
+          "interval_km": "Sensoren melder, at service er nødvendig, når denne distance er nået. Brug 0 for intet interval."
+        }
+      },
+      "gear_service": {
+        "title": "Markér som serviceret",
+        "description": "Nulstiller det valgte udstyr til 0 km og tæller igen fra nu.",
+        "data": {
+          "gear": "Udstyr"
+        }
+      },
+      "gear_remove": {
+        "title": "Fjern udstyr",
+        "data": {
+          "gear": "Udstyr"
+        }
+      }
+    },
+    "abort": {
+      "no_activities": "Ingen livstidsstatistik endnu. Vent på den første dataopdatering, og prøv igen.",
+      "no_ai_task": "AI Task-integrationen er ikke tilgængelig. Opsæt først en AI-udbyder (Google Gemini, OpenAI, Anthropic, Ollama...) i Home Assistant 2025.8 eller nyere."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Søvnvarighed" },
+      "sleep_deep": { "name": "Dyb søvn" },
+      "sleep_light": { "name": "Let søvn" },
+      "sleep_rem": { "name": "REM-søvn" },
+      "sleep_avg_hr": { "name": "Gennemsnitlig puls under søvn" },
+      "sleep_min_hr": { "name": "Laveste puls under søvn" },
+      "sleep_quality": { "name": "Søvnkvalitet" },
+      "sleep_spo2": { "name": "Iltmætning under søvn" },
+      "sleep_hrv": { "name": "HRV under søvn" },
+      "sleep_time": { "name": "Sengetid" },
+      "wake_time": { "name": "Opvågningstidspunkt" },
+      "nap_duration": { "name": "Varighed af lur" },
+      "recovery_balance": { "name": "Restitutionsbalance" },
+      "stress_state": { "name": "Stresstilstand" },
+      "stress_today": { "name": "Stress i dag" },
+      "last_sync": { "name": "Seneste synkronisering af ur" },
+      "daily_steps": { "name": "Daglige skridt" },
+      "daily_energy": { "name": "Daglig energi" },
+      "daily_total_energy": { "name": "Daglig samlet energi" },
+      "bmr": { "name": "Basalstofskifte" },
+      "current_hr": { "name": "Aktuel puls" },
+      "last_activity": { "name": "Seneste aktivitet" },
+      "last_workout_start": { "name": "Start på seneste træning" },
+      "days_since_last_workout": { "name": "Dage siden seneste træning" },
+      "last_workout_location": { "name": "Sted for seneste træning" },
+      "last_distance": { "name": "Distance for seneste træning" },
+      "last_duration": { "name": "Varighed af seneste træning" },
+      "last_ascent": { "name": "Stigning på seneste træning" },
+      "last_descent": { "name": "Fald på seneste træning" },
+      "last_ascent_time": { "name": "Stigningstid på seneste træning" },
+      "last_descent_time": { "name": "Faldtid på seneste træning" },
+      "last_min_altitude": { "name": "Min. højde på seneste træning" },
+      "last_max_altitude": { "name": "Maks. højde på seneste træning" },
+      "last_pte": { "name": "Maksimal træningseffekt for seneste træning" },
+      "last_epoc": { "name": "Maks. EPOC for seneste træning" },
+      "last_feeling": { "name": "Følelse efter seneste træning" },
+      "last_workout_tags": { "name": "Type af seneste træning" },
+      "last_workout_weather": { "name": "Vejr under seneste træning" },
+      "last_workout_achievements": { "name": "Præstationer på seneste træning" },
+      "recovery_time": { "name": "Restitutionstid efter træning" },
+      "recovery_until": { "name": "Fuldt restitueret" },
+      "last_avg_hr": { "name": "Gennemsnitlig puls på seneste træning" },
+      "last_max_hr": { "name": "Maks. puls på seneste træning" },
+      "last_avg_speed": { "name": "Gennemsnitsfart på seneste træning" },
+      "last_avg_pace": { "name": "Gennemsnitstempo på seneste træning" },
+      "last_cadence": { "name": "Kadence på seneste træning" },
+      "last_tss": { "name": "Træningsbelastning (TSS) for seneste træning" },
+      "last_zone0": { "name": "Tid under pulszone 1 på seneste træning" },
+      "last_zone1": { "name": "Tid i pulszone 1 på seneste træning" },
+      "last_zone2": { "name": "Tid i pulszone 2 på seneste træning" },
+      "last_zone3": { "name": "Tid i pulszone 3 på seneste træning" },
+      "last_zone4": { "name": "Tid i pulszone 4 på seneste træning" },
+      "last_zone5": { "name": "Tid i pulszone 5 på seneste træning" },
+      "last_workout_laps": { "name": "Omgange på seneste træning" },
+      "lifetime_distance": { "name": "Distance (livstid)" },
+      "lifetime_time": { "name": "Træningstid (livstid)" },
+      "lifetime_energy": { "name": "Energi (livstid)" },
+      "lifetime_workouts": { "name": "Træninger (livstid)" },
+      "lifetime_days": { "name": "Aktive dage (livstid)" },
+      "lifetime_by_activity": { "name": "Livstid pr. aktivitet" },
+      "year_distance": { "name": "Distance i år" },
+      "year_time": { "name": "Træningstid i år" },
+      "year_energy": { "name": "Energi i år" },
+      "year_workouts": { "name": "Træninger i år" },
+      "year_active_days": { "name": "Aktive dage i år" },
+      "month_distance": { "name": "Distance denne måned" },
+      "month_time": { "name": "Træningstid denne måned" },
+      "month_energy": { "name": "Energi denne måned" },
+      "month_workouts": { "name": "Træninger denne måned" },
+      "month_active_days": { "name": "Aktive dage denne måned" },
+      "training_records": { "name": "Træningsrekorder" },
+      "training_records_month": { "name": "Træningsrekorder (denne måned)" },
+      "training_records_year": { "name": "Træningsrekorder (i år)" },
+      "current_streak": { "name": "Aktuel stime" },
+      "best_efforts": { "name": "Bedste tider" },
+      "last_pct_hrmax": { "name": "% af maks. puls på seneste træning" },
+      "last_cal_per_km": { "name": "Kalorier pr. km på seneste træning" },
+      "last_ascent_rate": { "name": "Stigningshastighed på seneste træning" },
+      "last_stride": { "name": "Skridtlængde på seneste træning" },
+      "fitness_ctl": { "name": "Kondition (CTL)" },
+      "fatigue_atl": { "name": "Træthed (ATL)" },
+      "form_tsb": { "name": "Form (TSB)" },
+      "acwr": { "name": "Akut:kronisk belastningsforhold" },
+      "training_suggestion": {
+        "name": "Træningsforslag",
+        "state": {
+          "rest": "Hvile",
+          "easy": "Let",
+          "moderate": "Moderat",
+          "hard": "Hård"
+        }
+      },
+      "readiness": { "name": "Parathed" },
+      "hrv_baseline": { "name": "HRV-basislinje" },
+      "hrv_status": {
+        "name": "HRV-status",
+        "state": {
+          "low": "Lav",
+          "balanced": "Balanceret",
+          "high": "Høj"
+        }
+      },
+      "resting_hr": { "name": "Hvilepuls" },
+      "resting_hr_baseline": { "name": "Basislinje for hvilepuls" },
+      "vo2max": { "name": "VO2max" },
+      "estimated_vo2max": { "name": "Estimeret VO2max" },
+      "fitness_age": { "name": "Konditionsalder" },
+      "weekly_distance": { "name": "Distance (7 dage)" },
+      "weekly_time": { "name": "Træningstid (7 dage)" },
+      "weekly_steps": { "name": "Skridt (7 dage)" },
+      "workouts_7d": { "name": "Træninger (7 dage)" },
+      "workouts_30d": { "name": "Træninger (30 dage)" },
+      "workouts_recent": { "name": "Seneste træninger" },
+      "form_forecast": { "name": "Formprognose" },
+      "daily_brief": { "name": "Dagligt overblik" },
+      "sleep_regularity": { "name": "Søvnregelmæssighed" },
+      "social_jetlag": { "name": "Social jetlag" },
+      "aerobic_decoupling": { "name": "Aerob afkobling" },
+      "personal_insights": { "name": "Personlige indsigter" },
+      "commute_month": { "name": "Pendlerdistance denne måned" },
+      "commute_year": { "name": "Pendlerdistance i år" },
+      "ai_insight": { "name": "AI-analyse" },
+      "ai_weekly_summary": { "name": "Ugentlig AI-opsummering" },
+      "calendar_feed": { "name": "Kalenderlink" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Restituerer" },
+      "workout_today": { "name": "Træning i dag" },
+      "unusual_recovery": { "name": "Usædvanlig restitution" }
+    },
+    "calendar": {
+      "workouts": { "name": "Træninger" }
+    },
+    "switch": {
+      "ai_insight_enabled": { "name": "Automatisk AI-analyse" },
+      "ai_weekly_enabled": { "name": "Automatisk ugentlig AI-opsummering" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "Generér AI-analyse" },
+      "sync_now": { "name": "Synkronisér nu" },
+      "ai_weekly_generate": { "name": "Generér ugentlig AI-opsummering" }
+    },
+    "event": {
+      "workout": {
+        "name": "Træning",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Ny træning"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Morgen",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Vågnede"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "AI-rapport",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Daglig analyse",
+              "weekly_summary": "Ugentlig opsummering"
+            }
+          }
+        }
+      }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Suunto-uret er ikke synkroniseret",
+      "description": "Ingen nye data fra uret på **{account}** siden {last_sync} ({hours} timer siden). Åbn Suunto-appen på din telefon med Bluetooth slået til for at synkronisere uret. Denne meddelelse forsvinder af sig selv efter næste synkronisering."
+    },
+    "sport_colors_unmatched": {
+      "title": "Suunto-sportsfarver: nogle linjer passer ikke til nogen sport",
+      "description": "Disse linjer under Konfigurer > Generelle indstillinger > Sportsfarver for **{account}** passer ikke til nogen sport: {lines}. Skriv sportens navn, som kortene viser det, efterfulgt af et kolon og en farve. Kendte sportsgrene: {sports}. Denne meddelelse forsvinder, når alle linjer passer."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automatisk (Home Assistants sprog)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Mandag",
+        "tue": "Tirsdag",
+        "wed": "Onsdag",
+        "thu": "Torsdag",
+        "fri": "Fredag",
+        "sat": "Lørdag",
+        "sun": "Søndag"
+      }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Medtag pendling",
+        "only": "Kun pendling",
+        "exclude": "Uden pendling"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Alle",
+        "daily": "Daglig analyse",
+        "weekly": "Ugentlig opsummering"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Hvile",
+        "easy": "Let",
+        "moderate": "Moderat",
+        "hard": "Hård"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Seneste 7 dage",
+        "month": "Denne måned",
+        "year": "I år",
+        "lifetime": "Livstid",
+        "gear": "Udstyr"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "Ny træning",
+      "description": "Udløses, når en ny træning når frem til Home Assistant, efter at uret er synkroniseret med Suunto-appen.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Kun disse sportsgrene. Lad feltet stå tomt for alle sportsgrene."
+        },
+        "min_distance_km": {
+          "name": "Minimumsdistance",
+          "description": "Kun træninger på mindst denne distance."
+        },
+        "min_duration_minutes": {
+          "name": "Minimumsvarighed",
+          "description": "Kun træninger af mindst denne varighed."
+        },
+        "commute": {
+          "name": "Pendling",
+          "description": "Om pendlerture tæller med."
+        },
+        "with_achievement": {
+          "name": "Kun med ruterekord",
+          "description": "Kun træninger, der har opnået en placering på ruten, f.eks. den hurtigste tid på denne rute."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Vågnede",
+      "description": "Udløses, når sidste nats søvn er synkroniseret: efter urets morgensynkronisering, ikke i det øjeblik du vågner.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "sleep_below_hours": {
+          "name": "Sov mindre end",
+          "description": "Kun når sidste nat var kortere end dette."
+        },
+        "sleep_above_hours": {
+          "name": "Sov mere end",
+          "description": "Kun når sidste nat var længere end dette."
+        },
+        "readiness_below": {
+          "name": "Parathed under",
+          "description": "Kun når parathed er under denne værdi."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "AI-rapport klar",
+      "description": "Udløses, når den daglige AI-analyse eller den ugentlige AI-opsummering er klar.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "report": {
+          "name": "Rapport",
+          "description": "Hvilken rapport."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "Restituerer",
+      "description": "Tester, om restitutionstiden efter seneste træning stadig løber.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Træning i dag",
+      "description": "Tester, om der er registreret en træning i dag.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Kun disse sportsgrene tæller. Lad feltet stå tomt for alle sportsgrene."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Parathed",
+      "description": "Tester dagens parathed (0-100). Ukendt parathed består ikke.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "above": {
+          "name": "Over",
+          "description": "Består, når værdien er over dette."
+        },
+        "below": {
+          "name": "Under",
+          "description": "Består, når værdien er under dette."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Træningsforslag",
+      "description": "Tester dagens træningsforslag.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "suggestion": {
+          "name": "Forslag",
+          "description": "Består, når forslaget er et af disse."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Sidste nats søvn",
+      "description": "Tester, hvor længe du sov i nat. En nat, der endnu ikke er synkroniseret, består ikke.",
+      "fields": {
+        "config_entry": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "above": {
+          "name": "Mere end",
+          "description": "Består, når sidste nat var længere end dette."
+        },
+        "below": {
+          "name": "Mindre end",
+          "description": "Består, når sidste nat var kortere end dette."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Hent parathed",
+      "description": "Returnerer dagens parathed, træningsforslaget, HRV og hvilepuls i forhold til dine basislinjer, restitutionsbalance, form og restitutionstiden efter seneste træning.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Hent søvn",
+      "description": "Returnerer sidste nat i detaljer, lure, de seneste nætter med gennemsnit, søvnmålet, basislinjer og søvnregelmæssighed.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "nights": {
+          "name": "Nætter",
+          "description": "Hvor mange af de seneste nætter der skal vises og indgå i gennemsnittet (standard 7)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Hent træninger",
+      "description": "Returnerer træningerne i et datointerval, nyeste først, med totaler. Dækker de seneste 90 dage.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "start_date": {
+          "name": "Startdato",
+          "description": "Første dag. Lad feltet stå tomt for at tælle Dage tilbage fra slutdatoen."
+        },
+        "end_date": {
+          "name": "Slutdato",
+          "description": "Sidste dag. Standard er i dag."
+        },
+        "days": {
+          "name": "Dage",
+          "description": "Dage tilbage fra slutdatoen, når der ikke er angivet en startdato (standard 7)."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Kun denne sport, efter dens Suunto-navn eller en del af det, for eksempel Cycling."
+        },
+        "limit": {
+          "name": "Grænse",
+          "description": "Hvor mange træninger der skal vises (standard 20). Totalerne dækker altid hele intervallet."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Hent træningsbelastning",
+      "description": "Returnerer kondition, træthed og form, ACWR, ugemålet og en tabel uge for uge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "weeks": {
+          "name": "Uger",
+          "description": "Hvor mange kalenderuger tabellen viser (standard 4)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Hent i dag",
+      "description": "Returnerer dagens skridt og kalorier i forhold til målene, den seneste puls, dagens træninger, stress og seneste synkronisering af uret.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Hent totaler",
+      "description": "Returnerer totaler for de seneste 7 dage, denne måned, i år, hele livstiden og pr. stykke udstyr.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        },
+        "period": {
+          "name": "Periode",
+          "description": "Kun én del. Lad feltet stå tomt for dem alle."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Hent rekorder",
+      "description": "Returnerer personlige rekorder, bedste tider på standarddistancer, VO2max og konditionsalder.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Hent indsigter",
+      "description": "Returnerer dine personlige mønstre, aerob afkobling, søvnregelmæssighed, det daglige overblik og de seneste AI-rapporter.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Kun denne Suunto-konto. Lad feltet stå tomt for alle konti."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "Sports Tracker API tilgængelig",
+      "wellness_reachable": "24/7-dataserver tilgængelig",
+      "accounts_loaded": "Indlæste konti",
+      "account_state": "Kontostatus",
+      "daily_update": "Daglig dataopdatering",
+      "activity_update": "Aktivitetsopdatering",
+      "watch_last_synced": "Ur senest synkroniseret",
+      "workouts_in_window": "Træninger (seneste 90 dage)",
+      "ai_configured": "AI konfigureret"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "Der er endnu ingen Suunto-data. Vent på den første opdatering efter opsætningen."
+    },
+    "unknown_entry": {
+      "message": "Ingen Suunto-konto med ID'et {entry_id}."
+    }
+  }
+}

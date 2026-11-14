@@ -60,11 +60,13 @@ which silently removes any <img> placed inside it. -->
 - 🧩 **Built into the automation editor.** Suunto's own triggers (a new workout with sport, distance and commute filters, woke up with a sleep-length filter, an AI report) and conditions (recovering, workout today, readiness, training suggestion, last night's sleep) in Home Assistant's pickers (Home Assistant 2025.12 or newer), no event names or templates needed. Eight read-only actions return workouts, sleep, readiness, load, totals, records and insights to scripts, readable entries land in the logbook, and Settings > System > Repairs > System information shows whether Suunto is reachable.
 - 🗣️ **Ask Assist.** *"How did I sleep?"* *"Can I train hard today?"* *"How far did I ride this month?"* - by voice or in the chat, with the AI model you already use in Home Assistant. Turn on the "Suunto" tools next to Assist in its options; answers come from data already downloaded.
 - 📊 **Curves that fill in later.** Hourly heart rate, steps, energy, recovery balance and stress as long-term statistics, plus daily sleep, readiness and load trends. A watch that syncs late backfills the gaps.
-- 🧭 **A daily brief.** One plain sentence about your sleep, HRV, readiness and form, in 8 languages.
+- 🧭 **A daily brief.** One plain sentence about your sleep, HRV, readiness and form, in 15 languages.
 - 💡 **What works for you.** Patterns from your own history: how late workouts, training days or early bedtimes change your sleep, HRV and resting heart rate, and how heat and cold change your speed per heartbeat in each sport.
 - ⌚ **A nudge to sync.** The time of the newest data from your watch, and a notice in Settings > Repairs when the watch has not synced for a day, so stale numbers never pass for today's.
+- 🎨 **A colour for every sport.** The same in every companion card, kept for good, or your own under Configure.
+- 📅 **A calendar link for your coach.** Optional: a private link a coach or a partner can subscribe to in their phone or Google Calendar, with your workouts and nothing else, no Home Assistant account needed.
 - 🚲 **Commutes and gear.** Fuel and CO2 saved by riding instead of driving, and distance on each bike, chain or pair of shoes with a service reminder.
-- 🌍 **8 languages.** English, Polish, German, Portuguese, French, Spanish, Italian and Dutch, following your Home Assistant language.
+- 🌍 **15 languages.** English, Polish, German, Portuguese, French, Spanish, Italian, Dutch, Ukrainian, Russian, Finnish, Swedish, Danish, Norwegian and Czech, following your Home Assistant language.
 - 🔐 **One login.** Your password is used once, exchanged for a session token and not stored. Suunto emails you about a new login only at setup, or if the session ever expires.
 
 </details>
@@ -91,10 +93,10 @@ When you wake up, the AI model you already use in Home Assistant (Gemini, OpenAI
   <a href="https://github.com/MichalZaniewicz/ha-suunto-cards"><img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/cards-wall.webp" alt="67 cards, one training dashboard" width="100%"></a>
 </p>
 
-**[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion repo with 67 cards made for this integration: last workout, HR zones, a 24-hour sleep clock, training load, a form forecast, a FIFA-style player card, achievements and more. Add it in HACS as a *Dashboard*.
+**[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion repo with 68 cards made for this integration: last workout, HR zones, a 24-hour sleep clock, training load, a form forecast, a FIFA-style player card, achievements and more. Add it in HACS as a *Dashboard*.
 
 <details>
-<summary><b>See all 67 cards</b></summary>
+<summary><b>See all 68 cards</b></summary>
 
 ![Suunto Cards preview](https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto-cards/master/docs/screenshots/cards-overview-dark.png)
 
@@ -133,7 +135,7 @@ Everything else is in the **[wiki](https://github.com/MichalZaniewicz/ha-suunto/
 
 ## Related projects
 
-- **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)**: 67 Lovelace cards for this integration.
+- **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)**: 68 Lovelace cards for this integration.
 
 ## Acknowledgments
 

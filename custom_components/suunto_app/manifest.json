@@ -4,10 +4,11 @@
   "after_dependencies": ["recorder"],
   "codeowners": ["@MichalZaniewicz"],
   "config_flow": true,
+  "dependencies": ["http"],
   "documentation": "https://github.com/MichalZaniewicz/ha-suunto",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/MichalZaniewicz/ha-suunto/issues",
   "requirements": [],
-  "version": "1.0.39"
+  "version": "1.0.40b1"
 }

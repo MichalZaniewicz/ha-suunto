@@ -5,7 +5,7 @@ others (only the event entities' "event fired" lines). With it:
 "Suunto Michał new workout: Cycling, 32.4 km, 1:12 h, TSS 85".
 
 Logbook text is not run through Home Assistant's translations, so the few
-phrases live here in the 8 languages of the integration, picked by the
+phrases live here in the 15 languages of the integration, picked by the
 server language. The readiness word comes from brief.py, so it reads the
 same as on the daily brief sensor.
 """
@@ -83,6 +83,55 @@ _PHRASES: dict[str, dict[str, str]] = {
         "woke_up_unknown": "sono da noite passada sincronizado",
         "ai_daily": "análise diária de IA: {headline}",
         "ai_weekly": "resumo semanal de IA: {headline}",
+    },
+    "uk": {
+        "workout": "нове тренування: {details}",
+        "woke_up": "прокидання після {sleep} сну",
+        "woke_up_unknown": "сон минулої ночі синхронізовано",
+        "ai_daily": "щоденний аналіз ШІ: {headline}",
+        "ai_weekly": "тижневий підсумок ШІ: {headline}",
+    },
+    "ru": {
+        "workout": "новая тренировка: {details}",
+        "woke_up": "пробуждение после {sleep} сна",
+        "woke_up_unknown": "сон прошлой ночи синхронизирован",
+        "ai_daily": "ежедневный анализ ИИ: {headline}",
+        "ai_weekly": "недельная сводка ИИ: {headline}",
+    },
+    "fi": {
+        "workout": "uusi harjoitus: {details}",
+        "woke_up": "heräsi {sleep} unen jälkeen",
+        "woke_up_unknown": "viime yön uni synkronoitu",
+        "ai_daily": "päivittäinen AI-analyysi: {headline}",
+        "ai_weekly": "viikoittainen AI-yhteenveto: {headline}",
+    },
+    "sv": {
+        "workout": "nytt träningspass: {details}",
+        "woke_up": "vaknade efter {sleep} sömn",
+        "woke_up_unknown": "nattens sömn synkad",
+        "ai_daily": "daglig AI-insikt: {headline}",
+        "ai_weekly": "veckovis AI-sammanfattning: {headline}",
+    },
+    "da": {
+        "workout": "ny træning: {details}",
+        "woke_up": "vågnede efter {sleep} søvn",
+        "woke_up_unknown": "søvn fra i nat synkroniseret",
+        "ai_daily": "daglig AI-analyse: {headline}",
+        "ai_weekly": "ugentlig AI-opsummering: {headline}",
+    },
+    "nb": {
+        "workout": "ny treningsøkt: {details}",
+        "woke_up": "våknet etter {sleep} søvn",
+        "woke_up_unknown": "nattens søvn er synkronisert",
+        "ai_daily": "daglig AI-analyse: {headline}",
+        "ai_weekly": "ukentlig AI-oppsummering: {headline}",
+    },
+    "cs": {
+        "workout": "nový trénink: {details}",
+        "woke_up": "probuzení po {sleep} spánku",
+        "woke_up_unknown": "spánek z poslední noci synchronizován",
+        "ai_daily": "denní AI analýza: {headline}",
+        "ai_weekly": "týdenní AI shrnutí: {headline}",
     },
 }
 

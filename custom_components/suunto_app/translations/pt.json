@@ -31,7 +31,7 @@
       "init": {
         "title": "Opções do Suunto App",
         "menu_options": {
-          "settings": "Intervalos e dados de combustível",
+          "settings": "Definições gerais",
           "ai": "Análise diária e resumo semanal com IA",
           "gear_add": "Adicionar equipamento a acompanhar",
           "gear_service": "Marcar equipamento como revisto (repor a 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervalos e dados de combustível",
+        "title": "Definições gerais",
         "data": {
           "fast_scan_interval": "Intervalo dos dados em direto (minutos)",
           "scan_interval": "Intervalo dos dados históricos (minutos)",
           "fuel_l_per_100km": "Consumo do carro",
-          "fuel_price_per_litre": "Preço do combustível por litro"
+          "fuel_price_per_litre": "Preço do combustível por litro",
+          "calendar_feed_enabled": "Link do calendário para outros",
+          "sport_colors": "Cores dos desportos"
         },
         "data_description": {
           "fast_scan_interval": "Com que frequência atualizar os dados em direto (frequência cardíaca, passos e energia do dia).",
           "scan_interval": "Com que frequência atualizar os dados históricos (sono, treinos, carga, valores de base). Mantenha moderado, é uma API não oficial.",
           "fuel_l_per_100km": "Para a poupança das deslocações: o combustível que o carro gastaria na mesma distância.",
-          "fuel_price_per_litre": "Na sua moeda. Para o dinheiro poupado nas deslocações."
+          "fuel_price_per_litre": "Na sua moeda. Para o dinheiro poupado nas deslocações.",
+          "calendar_feed_enabled": "Um link .ics privado para o calendário de treinos (últimos 90 dias) para um treinador ou parceiro, sem conta no Home Assistant. O link aparece no sensor Link do calendário. Quem tiver o link vê os treinos, nunca o percurso, o sono ou a prontidão. Desligar e voltar a ligar gera um novo link e o antigo deixa de funcionar.",
+          "sport_colors": "Opcional. Um desporto por linha, com o nome como os cartões o mostram e uma cor, por exemplo \"Cycling: #2e7e9e\" ou \"Running: orange\". Cada desporto já tem a sua cor em todos os cartões; estas linhas substituem-na. Vazio: cores automáticas."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Deslocações este mês" },
       "commute_year": { "name": "Deslocações este ano" },
       "ai_insight": { "name": "Análise com IA" },
-      "ai_weekly_summary": { "name": "Resumo semanal com IA" }
+      "ai_weekly_summary": { "name": "Resumo semanal com IA" },
+      "calendar_feed": { "name": "Link do calendário" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "A recuperar" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "O relógio Suunto não sincronizou",
       "description": "Sem dados novos do relógio de **{account}** desde {last_sync} (há {hours} horas). Abra a app Suunto no telemóvel com o Bluetooth ligado para sincronizar o relógio. Este aviso desaparece sozinho após a próxima sincronização."
+    },
+    "sport_colors_unmatched": {
+      "title": "Cores dos desportos Suunto: algumas linhas não correspondem a nenhum desporto",
+      "description": "Estas linhas em Configurar > Definições gerais > Cores dos desportos de **{account}** não correspondem a nenhum desporto: {lines}. Escreva o nome do desporto como os cartões o mostram, depois dois pontos e uma cor. Desportos conhecidos: {sports}. Este aviso desaparece quando todas as linhas corresponderem."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

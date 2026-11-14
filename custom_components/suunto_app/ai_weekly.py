@@ -168,6 +168,13 @@ _TITLES: dict[str, tuple[str, str]] = {
     "it": ("Riepilogo settimanale IA", "Prossima settimana"),
     "nl": ("AI-weekoverzicht", "Volgende week"),
     "pt": ("Resumo semanal com IA", "Próxima semana"),
+    "uk": ("Тижневий підсумок ШІ", "Наступний тиждень"),
+    "ru": ("Недельная сводка ИИ", "На следующую неделю"),
+    "fi": ("AI-viikkoyhteenveto", "Ensi viikko"),
+    "sv": ("AI-veckosammanfattning", "Nästa vecka"),
+    "da": ("Ugentlig AI-opsummering", "Næste uge"),
+    "nb": ("AI-ukeoppsummering", "Neste uke"),
+    "cs": ("Týdenní AI shrnutí", "Příští týden"),
 }
 
 
@@ -420,6 +427,9 @@ class SuuntoAiWeekly:
         # (week end, automatic runs for it), for the retry cap.
         self._attempts: tuple[str, int] = ("", 0)
         self.result: dict[str, Any] | None = None
+        # The week end (ISO date) of the last AUTOMATIC summary that went out,
+        # see _done_this_week().
+        self._done_scheduled: str | None = None
         self.last_error: str | None = None
         self.running = False
         # The "Automatic weekly AI summary" switch; the button still works.
@@ -432,6 +442,8 @@ class SuuntoAiWeekly:
             result = stored.get("result")
             self.result = result if isinstance(result, dict) else None
             self.enabled = stored.get("enabled", True) is not False
+            done = stored.get("done_scheduled")
+            self._done_scheduled = done if isinstance(done, str) else None
         self._unsubs += [
             self._daily.async_add_listener(self._on_daily_update),
             async_track_time_change(
@@ -450,7 +462,13 @@ class SuuntoAiWeekly:
         self._notify()
 
     async def _async_save(self) -> None:
-        await self._store.async_save({"enabled": self.enabled, "result": self.result})
+        await self._store.async_save(
+            {
+                "enabled": self.enabled,
+                "result": self.result,
+                "done_scheduled": self._done_scheduled,
+            }
+        )
 
     @callback
     def async_stop(self) -> None:
@@ -486,8 +504,22 @@ class SuuntoAiWeekly:
             return False
         # ISO dates compare as strings; a summary pressed for a later day
         # (the button) covers this week too.
+        if self._done_this_week(scheduled.date()):
+            return False
         done = (self.result or {}).get("for_date") or ""
         return done < scheduled.date().isoformat()
+
+    def _done_this_week(self, scheduled: date) -> bool:
+        """Whether an automatic summary went out less than six days before
+        ``scheduled``: the weekday or hour was changed under Configure after
+        this week's summary, which must not send a second one. Six, not seven,
+        so a summary moved one day earlier still runs the week after. Only
+        automatic runs count; a press of the button never holds one back."""
+        try:
+            done = date.fromisoformat(self._done_scheduled or "")
+        except ValueError:
+            return False
+        return (scheduled - done).days < 6
 
     @callback
     def _on_time(self, _now: datetime) -> None:
@@ -536,6 +568,8 @@ class SuuntoAiWeekly:
             self._notify()
             try:
                 self.result = await self._async_call(week_end or dt_util.now().date())
+                if not manual:
+                    self._done_scheduled = self.result["for_date"]
                 self.last_error = None
                 await self._async_save()
                 self._fire_event(manual)

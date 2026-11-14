@@ -15,6 +15,7 @@ from homeassistant.core import CALLBACK_TYPE, CoreState, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -25,6 +26,8 @@ from .brief import daily_brief
 from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
+    CONF_SPORT_COLORS,
+    SPORT_PALETTE_SIZE,
     ACTIVITY_LOOKBACK_DAYS,
     CO2_KG_PER_LITRE,
     COMMUTE_TAG,
@@ -1517,6 +1520,48 @@ def _gear_snapshot(
     return out
 
 
+def _assign_sport_palette(palette: dict[str, int], sports: list[str]) -> dict[str, int]:
+    """Give every sport not in ``palette`` a slot of the cards' sport palette.
+
+    A sport keeps its slot for good (the Store remembers it), so its colour
+    never changes when another sport overtakes it. New sports come in the
+    order given (most workouts first) and take the lowest free slot; once all
+    SPORT_PALETTE_SIZE are taken they share, cycling through them.
+    """
+    out = dict(palette)
+    for sport in sports:
+        if not sport or sport in out:
+            continue
+        used = set(out.values())
+        free = [n for n in range(1, SPORT_PALETTE_SIZE + 1) if n not in used]
+        out[sport] = free[0] if free else len(out) % SPORT_PALETTE_SIZE + 1
+    return out
+
+
+def _parse_sport_colors(text: str | None, sports: list[str]) -> tuple[dict[str, str], list[str]]:
+    """The Sport colours option: one ``Name: colour`` a line.
+
+    The name matches a known sport case-insensitively and the result is keyed
+    by the sport's own spelling. A line without a colon, without a colour or
+    naming no known sport is returned in the second list (shown in Repairs).
+    The colour is passed on as written: the cards check it with CSS.supports.
+    """
+    known = {sport.casefold(): sport for sport in sports if sport}
+    colors: dict[str, str] = {}
+    unmatched: list[str] = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        name, sep, color = line.partition(":")
+        sport = known.get(name.strip().casefold())
+        if not sep or not color.strip() or sport is None:
+            unmatched.append(line)
+            continue
+        colors[sport] = color.strip()
+    return colors, unmatched
+
+
 def _lifetime_by_activity(stats: dict[str, Any]) -> list[dict[str, Any]]:
     """Per-activity lifetime totals from the stats payload's ``allStats`` list.
 
@@ -1570,6 +1615,9 @@ def _normalize_stats(stats: dict[str, Any]) -> dict[str, Any] | None:
 STORE_VERSION = 1
 # Delay before a changed Store is written, so one update cycle is one write.
 STORE_SAVE_DELAY_S = 30
+# Seconds after Home Assistant has started before the held events go out
+# (see _async_started): older versions arm automation triggers only then.
+HELD_EVENTS_DELAY_S = 5
 # Datetime fields inside the stored snapshots. JSON keeps them as ISO strings,
 # and the sensors call .isoformat() / as_local() on them, so they are turned
 # back into datetimes on load.
@@ -1869,6 +1917,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # newest DECOUPLING_HISTORY eligible workouts so the sensor can show
         # a trend; in the history Store for the same reason as best efforts.
         self._decoupling: dict[str, dict[str, Any]] = {}
+        # sport -> slot of the cards' sport palette, kept for good in the
+        # history Store (see _assign_sport_palette).
+        self._sport_palette: dict[str, int] = {}
         # Last raw sleep export fetch (per-record timestamp/isNap/duration/...),
         # kept only for diagnostics.py - lets a downloaded diagnostics bundle
         # show exactly why sleep_duration/nap_duration bucketed the way they
@@ -2090,6 +2141,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "avg_hr": w.get("avg_hr_bpm"),
                 "max_hr": w.get("max_hr_bpm"),
                 "tss": w.get("tss"),
+                "pte": w.get("pte"),
+                # Route achievements (raw, as Suunto sends them) and the route
+                # ranking, for the cards' "What's new" timeline.
+                "achievements": w.get("achievements") or None,
+                "route_ranking": w.get("route_ranking"),
                 # Start GPS (None for indoor workouts) - for a map/marker template.
                 "start_lat": w.get("start_lat"),
                 "start_lon": w.get("start_lon"),
@@ -2292,6 +2348,11 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if price is None:
             price = DEFAULT_FUEL_PRICE
         stats_norm = _normalize_stats(stats)
+        sports = self._sport_colors(
+            [a.get("activity") for a in (stats_norm or {}).get("by_activity") or []]
+            + [w.get("activity") for w in norm_workouts],
+            options.get(CONF_SPORT_COLORS),
+        )
         self._save_store()
 
         return {
@@ -2305,6 +2366,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     else None
                 ),
             },
+            # Each sport's colour in the cards: the palette slot and your
+            # own colours from Configure.
+            "sports": sports,
             "gear": _gear_snapshot(
                 options.get(CONF_GEAR) or [],
                 (stats_norm or {}).get("by_activity"),
@@ -2359,6 +2423,37 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    def _sport_colors(self, sports: list[str | None], option: str | None) -> dict[str, Any]:
+        """Palette slots for every sport seen (new ones assigned and stored)
+        and the Sport colours option matched against them, with a Repairs
+        notice naming the lines that match nothing. Matched against every
+        sport ever seen, not this cycle's list, so a failed stats fetch does
+        not turn every line into an unmatched one."""
+        palette = _assign_sport_palette(self._sport_palette, [s for s in sports if s])
+        if palette != self._sport_palette:
+            self._sport_palette = palette
+            self._save_store()
+        colors, unmatched = _parse_sport_colors(option, list(palette))
+        if self.config_entry is not None:
+            issue_id = f"sport_colors_unmatched_{self.config_entry.entry_id}"
+            if unmatched:
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    issue_id,
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="sport_colors_unmatched",
+                    translation_placeholders={
+                        "account": self.config_entry.title,
+                        "lines": ", ".join(unmatched),
+                        "sports": ", ".join(sorted(palette)),
+                    },
+                )
+            else:
+                ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+        return {"palette": palette, "colors": colors, "unmatched": unmatched}
 
     def _update_sync_issue(self, sync: dict[str, Any] | None) -> None:
         """Raise or clear the "watch has not synced" Repairs notice."""
@@ -2462,6 +2557,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data = _decode_store(stored)
         if isinstance(fitness := data.get("fitness"), dict):
             self._last_fitness = fitness
+        if isinstance(palette := stored.get("sport_palette"), dict):
+            self._sport_palette = {
+                str(sport): slot
+                for sport, slot in palette.items()
+                if isinstance(slot, int) and 1 <= slot <= SPORT_PALETTE_SIZE
+            }
         if isinstance(records := data.get("records"), dict):
             self._last_records = records
         if isinstance(efforts := data.get("best_efforts"), dict):
@@ -2529,6 +2630,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "year_workouts": list(self._year_workouts_cache.values()),
                 "best_efforts": self._best_efforts,
                 "decoupling": self._decoupling,
+                "sport_palette": self._sport_palette,
                 # Only the keys still in the fetch window (all of them before
                 # the first window is known): an older workout can never be
                 # announced again anyway (NEW_WORKOUT_MAX_AGE_DAYS).
@@ -2568,7 +2670,12 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         announce, so a reload or a stop before the start has finished does
         not lose them: the next setup restores and fires them.
         """
-        if self.hass.state not in (CoreState.not_running, CoreState.starting):
+        # While held events still wait for their delay, a new one queues
+        # behind them so the order stays.
+        if (
+            self.hass.state not in (CoreState.not_running, CoreState.starting)
+            and not self._held_events
+        ):
             self.hass.bus.async_fire(event_type, event_data)
             return
         _LOGGER.debug("Holding %s until Home Assistant has started", event_type)
@@ -2579,16 +2686,33 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @callback
     def _async_fire_held_when_started(self) -> None:
         """Fire the held events once Home Assistant has started (at once if it has)."""
+        if self._fire_held_at_start is not None:
+            return  # already waiting for the start or for the delay
         if self.hass.state not in (CoreState.not_running, CoreState.starting):
-            self._async_fire_held_events(self.hass)
-        elif self._fire_held_at_start is None:
-            self._fire_held_at_start = async_at_started(
-                self.hass, self._async_fire_held_events
-            )
+            self._async_fire_held_events()
+        else:
+            self._fire_held_at_start = async_at_started(self.hass, self._async_started)
 
     @callback
-    def _async_fire_held_events(self, _hass: HomeAssistant) -> None:
-        """Home Assistant has started: fire what was held, in order."""
+    def _async_started(self, _hass: HomeAssistant) -> None:
+        """Home Assistant has started: fire what is held a few seconds later.
+
+        Since Home Assistant 2026.7 automations arm their triggers before
+        STARTED; older versions arm them in tasks started BY that event, which
+        would not be listening yet if the held events went out in the same
+        dispatch. The delay costs nothing on newer versions.
+        """
+        self._fire_held_at_start = async_call_later(
+            self.hass, HELD_EVENTS_DELAY_S, self._async_fire_held_events_later
+        )
+
+    @callback
+    def _async_fire_held_events_later(self, _now: datetime) -> None:
+        self._async_fire_held_events()
+
+    @callback
+    def _async_fire_held_events(self) -> None:
+        """Fire what was held, in order."""
         self._fire_held_at_start = None
         held, self._held_events = self._held_events, []
         if not held:

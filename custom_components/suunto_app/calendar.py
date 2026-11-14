@@ -16,6 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import SuuntoAppConfigEntry, suunto_device_info
+from .calendar_feed import workout_events
 
 
 async def async_setup_entry(
@@ -57,39 +58,7 @@ class SuuntoWorkoutsCalendar(CoordinatorEntity, CalendarEntity):
         """
         if self._cached_events is not None:
             return self._cached_events
-        events: list[CalendarEvent] = []
-        for w in (self.coordinator.data or {}).get("workouts", []):
-            start = w.get("start_time")
-            if not isinstance(start, datetime):
-                continue
-            minutes = w.get("duration_minutes") or 0
-            end = start + timedelta(minutes=minutes or 1)
-            distance = w.get("distance_meters")
-            km = f"{distance / 1000:.1f} km" if distance else None
-            summary = " - ".join(
-                p for p in (w.get("activity") or "Workout", km) if p
-            )
-            details = []
-            if minutes:
-                details.append(f"{minutes} min")
-            if w.get("avg_hr_bpm"):
-                details.append(
-                    f"HR {w['avg_hr_bpm']}/{w.get('max_hr_bpm') or '?'} bpm"
-                )
-            if w.get("tss"):
-                details.append(f"TSS {w['tss']}")
-            # Suunto's own 1..5 session-impact rating, alongside the derived TSS.
-            if w.get("pte"):
-                details.append(f"PTE {w['pte']}")
-            events.append(
-                CalendarEvent(
-                    start=start,
-                    end=end,
-                    summary=summary,
-                    description=" - ".join(details) or None,
-                    uid=w.get("key"),
-                )
-            )
+        events = workout_events((self.coordinator.data or {}).get("workouts", []))
         self._cached_events = events
         return events
 

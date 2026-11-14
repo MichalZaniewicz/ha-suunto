@@ -31,7 +31,7 @@
       "init": {
         "title": "Options Suunto App",
         "menu_options": {
-          "settings": "Intervalles et données carburant",
+          "settings": "Réglages généraux",
           "ai": "Analyse IA quotidienne et bilan hebdomadaire",
           "gear_add": "Ajouter un équipement à suivre",
           "gear_service": "Marquer un équipement comme entretenu (remise à 0 km)",
@@ -39,18 +39,22 @@
         }
       },
       "settings": {
-        "title": "Intervalles et données carburant",
+        "title": "Réglages généraux",
         "data": {
           "fast_scan_interval": "Intervalle des données en direct (minutes)",
           "scan_interval": "Intervalle des données d'historique (minutes)",
           "fuel_l_per_100km": "Consommation de la voiture",
-          "fuel_price_per_litre": "Prix du carburant au litre"
+          "fuel_price_per_litre": "Prix du carburant au litre",
+          "calendar_feed_enabled": "Lien de calendrier pour les autres",
+          "sport_colors": "Couleurs des sports"
         },
         "data_description": {
           "fast_scan_interval": "Fréquence d'actualisation des données en direct (fréquence cardiaque, pas et énergie du jour).",
           "scan_interval": "Fréquence d'actualisation des données d'historique (sommeil, entraînements, charge, références). Restez modéré, c'est une API non officielle.",
           "fuel_l_per_100km": "Pour les économies des trajets : le carburant que votre voiture aurait consommé sur la même distance.",
-          "fuel_price_per_litre": "Dans votre devise. Pour l'argent économisé sur les trajets."
+          "fuel_price_per_litre": "Dans votre devise. Pour l'argent économisé sur les trajets.",
+          "calendar_feed_enabled": "Un lien .ics privé vers le calendrier des entraînements (90 derniers jours) pour un coach ou un partenaire, sans compte Home Assistant. Le lien apparaît dans le capteur Lien du calendrier. Toute personne ayant le lien voit les entraînements, jamais le parcours, le sommeil ou la disponibilité. Désactiver puis réactiver donne un nouveau lien et l'ancien cesse de fonctionner.",
+          "sport_colors": "Facultatif. Un sport par ligne, avec son nom tel que les cartes l'affichent et une couleur, par exemple \"Cycling: #2e7e9e\" ou \"Running: orange\". Chaque sport a déjà sa couleur dans toutes les cartes, ces lignes la remplacent. Vide : couleurs automatiques."
         }
       },
       "ai": {
@@ -229,7 +233,8 @@
       "commute_month": { "name": "Trajets domicile-travail ce mois" },
       "commute_year": { "name": "Trajets domicile-travail cette année" },
       "ai_insight": { "name": "Analyse IA" },
-      "ai_weekly_summary": { "name": "Bilan IA de la semaine" }
+      "ai_weekly_summary": { "name": "Bilan IA de la semaine" },
+      "calendar_feed": { "name": "Lien du calendrier" }
     },
     "binary_sensor": {
       "is_recovering": { "name": "Récupération" },
@@ -286,6 +291,10 @@
     "watch_not_synced": {
       "title": "La montre Suunto n'a pas été synchronisée",
       "description": "Aucune nouvelle donnée de la montre de **{account}** depuis {last_sync} (il y a {hours} heures). Ouvrez l'application Suunto sur votre téléphone avec le Bluetooth activé pour synchroniser la montre. Cet avis disparaît tout seul après la prochaine synchronisation."
+    },
+    "sport_colors_unmatched": {
+      "title": "Couleurs des sports Suunto : certaines lignes ne correspondent à aucun sport",
+      "description": "Ces lignes de Configurer > Réglages généraux > Couleurs des sports de **{account}** ne correspondent à aucun sport : {lines}. Écrivez le nom du sport tel que les cartes l'affichent, puis deux-points et une couleur. Sports connus : {sports}. Cet avis disparaît dès que chaque ligne correspond."
     }
   },
   "selector": {
@@ -299,7 +308,14 @@
         "es": "Español",
         "it": "Italiano",
         "nl": "Nederlands",
-        "pt": "Português"
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
       }
     },
     "ai_weekly_day": {

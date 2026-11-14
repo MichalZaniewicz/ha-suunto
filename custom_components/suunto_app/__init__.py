@@ -17,6 +17,7 @@ from homeassistant.helpers.typing import ConfigType
 from .ai_insight import SuuntoAiInsight
 from .ai_weekly import SuuntoAiWeekly
 from .api import SportsTrackerClient
+from .calendar_feed import async_register_calendar_feed_view, new_token
 from .const import (
     CONF_AI_CONTEXT,
     CONF_AI_HOUR,
@@ -24,12 +25,15 @@ from .const import (
     CONF_AI_TASK_ENTITY,
     CONF_AI_WEEKLY_DAY,
     CONF_AI_WEEKLY_HOUR,
+    CONF_CALENDAR_FEED_ENABLED,
+    CONF_CALENDAR_FEED_TOKEN,
     CONF_FAST_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL,
     CONF_SESSION_KEY,
     DEFAULT_AI_HOUR,
     DEFAULT_AI_WEEKLY_DAY,
     DEFAULT_AI_WEEKLY_HOUR,
+    DEFAULT_CALENDAR_FEED_ENABLED,
     DEFAULT_FAST_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -148,6 +152,8 @@ async def async_setup_entry(
         fast=fast, daily=daily, ai=ai, weekly=weekly
     )
     entry.async_on_unload(daily.async_cancel_held_events)
+    # Before the update listener: a change of the token alone must not reload.
+    _sync_calendar_feed_token(hass, entry)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     for runner in (ai, weekly):
         if runner is not None:
@@ -157,7 +163,26 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # The "Suunto" tool set for conversation agents (llm_api.py).
     async_setup_llm_api(hass)
+    # The .ics link for others (calendar_feed.py); answers 404 unless on.
+    async_register_calendar_feed_view(hass)
     return True
+
+
+def _sync_calendar_feed_token(hass: HomeAssistant, entry: SuuntoAppConfigEntry) -> None:
+    """The calendar feed's secret exists exactly while the option is on: made
+    when it is turned on, dropped when it is turned off, so off and on again
+    gives a new link and the old one stops working."""
+    enabled = entry.options.get(CONF_CALENDAR_FEED_ENABLED, DEFAULT_CALENDAR_FEED_ENABLED)
+    token = entry.data.get(CONF_CALENDAR_FEED_TOKEN)
+    if enabled and not token:
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_CALENDAR_FEED_TOKEN: new_token()}
+        )
+    elif not enabled and token:
+        hass.config_entries.async_update_entry(
+            entry,
+            data={k: v for k, v in entry.data.items() if k != CONF_CALENDAR_FEED_TOKEN},
+        )
 
 
 async def async_unload_entry(
@@ -187,6 +212,7 @@ async def async_remove_entry(
     ):
         await Store(hass, 1, key).async_remove()
     ir.async_delete_issue(hass, DOMAIN, f"watch_not_synced_{entry.entry_id}")
+    ir.async_delete_issue(hass, DOMAIN, f"sport_colors_unmatched_{entry.entry_id}")
 
 
 async def _async_update_listener(

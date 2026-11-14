@@ -3,6 +3,45 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.40b1
+- **Sport colours.** Every sport gets its own colour, the same in every
+  companion card (from ha-suunto-cards 0.25.0): the Lifetime by sport
+  sensor's new `sport_palette` gives each sport a slot 1-12 of the cards'
+  palette, assigned once (most workouts first) and kept, so a sport no
+  longer changes colour when another one overtakes it this week. Your own
+  colours go under Configure -> General settings -> Sport colours, one
+  "Cycling: #2e7e9e" a line (`sport_colors`); a line that matches no sport
+  is listed in `sport_colors_unmatched` and in a Repairs notice.
+- **Recent workouts carry PTE and route achievements.** Each entry of the
+  Recent workouts sensor's `workouts` gained `pte`, `achievements` (raw, as
+  Suunto sends them) and `route_ranking`, for the new What's New card.
+- **Configure: "Intervals and fuel figures" is now "General settings"**, as
+  it also holds the calendar link and the sport colours.
+- **Calendar link for others.** A new option under Configure -> General
+  settings, off by default: a private `.ics` link to the workouts calendar (the last
+  90 days) for a coach or a partner to subscribe to on their phone or in
+  Google Calendar, without a Home Assistant account. The link is in a new
+  diagnostic sensor, Calendar link. Anyone with the link sees the workouts
+  (sport, distance, duration, heart rate, TSS, PTE), never the route, the
+  start position, the sleep or the readiness. Turning the option off and
+  on again gives a new link and the old one stops working. The feed is
+  built from the workouts the integration already has, so a phone checking
+  it never makes the integration ask Suunto for more.
+- **Ukrainian, Russian, Finnish, Swedish, Danish, Norwegian (Bokmål) and
+  Czech** (15 languages now). Entity names, Configure, actions, triggers
+  and conditions, repairs, logbook lines, the daily brief, personal
+  insights and the labels of the AI reports; the AI language option lists
+  them all.
+- **Fixed: a second weekly AI summary after changing its day or hour.**
+  Moving the weekly summary under Configure after this week's summary had
+  gone out sent another one at the new time. A scheduled summary now
+  counts as done for six days.
+- **Fixed: events found at startup could be missed on Home Assistant
+  before 2026.7.** A workout or a wake-up that synced while Home Assistant
+  was starting is held until the start has finished; it now goes out five
+  seconds after that, because older versions arm automation triggers only
+  then.
+
 ## 1.0.39
 - **Suunto triggers and conditions in the automation editor.** Add trigger
   and Add condition now list Suunto's own entries, with fields instead of

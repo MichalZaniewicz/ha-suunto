@@ -1,0 +1,643 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suunto App (neoficiální)",
+        "description": "Přihlas se účtem aplikace Suunto (Sports Tracker). Integrace používá soukromé API aplikace Suunto a může porušovat podmínky použití Suunto - používej vlastní účet na vlastní riziko. Heslo slouží jen k získání tokenu relace a NEUKLÁDÁ se; uloží se pouze odvolatelný token relace.",
+        "data": {
+          "email": "E-mail",
+          "password": "Heslo"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Znovu přihlásit Suunto",
+        "description": "Relace pro {email} vypršela. Zadej znovu heslo a získej nový token relace (heslo se neukládá).",
+        "data": {
+          "password": "Heslo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Přihlášení bylo odmítnuto. Zkontroluj e-mail a heslo (blokovat ho může i dvoufázové ověření na účtu).",
+      "cannot_connect": "Nepodařilo se spojit se servery Suunto/Sports Tracker."
+    },
+    "abort": {
+      "already_configured": "Tento účet Suunto je už nastavený.",
+      "reauth_successful": "Opětovné přihlášení proběhlo úspěšně."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Možnosti Suunto App",
+        "menu_options": {
+          "settings": "Obecná nastavení",
+          "ai": "Denní AI analýza a týdenní shrnutí",
+          "gear_add": "Přidat sledované vybavení",
+          "gear_service": "Označit vybavení jako po servisu (vynulovat na 0 km)",
+          "gear_remove": "Odebrat vybavení"
+        }
+      },
+      "settings": {
+        "title": "Obecná nastavení",
+        "data": {
+          "fast_scan_interval": "Interval živých dat (minuty)",
+          "scan_interval": "Interval historie (minuty)",
+          "fuel_l_per_100km": "Spotřeba auta",
+          "fuel_price_per_litre": "Cena paliva za litr",
+          "calendar_feed_enabled": "Odkaz na kalendář pro ostatní",
+          "sport_colors": "Barvy sportů"
+        },
+        "data_description": {
+          "fast_scan_interval": "Jak často obnovovat živá data (aktuální tep, denní kroky a energii).",
+          "scan_interval": "Jak často obnovovat data z historie (spánek, tréninky, tréninková zátěž, výchozí hodnoty). Drž to rozumně nízko - jde o neoficiální API.",
+          "fuel_l_per_100km": "Používá se pro úspory z dojíždění: palivo, které by auto spálilo na stejné vzdálenosti.",
+          "fuel_price_per_litre": "Ve tvé měně. Používá se pro peníze ušetřené dojížděním.",
+          "calendar_feed_enabled": "Soukromý odkaz .ics na kalendář tréninků (posledních 90 dní) pro trenéra nebo partnera, bez účtu Home Assistant. Odkaz najdeš v senzoru Odkaz na kalendář. Kdo má odkaz, vidí tréninky, nikdy ne trasu, spánek ani připravenost. Vypnutím a opětovným zapnutím vznikne nový odkaz a starý přestane fungovat.",
+          "sport_colors": "Volitelné. Jeden sport na řádek: název tak, jak ho ukazují karty, a barva, například \"Cycling: #2e7e9e\" nebo \"Running: orange\". Každý sport už má ve všech kartách vlastní barvu; tyto řádky ji nahradí. Prázdné: automatické barvy."
+        }
+      },
+      "ai": {
+        "title": "Denní AI analýza a týdenní shrnutí",
+        "description": "Jednou denně si AI model podle tvé volby přečte data o spánku, zotavení a tréninku a napíše krátké hodnocení s radami. Nejdřív nastav poskytovatele AI (Google Gemini, OpenAI, Anthropic, Ollama...) jako běžnou integraci Home Assistantu - žádný API klíč se tu neukládá. Tvá zdravotní data se posílají tomuto poskytovateli (lokální Ollama je nechá doma). Nejde o lékařskou radu. Jednou týdně (den a hodina níže) napíše také shrnutí tréninkového týdne s plánem na další.",
+        "data": {
+          "ai_task_entity": "AI model",
+          "ai_extra_context": "Tvoje poznámky pro AI",
+          "ai_fallback_hour": "Záložní hodina",
+          "ai_language": "Jazyk",
+          "ai_weekly_day": "Den týdenního shrnutí",
+          "ai_weekly_hour": "Hodina týdenního shrnutí"
+        },
+        "data_description": {
+          "ai_task_entity": "Entita AI Task, která se má použít. Nech prázdné a funkce bude vypnutá.",
+          "ai_extra_context": "Volitelné, např. tvůj cíl nebo blížící se závod: \"Připravuji se na maraton 12. dubna\".",
+          "ai_fallback_hour": "Analýza se spustí po ranní synchronizaci hodinek. Pokud do této hodiny nepřijde žádná nová noc, spustí se i tak. Pokud je poslední noc synchronizovaná jen zčásti (ještě spíš), počká až 3 další hodiny.",
+          "ai_language": "Automaticky se řídí jazykem serveru Home Assistantu (Nastavení > Systém > Obecné), ne jazykem tvého uživatelského profilu.",
+          "ai_weekly_day": "Shrnutí pokrývá sedm dní končících tímto dnem. Pozastavit ho můžeš přepínačem Automatické týdenní AI shrnutí.",
+          "ai_weekly_hour": "Pokud je Home Assistant v tu dobu vypnutý, shrnutí se spustí do 24 hodin po jeho startu."
+        }
+      },
+      "gear_add": {
+        "title": "Přidat vybavení",
+        "description": "Sleduj najeté kilometry řetězu, pneumatik, bot nebo čehokoli jiného podle jednoho sportu. Od teď se počítá každý kilometr tohoto sportu.",
+        "data": {
+          "name": "Název",
+          "activity": "Sport",
+          "start_km": "Už najetá vzdálenost",
+          "interval_km": "Servisní interval"
+        },
+        "data_description": {
+          "interval_km": "Jakmile se dosáhne této vzdálenosti, senzor ohlásí potřebu servisu. 0 znamená bez intervalu."
+        }
+      },
+      "gear_service": {
+        "title": "Označit jako po servisu",
+        "description": "Vynuluje vybrané vybavení na 0 km a počítá znovu od teď.",
+        "data": {
+          "gear": "Vybavení"
+        }
+      },
+      "gear_remove": {
+        "title": "Odebrat vybavení",
+        "data": {
+          "gear": "Vybavení"
+        }
+      }
+    },
+    "abort": {
+      "no_activities": "Zatím žádné celkové statistiky. Počkej na první aktualizaci dat a zkus to znovu.",
+      "no_ai_task": "Integrace AI Task není dostupná. Nejdřív nastav poskytovatele AI (Google Gemini, OpenAI, Anthropic, Ollama...) v Home Assistantu 2025.8 nebo novějším."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "sleep_duration": { "name": "Délka spánku" },
+      "sleep_deep": { "name": "Hluboký spánek" },
+      "sleep_light": { "name": "Lehký spánek" },
+      "sleep_rem": { "name": "REM spánek" },
+      "sleep_avg_hr": { "name": "Průměrný tep ve spánku" },
+      "sleep_min_hr": { "name": "Minimální tep ve spánku" },
+      "sleep_quality": { "name": "Kvalita spánku" },
+      "sleep_spo2": { "name": "Okysličení krve ve spánku" },
+      "sleep_hrv": { "name": "HRV ve spánku" },
+      "sleep_time": { "name": "Začátek spánku" },
+      "wake_time": { "name": "Čas probuzení" },
+      "nap_duration": { "name": "Délka zdřímnutí" },
+      "recovery_balance": { "name": "Bilance zotavení" },
+      "stress_state": { "name": "Stav stresu" },
+      "stress_today": { "name": "Stres dnes" },
+      "last_sync": { "name": "Poslední synchronizace hodinek" },
+      "daily_steps": { "name": "Denní kroky" },
+      "daily_energy": { "name": "Denní energie" },
+      "daily_total_energy": { "name": "Denní celková energie" },
+      "bmr": { "name": "Bazální metabolismus" },
+      "current_hr": { "name": "Aktuální tep" },
+      "last_activity": { "name": "Poslední aktivita" },
+      "last_workout_start": { "name": "Začátek posledního tréninku" },
+      "days_since_last_workout": { "name": "Dny od posledního tréninku" },
+      "last_workout_location": { "name": "Místo posledního tréninku" },
+      "last_distance": { "name": "Vzdálenost posledního tréninku" },
+      "last_duration": { "name": "Délka posledního tréninku" },
+      "last_ascent": { "name": "Stoupání posledního tréninku" },
+      "last_descent": { "name": "Klesání posledního tréninku" },
+      "last_ascent_time": { "name": "Čas stoupání posledního tréninku" },
+      "last_descent_time": { "name": "Čas klesání posledního tréninku" },
+      "last_min_altitude": { "name": "Min. nadmořská výška posledního tréninku" },
+      "last_max_altitude": { "name": "Max. nadmořská výška posledního tréninku" },
+      "last_pte": { "name": "Vrcholový tréninkový efekt posledního tréninku" },
+      "last_epoc": { "name": "Vrcholové EPOC posledního tréninku" },
+      "last_feeling": { "name": "Pocit z posledního tréninku" },
+      "last_workout_tags": { "name": "Typ posledního tréninku" },
+      "last_workout_weather": { "name": "Počasí posledního tréninku" },
+      "last_workout_achievements": { "name": "Úspěchy posledního tréninku" },
+      "recovery_time": { "name": "Doba zotavení po tréninku" },
+      "recovery_until": { "name": "Zotaveno v" },
+      "last_avg_hr": { "name": "Průměrný tep posledního tréninku" },
+      "last_max_hr": { "name": "Maximální tep posledního tréninku" },
+      "last_avg_speed": { "name": "Průměrná rychlost posledního tréninku" },
+      "last_avg_pace": { "name": "Průměrné tempo posledního tréninku" },
+      "last_cadence": { "name": "Kadence posledního tréninku" },
+      "last_tss": { "name": "Tréninková zátěž posledního tréninku (TSS)" },
+      "last_zone0": { "name": "Poslední trénink: čas pod tepovou zónou 1" },
+      "last_zone1": { "name": "Poslední trénink: čas v tepové zóně 1" },
+      "last_zone2": { "name": "Poslední trénink: čas v tepové zóně 2" },
+      "last_zone3": { "name": "Poslední trénink: čas v tepové zóně 3" },
+      "last_zone4": { "name": "Poslední trénink: čas v tepové zóně 4" },
+      "last_zone5": { "name": "Poslední trénink: čas v tepové zóně 5" },
+      "last_workout_laps": { "name": "Kola posledního tréninku" },
+      "lifetime_distance": { "name": "Celková vzdálenost" },
+      "lifetime_time": { "name": "Celkový čas tréninku" },
+      "lifetime_energy": { "name": "Celková energie" },
+      "lifetime_workouts": { "name": "Tréninky celkem" },
+      "lifetime_days": { "name": "Aktivní dny celkem" },
+      "lifetime_by_activity": { "name": "Celkem podle aktivity" },
+      "year_distance": { "name": "Vzdálenost letos" },
+      "year_time": { "name": "Čas tréninku letos" },
+      "year_energy": { "name": "Energie letos" },
+      "year_workouts": { "name": "Tréninky letos" },
+      "year_active_days": { "name": "Aktivní dny letos" },
+      "month_distance": { "name": "Vzdálenost tento měsíc" },
+      "month_time": { "name": "Čas tréninku tento měsíc" },
+      "month_energy": { "name": "Energie tento měsíc" },
+      "month_workouts": { "name": "Tréninky tento měsíc" },
+      "month_active_days": { "name": "Aktivní dny tento měsíc" },
+      "training_records": { "name": "Tréninkové rekordy" },
+      "training_records_month": { "name": "Tréninkové rekordy (tento měsíc)" },
+      "training_records_year": { "name": "Tréninkové rekordy (letos)" },
+      "current_streak": { "name": "Aktuální série" },
+      "best_efforts": { "name": "Nejlepší výkony" },
+      "last_pct_hrmax": { "name": "Poslední trénink: % maximálního tepu" },
+      "last_cal_per_km": { "name": "Kalorie na km posledního tréninku" },
+      "last_ascent_rate": { "name": "Rychlost stoupání posledního tréninku" },
+      "last_stride": { "name": "Délka kroku posledního tréninku" },
+      "fitness_ctl": { "name": "Kondice (CTL)" },
+      "fatigue_atl": { "name": "Únava (ATL)" },
+      "form_tsb": { "name": "Forma (TSB)" },
+      "acwr": { "name": "Poměr akutní a chronické zátěže" },
+      "training_suggestion": {
+        "name": "Doporučení tréninku",
+        "state": {
+          "rest": "Odpočinek",
+          "easy": "Lehce",
+          "moderate": "Středně",
+          "hard": "Naplno"
+        }
+      },
+      "readiness": { "name": "Připravenost" },
+      "hrv_baseline": { "name": "Výchozí HRV" },
+      "hrv_status": {
+        "name": "Stav HRV",
+        "state": {
+          "low": "Nízká",
+          "balanced": "Vyrovnaná",
+          "high": "Vysoká"
+        }
+      },
+      "resting_hr": { "name": "Klidový tep" },
+      "resting_hr_baseline": { "name": "Výchozí klidový tep" },
+      "vo2max": { "name": "VO2max" },
+      "estimated_vo2max": { "name": "Odhadované VO2max" },
+      "fitness_age": { "name": "Kondiční věk" },
+      "weekly_distance": { "name": "Vzdálenost (7 dní)" },
+      "weekly_time": { "name": "Čas tréninku (7 dní)" },
+      "weekly_steps": { "name": "Kroky (7 dní)" },
+      "workouts_7d": { "name": "Tréninky (7 dní)" },
+      "workouts_30d": { "name": "Tréninky (30 dní)" },
+      "workouts_recent": { "name": "Nedávné tréninky" },
+      "form_forecast": { "name": "Předpověď formy" },
+      "daily_brief": { "name": "Denní přehled" },
+      "sleep_regularity": { "name": "Pravidelnost spánku" },
+      "social_jetlag": { "name": "Sociální jetlag" },
+      "aerobic_decoupling": { "name": "Aerobní decoupling" },
+      "personal_insights": { "name": "Osobní zjištění" },
+      "commute_month": { "name": "Dojíždění tento měsíc" },
+      "commute_year": { "name": "Dojíždění letos" },
+      "ai_insight": { "name": "AI analýza" },
+      "ai_weekly_summary": { "name": "Týdenní AI shrnutí" },
+      "calendar_feed": { "name": "Odkaz na kalendář" }
+    },
+    "binary_sensor": {
+      "is_recovering": { "name": "Zotavování" },
+      "workout_today": { "name": "Trénink dnes" },
+      "unusual_recovery": { "name": "Neobvyklé zotavení" }
+    },
+    "calendar": {
+      "workouts": { "name": "Tréninky" }
+    },
+    "switch": {
+      "ai_insight_enabled": { "name": "Automatická AI analýza" },
+      "ai_weekly_enabled": { "name": "Automatické týdenní AI shrnutí" }
+    },
+    "button": {
+      "ai_insight_generate": { "name": "Vytvořit AI analýzu" },
+      "sync_now": { "name": "Synchronizovat teď" },
+      "ai_weekly_generate": { "name": "Vytvořit týdenní AI shrnutí" }
+    },
+    "event": {
+      "workout": {
+        "name": "Trénink",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_workout": "Nový trénink"
+            }
+          }
+        }
+      },
+      "woke_up": {
+        "name": "Ráno",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "woke_up": "Probuzení"
+            }
+          }
+        }
+      },
+      "ai_report": {
+        "name": "AI zpráva",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "daily_insight": "Denní analýza",
+              "weekly_summary": "Týdenní shrnutí"
+            }
+          }
+        }
+      }
+    }
+  },
+  "issues": {
+    "watch_not_synced": {
+      "title": "Hodinky Suunto se nesynchronizovaly",
+      "description": "Žádná nová data z hodinek účtu **{account}** od {last_sync} (před {hours} h). Otevři aplikaci Suunto v telefonu se zapnutým Bluetooth a hodinky se synchronizují. Toto upozornění samo zmizí po další synchronizaci."
+    },
+    "sport_colors_unmatched": {
+      "title": "Barvy sportů Suunto: některé řádky neodpovídají žádnému sportu",
+      "description": "Tyto řádky v Nastavit > Obecná nastavení > Barvy sportů účtu **{account}** neodpovídají žádnému sportu: {lines}. Napiš název sportu tak, jak ho ukazují karty, pak dvojtečku a barvu. Známé sporty: {sports}. Upozornění zmizí, jakmile bude odpovídat každý řádek."
+    }
+  },
+  "selector": {
+    "ai_language": {
+      "options": {
+        "auto": "Automaticky (jazyk Home Assistantu)",
+        "en": "English",
+        "pl": "Polski",
+        "de": "Deutsch",
+        "fr": "Français",
+        "es": "Español",
+        "it": "Italiano",
+        "nl": "Nederlands",
+        "pt": "Português",
+        "uk": "Українська",
+        "ru": "Русский",
+        "fi": "Suomi",
+        "sv": "Svenska",
+        "da": "Dansk",
+        "nb": "Norsk bokmål",
+        "cs": "Čeština"
+      }
+    },
+    "ai_weekly_day": {
+      "options": {
+        "mon": "Pondělí",
+        "tue": "Úterý",
+        "wed": "Středa",
+        "thu": "Čtvrtek",
+        "fri": "Pátek",
+        "sat": "Sobota",
+        "sun": "Neděle"
+      }
+    },
+    "commute_filter": {
+      "options": {
+        "any": "Včetně dojíždění",
+        "only": "Jen dojíždění",
+        "exclude": "Bez dojíždění"
+      }
+    },
+    "ai_report_kind": {
+      "options": {
+        "any": "Jakákoli",
+        "daily": "Denní analýza",
+        "weekly": "Týdenní shrnutí"
+      }
+    },
+    "training_suggestion": {
+      "options": {
+        "rest": "Odpočinek",
+        "easy": "Lehce",
+        "moderate": "Středně",
+        "hard": "Naplno"
+      }
+    },
+    "totals_period": {
+      "options": {
+        "last_7_days": "Posledních 7 dní",
+        "month": "Tento měsíc",
+        "year": "Letos",
+        "lifetime": "Celkem",
+        "gear": "Vybavení"
+      }
+    }
+  },
+  "triggers": {
+    "new_workout": {
+      "name": "Nový trénink",
+      "description": "Spustí se, když do Home Assistantu dorazí nový trénink, po synchronizaci hodinek s aplikací Suunto.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Jen tyto sporty. Nech prázdné pro jakýkoli sport."
+        },
+        "min_distance_km": {
+          "name": "Minimální vzdálenost",
+          "description": "Jen tréninky s alespoň touto vzdáleností."
+        },
+        "min_duration_minutes": {
+          "name": "Minimální délka",
+          "description": "Jen tréninky trvající alespoň takto dlouho."
+        },
+        "commute": {
+          "name": "Dojíždění",
+          "description": "Zda se počítá dojíždění."
+        },
+        "with_achievement": {
+          "name": "Jen s rekordem na trase",
+          "description": "Jen tréninky, které získaly umístění na trase, například nejrychlejší čas na této trase."
+        }
+      }
+    },
+    "woke_up": {
+      "name": "Probuzení",
+      "description": "Spustí se, když se synchronizuje spánek z poslední noci: po ranní synchronizaci hodinek, ne ve chvíli, kdy se probudíš.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "sleep_below_hours": {
+          "name": "Spánek kratší než",
+          "description": "Jen když byla poslední noc kratší než tato hodnota."
+        },
+        "sleep_above_hours": {
+          "name": "Spánek delší než",
+          "description": "Jen když byla poslední noc delší než tato hodnota."
+        },
+        "readiness_below": {
+          "name": "Připravenost pod",
+          "description": "Jen když je připravenost pod touto hodnotou."
+        }
+      }
+    },
+    "ai_report": {
+      "name": "AI zpráva připravena",
+      "description": "Spustí se, když je připravená denní AI analýza nebo týdenní AI shrnutí.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "report": {
+          "name": "Zpráva",
+          "description": "Která zpráva."
+        }
+      }
+    }
+  },
+  "conditions": {
+    "is_recovering": {
+      "name": "Zotavování",
+      "description": "Testuje, zda ještě běží doba zotavení po posledním tréninku.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        }
+      }
+    },
+    "workout_today": {
+      "name": "Trénink dnes",
+      "description": "Testuje, zda byl dnes zaznamenán trénink.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Počítají se jen tyto sporty. Nech prázdné pro jakýkoli sport."
+        }
+      }
+    },
+    "readiness": {
+      "name": "Připravenost",
+      "description": "Testuje dnešní připravenost (0-100). Neznámá připravenost neprojde.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "above": {
+          "name": "Nad",
+          "description": "Projde, když je hodnota nad touto hranicí."
+        },
+        "below": {
+          "name": "Pod",
+          "description": "Projde, když je hodnota pod touto hranicí."
+        }
+      }
+    },
+    "training_suggestion": {
+      "name": "Doporučení tréninku",
+      "description": "Testuje dnešní doporučení tréninku.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "suggestion": {
+          "name": "Doporučení",
+          "description": "Projde, když je doporučení jedno z těchto."
+        }
+      }
+    },
+    "last_night_sleep": {
+      "name": "Spánek z poslední noci",
+      "description": "Testuje délku spánku z poslední noci. Noc, která se ještě nesynchronizovala, neprojde.",
+      "fields": {
+        "config_entry": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro jakýkoli účet."
+        },
+        "above": {
+          "name": "Více než",
+          "description": "Projde, když byla poslední noc delší než tato hodnota."
+        },
+        "below": {
+          "name": "Méně než",
+          "description": "Projde, když byla poslední noc kratší než tato hodnota."
+        }
+      }
+    }
+  },
+  "services": {
+    "get_readiness": {
+      "name": "Získat připravenost",
+      "description": "Vrátí dnešní připravenost, doporučení tréninku, HRV a klidový tep oproti výchozím hodnotám, bilanci zotavení, formu a dobu zotavení po posledním tréninku.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        }
+      }
+    },
+    "get_sleep": {
+      "name": "Získat spánek",
+      "description": "Vrátí podrobnosti o poslední noci, zdřímnutí, nedávné noci s průměry, cíl spánku, výchozí hodnoty a pravidelnost spánku.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        },
+        "nights": {
+          "name": "Noci",
+          "description": "Kolik posledních nocí vypsat a zprůměrovat (výchozí 7)."
+        }
+      }
+    },
+    "get_workouts": {
+      "name": "Získat tréninky",
+      "description": "Vrátí tréninky v rozsahu dat, od nejnovějšího, se součty. Pokrývá posledních 90 dní.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        },
+        "start_date": {
+          "name": "Datum od",
+          "description": "První den. Nech prázdné a počítá se Dní zpět od data do."
+        },
+        "end_date": {
+          "name": "Datum do",
+          "description": "Poslední den. Výchozí je dnešek."
+        },
+        "days": {
+          "name": "Dní",
+          "description": "Počet dní zpět od data do, když není zadané datum od (výchozí 7)."
+        },
+        "activity": {
+          "name": "Sport",
+          "description": "Jen tento sport, podle jeho názvu v Suunto nebo jeho části, například Cycling."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "Kolik tréninků vypsat (výchozí 20). Součty vždy pokrývají celý rozsah."
+        }
+      }
+    },
+    "get_training_load": {
+      "name": "Získat tréninkovou zátěž",
+      "description": "Vrátí kondici, únavu a formu, ACWR, týdenní cíl a tabulku po týdnech.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        },
+        "weeks": {
+          "name": "Týdny",
+          "description": "Kolik kalendářních týdnů v tabulce (výchozí 4)."
+        }
+      }
+    },
+    "get_today": {
+      "name": "Získat dnešek",
+      "description": "Vrátí dnešní kroky a kalorie oproti cílům, poslední tep, dnešní tréninky, stres a poslední synchronizaci hodinek.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        }
+      }
+    },
+    "get_totals": {
+      "name": "Získat součty",
+      "description": "Vrátí součty za posledních 7 dní, tento měsíc, tento rok, celkem a pro každý kus vybavení.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        },
+        "period": {
+          "name": "Období",
+          "description": "Jen jedna část. Nech prázdné pro všechny."
+        }
+      }
+    },
+    "get_records": {
+      "name": "Získat rekordy",
+      "description": "Vrátí osobní rekordy, nejlepší výkony na standardních vzdálenostech, VO2max a kondiční věk.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        }
+      }
+    },
+    "get_insights": {
+      "name": "Získat zjištění",
+      "description": "Vrátí tvé osobní vzorce, aerobní decoupling, pravidelnost spánku, denní přehled a poslední AI zprávy.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "api_reachable": "API Sports Tracker dostupné",
+      "wellness_reachable": "Server dat 24/7 dostupný",
+      "accounts_loaded": "Načtené účty",
+      "account_state": "Stav účtu",
+      "daily_update": "Aktualizace denních dat",
+      "activity_update": "Aktualizace aktivity",
+      "watch_last_synced": "Poslední synchronizace hodinek",
+      "workouts_in_window": "Tréninky (posledních 90 dní)",
+      "ai_configured": "AI nastavena"
+    }
+  },
+  "exceptions": {
+    "no_data": {
+      "message": "Zatím nejsou k dispozici žádná data Suunto. Počkej na první aktualizaci po nastavení."
+    },
+    "unknown_entry": {
+      "message": "Žádný účet Suunto s ID {entry_id}."
+    }
+  }
+}
