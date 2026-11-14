@@ -38,13 +38,13 @@ which silently removes any <img> placed inside it. -->
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/stats.svg" alt="106 sensors, 9 blueprints, 67 cards, 8 languages, 0 partner keys" width="100%">
+  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/stats.svg" alt="106 sensors, 12 blueprints, 68 cards, 15 languages, 0 partner keys" width="100%">
 </p>
 
 ## What it does
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/features.svg" alt="Sleep and readiness, training load, every workout, 9 ready-made notifications, daily and weekly AI insight, hourly curves that fill in later" width="100%">
+  <img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/features.svg" alt="Sleep and readiness, training load, every workout, 12 ready-made notifications, daily and weekly AI insight, hourly curves that fill in later" width="100%">
 </p>
 
 <details>
@@ -92,7 +92,7 @@ When you wake up, the AI model you already use in Home Assistant (Gemini, OpenAI
 ## A dashboard in minutes
 
 <p align="center">
-  <a href="https://github.com/MichalZaniewicz/ha-suunto-cards"><img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/cards-wall.webp" alt="67 cards, one training dashboard" width="100%"></a>
+  <a href="https://github.com/MichalZaniewicz/ha-suunto-cards"><img src="https://raw.githubusercontent.com/MichalZaniewicz/ha-suunto/main/docs/readme/cards-wall.webp" alt="68 cards, one training dashboard" width="100%"></a>
 </p>
 
 **[Suunto Cards](https://github.com/MichalZaniewicz/ha-suunto-cards)** is a companion repo with 68 cards made for this integration: last workout, HR zones, a 24-hour sleep clock, training load, a form forecast, a FIFA-style player card, achievements and more. Add it in HACS as a *Dashboard*.
