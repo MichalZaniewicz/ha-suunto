@@ -3,7 +3,7 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
-## 1.0.40b2
+## 1.0.40
 - **A notice when a Suunto data stream stops coming in.** Sleep, recovery,
   workouts, the 24/7 activity and the other streams are fetched side by
   side, and one failing used to go unnoticed: its sensors just kept their
@@ -35,7 +35,6 @@ beta pre-releases are tagged `X.Y.ZbN`.
   finish, for a notification or a picture card. Drawn from the track the
   integration already has; empty after an indoor workout.
 
-## 1.0.40b1
 - **Sport colours.** Every sport gets its own colour, the same in every
   companion card (from ha-suunto-cards 0.25.0): the Lifetime by sport
   sensor's new `sport_palette` gives each sport a slot 1-12 of the cards'
