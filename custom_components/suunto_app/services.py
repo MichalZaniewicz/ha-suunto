@@ -13,12 +13,14 @@ automation and a conversation agent always see the same numbers. Called with
         message: "{{ rides.totals.distance_km }} km this week"
 
 Everything comes from data the integration already holds: no action makes
-a request to Suunto, and none changes anything. Dates and times are ISO 8601
+a request to Suunto. Only ``sync_calendar`` changes anything: it copies the
+workouts into the calendar you name (calendar_sync.py). Dates and times are ISO 8601
 in local time (Assist gets "2026-10-14 Wed" instead).
 """
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 try:
@@ -37,6 +39,7 @@ from homeassistant.core import (
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.util import dt as dt_util
 
+from .calendar_sync import async_sync_calendar, parse_sports, sync_items
 from .const import DOMAIN
 from .llm_api import (
     InsightsTool,
@@ -81,6 +84,34 @@ _ACTIONS: dict[str, tuple[type, dict[Any, Any]]] = {
     "get_records": (RecordsTool, {}),
     "get_insights": (InsightsTool, {}),
 }
+
+
+SYNC_DEFAULT_DAYS = 30
+
+
+def _entries(hass: HomeAssistant, entry_id: str | None) -> list[Any]:
+    """The picked entry, or every loaded one, that has data."""
+    if entry_id:
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if entry is None or entry.domain != DOMAIN:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="unknown_entry",
+                translation_placeholders={"entry_id": entry_id},
+            )
+        candidates = [entry]
+    else:
+        candidates = hass.config_entries.async_entries(DOMAIN)
+    found = [
+        entry
+        for entry in candidates
+        if entry.state is ConfigEntryState.LOADED
+        and getattr(entry, "runtime_data", None) is not None
+        and entry.runtime_data.daily.data is not None
+    ]
+    if not found:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_data")
+    return found
 
 
 def _runtimes(hass: HomeAssistant, entry_id: str | None) -> list[tuple[str, Any]]:
@@ -135,3 +166,47 @@ def async_setup_services(hass: HomeAssistant) -> None:
             schema=vol.Schema({vol.Optional(CONF_CONFIG_ENTRY_ID): str, **fields}),
             supports_response=SupportsResponse.ONLY,
         )
+
+    async def _sync(call: ServiceCall) -> ServiceResponse:
+        """Copy the workouts into another calendar (calendar_sync.py): the one
+        action that writes, and only to the calendar you name."""
+        days = call.data.get("days", SYNC_DEFAULT_DAYS)
+        since = dt_util.start_of_local_day(dt_util.now().date() - timedelta(days=days - 1))
+        sports = parse_sports(call.data.get("sports"))
+        results = []
+        for entry in _entries(hass, call.data.get(CONF_CONFIG_ENTRY_ID)):
+            items = sync_items(
+                entry.runtime_data.daily.data.get("workouts") or [],
+                since=since,
+                sports=sports,
+                prefix=call.data.get("prefix", ""),
+            )
+            counts = await async_sync_calendar(
+                hass,
+                entry_id=entry.entry_id,
+                target_entity_id=call.data["calendar"],
+                items=items,
+                since=since,
+                dry_run=call.data.get("dry_run", False),
+            )
+            results.append({"account": entry.title, "workouts": len(items), **counts})
+        if len(results) == 1:
+            return results[0]
+        return {"accounts": results}
+
+    hass.services.async_register(
+        DOMAIN,
+        "sync_calendar",
+        _sync,
+        schema=vol.Schema(
+            {
+                vol.Optional(CONF_CONFIG_ENTRY_ID): str,
+                vol.Required("calendar"): vol.Coerce(str),
+                vol.Optional("days"): vol.All(vol.Coerce(int), vol.Range(min=1, max=90)),
+                vol.Optional("sports"): vol.Any(vol.Coerce(str), [vol.Coerce(str)]),
+                vol.Optional("prefix"): vol.Coerce(str),
+                vol.Optional("dry_run"): bool,
+            }
+        ),
+        supports_response=SupportsResponse.OPTIONAL,
+    )

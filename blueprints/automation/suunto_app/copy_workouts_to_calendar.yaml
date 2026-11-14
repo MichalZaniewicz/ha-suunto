@@ -1,0 +1,90 @@
+blueprint:
+  name: "Suunto: Copy Workouts To A Calendar"
+  description: >
+    Copies your Suunto workouts into a calendar of your choice (Google
+    Calendar, a Local Calendar...) with the `suunto_app.sync_calendar`
+    action, so they show up wherever that calendar does: your phone, a
+    shared family calendar, your coach's view.
+
+
+    Runs after every new workout and once a day, which also picks up a
+    workout edited or deleted in the Suunto app. Only copies tagged by this
+    integration are ever changed or removed; events you added by hand stay.
+    Needs a calendar that allows adding events.
+  domain: automation
+  source_url: https://github.com/MichalZaniewicz/ha-suunto/blob/main/blueprints/automation/suunto_app/copy_workouts_to_calendar.yaml
+  input:
+    target_calendar:
+      name: Calendar to copy into
+      description: A calendar that allows adding events, e.g. a Google Calendar.
+      selector:
+        entity:
+          filter:
+            domain: calendar
+    account:
+      name: Suunto account (optional)
+      description: Leave empty to copy every Suunto account's workouts.
+      default: ""
+      selector:
+        config_entry:
+          integration: suunto_app
+    days:
+      name: Days to keep in step
+      description: How far back the copies are kept in step with Suunto.
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 90
+          step: 1
+          mode: box
+    sports:
+      name: Only these sports (optional)
+      description: Comma-separated, as the cards show them, e.g. "Cycling, Running". Empty copies every sport.
+      default: ""
+      selector:
+        text:
+    prefix:
+      name: Title prefix (optional)
+      description: Put in front of every copied title, e.g. an emoji or a name.
+      default: ""
+      selector:
+        text:
+    daily_time:
+      name: Daily check at
+      description: When to look for workouts edited or deleted in the Suunto app.
+      default: "03:00:00"
+      selector:
+        time:
+
+triggers:
+  - trigger: event
+    event_type: suunto_app_new_workout
+  - trigger: time
+    at: !input daily_time
+
+variables:
+  account: !input account
+
+actions:
+  - if:
+      - condition: template
+        value_template: "{{ account | length > 0 }}"
+    then:
+      - action: suunto_app.sync_calendar
+        data:
+          config_entry_id: "{{ account }}"
+          calendar: !input target_calendar
+          days: !input days
+          sports: !input sports
+          prefix: !input prefix
+    else:
+      - action: suunto_app.sync_calendar
+        data:
+          calendar: !input target_calendar
+          days: !input days
+          sports: !input sports
+          prefix: !input prefix
+
+mode: queued
+max: 5

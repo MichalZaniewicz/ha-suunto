@@ -3,6 +3,38 @@
 Notable changes per release. Releases are published on GitHub (HACS reads them);
 beta pre-releases are tagged `X.Y.ZbN`.
 
+## 1.0.40b2
+- **A notice when a Suunto data stream stops coming in.** Sleep, recovery,
+  workouts, the 24/7 activity and the other streams are fetched side by
+  side, and one failing used to go unnoticed: its sensors just kept their
+  last values. Each stream's successes and failures are now recorded; one
+  failing nonstop for 6 hours raises a Settings > Repairs notice naming it,
+  with the last error and the last success, and the notice goes away by
+  itself after the next success. Settings > System > Repairs > System
+  information lists the streams with errors.
+- **Fuller diagnostics.** The downloaded diagnostics now also hold the
+  integration and Home Assistant versions, the settings, how each
+  coordinator and each data stream is doing, the open Repairs notices, the
+  stored history and the state of the AI runners. Everything personal is
+  redacted, now including the calendar link's secret and your own notes for
+  the AI.
+- **Copy workouts to a calendar.** New action `suunto_app.sync_calendar`:
+  copies your workouts into a calendar of your choice (Google Calendar, a
+  Local Calendar) and keeps the copies in step: a workout edited or deleted
+  in the Suunto app is updated or removed there too, and events added by
+  hand are never touched. Options: the last `days` (30), only some
+  `sports`, a title `prefix`, `dry_run`. New blueprint **Copy Workouts To
+  A Calendar** runs it after every new workout and once a day (12
+  blueprints).
+- **Gear service as a to-do list.** A Gear service list with one item per
+  piece of gear under Configure > Gear: "to do" once its service interval
+  is reached, with the distance against the interval. Ticking it off is the
+  same as Configure > Gear service: the counter starts again from 0 km.
+- **The last workout's route as an image.** A new image entity draws the
+  route of the last workout, coloured by speed, with the start and the
+  finish, for a notification or a picture card. Drawn from the track the
+  integration already has; empty after an indoor workout.
+
 ## 1.0.40b1
 - **Sport colours.** Every sport gets its own colour, the same in every
   companion card (from ha-suunto-cards 0.25.0): the Lifetime by sport

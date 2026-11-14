@@ -38,6 +38,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import SuuntoAppAuthError, SuuntoAppError, async_login
+from .coordinator import gear_after_service
 from .const import (
     AI_LANGUAGES,
     AI_LANGUAGE_AUTO,
@@ -442,17 +443,9 @@ class SuuntoAppOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Reset a piece of gear to 0 km after replacing or servicing it."""
         if user_input is not None:
-            lifetime = {
-                a.get("activity_id"): a.get("distance_km") or 0.0
-                for a in self._lifetime_by_activity()
-            }
-            gear = self._gear()
-            for item in gear:
-                if item["id"] == user_input["gear"]:
-                    item["start_km"] = 0
-                    item["baseline_km"] = lifetime.get(
-                        item.get("activity_id"), item.get("baseline_km", 0.0)
-                    )
+            gear = gear_after_service(
+                self._gear(), user_input["gear"], self._lifetime_by_activity()
+            )
             return self._save(**{CONF_GEAR: gear})
         return self.async_show_form(
             step_id="gear_service",

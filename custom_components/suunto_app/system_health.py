@@ -69,6 +69,8 @@ async def system_health_info(hass: HomeAssistant) -> dict[str, Any]:
             ),
             "workouts_in_window": len(data.get("workouts") or []),
             "ai_configured": runtime.ai is not None,
+            # Data streams whose latest fetch failed (health.py), e.g. "sleep".
+            "degraded_streams": ", ".join(daily.health.degraded()) or "none",
         }
     )
     return info

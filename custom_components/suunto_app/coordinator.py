@@ -23,6 +23,7 @@ from homeassistant.util import dt as dt_util
 
 from . import metrics, patterns
 from .brief import daily_brief
+from .health import STREAMS, StreamHealth
 from . import statistics as suunto_stats
 from .api import SportsTrackerClient, SuuntoAppAuthError, SuuntoAppError
 from .const import (
@@ -1472,6 +1473,24 @@ def _commute_snapshot(
     }
 
 
+def gear_after_service(
+    gear: list[dict[str, Any]], gear_id: str, by_activity: list[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
+    """The gear list with ``gear_id`` reset to 0 km after a service or a
+    replacement: counting starts again from that sport's lifetime distance
+    now. Shared by Configure > Gear service and the Gear service to-do list
+    (todo.py), so both do exactly the same."""
+    lifetime = {a.get("activity_id"): a.get("distance_km") or 0.0 for a in by_activity or []}
+    out = []
+    for item in gear:
+        item = dict(item)
+        if item.get("id") == gear_id:
+            item["start_km"] = 0
+            item["baseline_km"] = lifetime.get(item.get("activity_id"), item.get("baseline_km", 0.0))
+        out.append(item)
+    return out
+
+
 def _gear_snapshot(
     gear: list[dict[str, Any]], by_activity: list[dict[str, Any]] | None
 ) -> dict[str, dict[str, Any]]:
@@ -1719,6 +1738,9 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._profile_fetched_at: datetime | None = None
         # Targets set in the Suunto app (see _profile_goals), from the same fetch.
         self._goals: dict[str, Any] | None = None
+        # Per-stream success/failure record (health.py); __init__.py hands both
+        # coordinators of an entry the same instance.
+        self.health = StreamHealth()
 
     async def _async_refresh_profile(self) -> None:
         """Fetch the profile for BMR at most once per PROFILE_REFRESH_HOURS.
@@ -1738,7 +1760,9 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except SuuntoAppError as err:
             _LOGGER.debug("Profile fetch failed (non-fatal): %s", err)
+            self.health.failed("profile", err, now)
             return
+        self.health.ok("profile", now)
         self._profile_fetched_at = now
         self._profile = _profile_bmr(settings, dt_util.now().date())
         self._goals = _profile_goals(settings)
@@ -1786,7 +1810,9 @@ class SuuntoActivityCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except SuuntoAppAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except SuuntoAppError as err:
+            self.health.failed("activity", err, dt_util.utcnow())
             raise UpdateFailed(str(err)) from err
+        self.health.ok("activity", dt_util.utcnow())
         await self._async_refresh_profile()
         normalized = _normalize_activity(activity)
         if normalized is not None:
@@ -1882,6 +1908,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # with the Store, and fired once it has started (async_fire_event).
         self._held_events: list[tuple[str, dict[str, Any]]] = []
         self._fire_held_at_start: CALLBACK_TYPE | None = None
+        # Per-stream success/failure record (health.py), shared with the fast
+        # coordinator by __init__.py; Repairs notices from _update_stream_issues.
+        self.health = StreamHealth()
         # Workout keys in this cycle's fetch window (what the Store keeps).
         self._window_keys: set[str] = set()
         # "key:lastModified" -> normalized workout. The raw records are immutable
@@ -1968,15 +1997,18 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 raise ConfigEntryAuthFailed(str(result)) from result
             if isinstance(result, SuuntoAppError):
                 _LOGGER.warning("Suunto '%s' fetch failed: %s", label, result)
+                self.health.failed(label, result, now)
                 data[label] = []
                 errors += 1
             elif isinstance(result, BaseException):
                 raise result  # unexpected error - don't swallow it
             else:
+                self.health.ok(label, now)
                 data[label] = result
 
         # Only fail when every endpoint errored (empty-but-successful is valid).
         if errors == len(labels):
+            self._update_stream_issues(now)
             raise UpdateFailed("All Suunto endpoints failed this cycle")
 
         sleep, recovery, workouts = data["sleep"], data["recovery"], data["workouts"]
@@ -2002,8 +2034,10 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if username:
             try:
                 stats = await self._client.async_get_stats(username)
+                self.health.ok("stats", now)
             except SuuntoAppError as err:
                 _LOGGER.debug("Stats fetch failed (non-fatal): %s", err)
+                self.health.failed("stats", err, now)
 
         # Counts are filtered explicitly: the fetch window is 90 days (needed for
         # the training-load model), so len(workouts) is NOT a 30-day count.
@@ -2114,6 +2148,7 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._last_sync = newest
         sync = _sync_snapshot(self._last_sync, now)
         self._update_sync_issue(sync)
+        self._update_stream_issues(now)
 
         # Rolling 7-day step total, read back from the "steps" statistic the
         # import above just refreshed. Best-effort, same reasoning as the
@@ -2423,6 +2458,40 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "count_7d": count_7d,
             "count_30d": count_30d,
         }
+
+    def _update_stream_issues(self, now: datetime) -> None:
+        """A Repairs notice per stream failing nonstop for STREAM_ISSUE_HOURS
+        (health.py), gone with its next success. Covers both coordinators of
+        the entry, as they share one StreamHealth."""
+        if self.config_entry is None:
+            return
+        failing = self.health.failing(now)
+        for name in self.health.known():
+            issue_id = f"stream_failing_{self.config_entry.entry_id}_{name}"
+            stream = failing.get(name)
+            if stream is None:
+                ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+                continue
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="stream_failing",
+                translation_placeholders={
+                    "account": self.config_entry.title,
+                    "stream": STREAMS.get(name, name),
+                    "since": dt_util.as_local(stream.failing_since).strftime("%Y-%m-%d %H:%M"),
+                    "hours": str(round((now - stream.failing_since).total_seconds() / 3600)),
+                    "error": stream.last_error or "-",
+                    "last_success": (
+                        dt_util.as_local(stream.last_success).strftime("%Y-%m-%d %H:%M")
+                        if stream.last_success
+                        else "-"
+                    ),
+                },
+            )
 
     def _sport_colors(self, sports: list[str | None], option: str | None) -> dict[str, Any]:
         """Palette slots for every sport seen (new ones assigned and stored)
@@ -2946,7 +3015,13 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         now = dt_util.utcnow()
         since_ms = _since_hour_ms(now, STATS_LOOKBACK_DAYS)
-        activity = await self._client.async_get_wellness("activity", since_ms)
+        try:
+            activity = await self._client.async_get_wellness("activity", since_ms)
+        except SuuntoAppError as err:
+            if not isinstance(err, SuuntoAppAuthError):
+                self.health.failed("activity_history", err, now)
+            raise
+        self.health.ok("activity_history", now)
         self._last_activity = activity
 
         hr: list[tuple[datetime, float]] = []
@@ -3022,7 +3097,9 @@ class SuuntoDailyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     raise result
                 if isinstance(result, BaseException):
                     _LOGGER.debug("Workout data fetch failed (skipped): %s", result)
+                    self.health.failed("workout_data", result, dt_util.utcnow())
                     continue
+                self.health.ok("workout_data", dt_util.utcnow())
                 samples: list[tuple[datetime, float]] = []
                 for point in result.get("heartrates") or []:
                     epoch_ms = point.get("d")

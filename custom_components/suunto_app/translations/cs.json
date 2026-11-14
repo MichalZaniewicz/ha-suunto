@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Servis vybavení" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Trasa posledního tréninku" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Barvy sportů Suunto: některé řádky neodpovídají žádnému sportu",
       "description": "Tyto řádky v Nastavit > Obecná nastavení > Barvy sportů účtu **{account}** neodpovídají žádnému sportu: {lines}. Napiš název sportu tak, jak ho ukazují karty, pak dvojtečku a barvu. Známé sporty: {sports}. Upozornění zmizí, jakmile bude odpovídat každý řádek."
+    },
+    "stream_failing": {
+      "title": "Data Suunto nepřicházejí: {stream}",
+      "description": "Suunto nedodává **{stream}** pro účet **{account}** od {since} ({hours} h). Senzory z nich počítané si drží poslední hodnoty (naposledy úspěšně: {last_success}). Poslední chyba: `{error}`. Obvykle jde o krátký výpadek na straně Suunto; toto upozornění samo zmizí po další úspěšné aktualizaci. Pokud zůstane několik dní, stáhni diagnostiku z nabídky integrace a nahlas problém (issue) přes GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Kopírovat tréninky do kalendáře",
+      "description": "Zkopíruje tvé tréninky do jiného kalendáře, například Google Calendar, a udržuje kopie v souladu: trénink upravený nebo smazaný v aplikaci Suunto se tam také aktualizuje nebo odstraní. Mění se vždy jen kopie vytvořené touto akcí; ručně přidané události zůstanou.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Jen tento účet Suunto. Nech prázdné pro všechny účty."
+        },
+        "calendar": {
+          "name": "Kalendář",
+          "description": "Kalendář, do kterého se kopíruje. Musí umožňovat přidávání událostí."
+        },
+        "days": {
+          "name": "Dní",
+          "description": "Kolik posledních dní udržovat v souladu (výchozí 30, nejvýše 90)."
+        },
+        "sports": {
+          "name": "Sporty",
+          "description": "Jen tyto sporty, oddělené čárkou, tak jak je ukazují karty, např. \"Cycling, Running\". Prázdné zkopíruje všechny sporty."
+        },
+        "prefix": {
+          "name": "Předpona názvu",
+          "description": "Vloží se před každý zkopírovaný název, např. emoji nebo jméno."
+        },
+        "dry_run": {
+          "name": "Zkušební běh",
+          "description": "Jen ohlásí, co by se změnilo, aniž by cokoli změnil."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Aktualizace aktivity",
       "watch_last_synced": "Poslední synchronizace hodinek",
       "workouts_in_window": "Tréninky (posledních 90 dní)",
-      "ai_configured": "AI nastavena"
+      "ai_configured": "AI nastavena",
+      "degraded_streams": "Datové toky s chybami"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Žádný účet Suunto s ID {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} není kalendář."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} neumožňuje přidávat události. Vyber kalendář, do kterého lze přidávat události, například Google Calendar nebo Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "Celkové součty od Suunto nejsou právě teď k dispozici, takže nová počáteční vzdálenost není známá. Zkus to znovu po další aktualizaci."
     }
   }
 }

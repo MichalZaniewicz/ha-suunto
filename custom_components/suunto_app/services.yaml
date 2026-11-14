@@ -93,3 +93,37 @@ get_records:
 get_insights:
   fields:
     config_entry_id: *config_entry_id
+
+sync_calendar:
+  fields:
+    config_entry_id: *config_entry_id
+    calendar:
+      required: true
+      selector:
+        entity:
+          filter:
+            domain: calendar
+    days:
+      required: false
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 90
+          step: 1
+          mode: box
+    sports:
+      required: false
+      example: "Cycling, Running"
+      selector:
+        text:
+    prefix:
+      required: false
+      example: "🚴"
+      selector:
+        text:
+    dry_run:
+      required: false
+      default: false
+      selector:
+        boolean:

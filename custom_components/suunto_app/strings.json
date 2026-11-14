@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Gear service" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Last workout route" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Suunto sport colours: some lines match no sport",
       "description": "These lines under Configure > General settings > Sport colours of **{account}** match no sport: {lines}. Write the sport's name as the cards show it, then a colon and a colour. Known sports: {sports}. This notice disappears once every line matches."
+    },
+    "stream_failing": {
+      "title": "Suunto data not coming in: {stream}",
+      "description": "Suunto has not delivered **{stream}** for **{account}** since {since} ({hours} hours). The sensors built from it keep their last values ({last_success} was the last success). Last error: `{error}`. Usually a short outage at Suunto; this notice disappears by itself after the next successful update. If it stays for days, download the diagnostics from the integration's menu and open an issue on GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Only this Suunto account. Leave empty for every account."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Copy workouts to a calendar",
+      "description": "Copies your workouts into another calendar, such as Google Calendar, and keeps the copies in step: a workout edited or deleted in the Suunto app is updated or removed there too. Only copies made by this action are ever changed; events added by hand stay.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Only this Suunto account. Leave empty for every account."
+        },
+        "calendar": {
+          "name": "Calendar",
+          "description": "The calendar to copy into. It must allow adding events."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many recent days to keep in step (default 30, at most 90)."
+        },
+        "sports": {
+          "name": "Sports",
+          "description": "Only these sports, comma-separated, as the cards show them, e.g. \"Cycling, Running\". Empty copies every sport."
+        },
+        "prefix": {
+          "name": "Title prefix",
+          "description": "Put in front of every copied title, e.g. an emoji or a name."
+        },
+        "dry_run": {
+          "name": "Dry run",
+          "description": "Only report what would change, without changing anything."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Activity update",
       "watch_last_synced": "Watch last synced",
       "workouts_in_window": "Workouts (last 90 days)",
-      "ai_configured": "AI configured"
+      "ai_configured": "AI configured",
+      "degraded_streams": "Data streams with errors"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "No Suunto account with the ID {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} is not a calendar."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} does not allow adding events. Pick a calendar you can add events to, such as a Google Calendar or a Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "The lifetime totals from Suunto are not available right now, so the new starting distance is unknown. Try again after the next update."
     }
   }
 }

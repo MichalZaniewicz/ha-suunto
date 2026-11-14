@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Ausrüstungswartung" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Route des letzten Trainings" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Suunto-Sportarten-Farben: manche Zeilen passen zu keiner Sportart",
       "description": "Diese Zeilen unter Konfigurieren > Allgemeine Einstellungen > Sportarten-Farben von **{account}** passen zu keiner Sportart: {lines}. Schreibe den Namen der Sportart wie in den Karten, dann einen Doppelpunkt und eine Farbe. Bekannte Sportarten: {sports}. Dieser Hinweis verschwindet, sobald jede Zeile passt."
+    },
+    "stream_failing": {
+      "title": "Suunto-Daten kommen nicht an: {stream}",
+      "description": "Suunto hat **{stream}** für **{account}** seit {since} ({hours} Stunden) nicht geliefert. Die daraus berechneten Sensoren behalten ihre letzten Werte (letzter Erfolg: {last_success}). Letzter Fehler: `{error}`. Meist ist es ein kurzer Ausfall bei Suunto; dieser Hinweis verschwindet von selbst nach der nächsten erfolgreichen Aktualisierung. Bleibt er tagelang, lade die Diagnose über das Menü der Integration herunter und eröffne ein Issue auf GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Nur dieses Suunto-Konto. Leer lassen für alle Konten."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Trainings in einen Kalender kopieren",
+      "description": "Kopiert deine Trainings in einen anderen Kalender, etwa Google Calendar, und hält die Kopien aktuell: Ein in der Suunto-App bearbeitetes oder gelöschtes Training wird dort ebenfalls aktualisiert oder entfernt. Geändert werden nur Kopien, die diese Aktion angelegt hat; von Hand hinzugefügte Termine bleiben erhalten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Nur dieses Suunto-Konto. Leer lassen für alle Konten."
+        },
+        "calendar": {
+          "name": "Kalender",
+          "description": "Der Kalender, in den kopiert wird. Er muss das Hinzufügen von Terminen erlauben."
+        },
+        "days": {
+          "name": "Tage",
+          "description": "Wie viele letzte Tage aktuell gehalten werden (Standard 30, höchstens 90)."
+        },
+        "sports": {
+          "name": "Sportarten",
+          "description": "Nur diese Sportarten, durch Kommas getrennt, so wie die Karten sie zeigen, zum Beispiel \"Cycling, Running\". Leer kopiert alle Sportarten."
+        },
+        "prefix": {
+          "name": "Titelpräfix",
+          "description": "Wird vor jeden kopierten Titel gesetzt, zum Beispiel ein Emoji oder ein Name."
+        },
+        "dry_run": {
+          "name": "Probelauf",
+          "description": "Meldet nur, was sich ändern würde, ohne etwas zu ändern."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Aktualisierung der Aktivität",
       "watch_last_synced": "Letzte Synchronisierung der Uhr",
       "workouts_in_window": "Trainings (letzte 90 Tage)",
-      "ai_configured": "KI eingerichtet"
+      "ai_configured": "KI eingerichtet",
+      "degraded_streams": "Datenströme mit Fehlern"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Kein Suunto-Konto mit der ID {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} ist kein Kalender."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} erlaubt kein Hinzufügen von Terminen. Wähle einen Kalender, in den du Termine eintragen kannst, etwa einen Google Calendar oder einen Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "Die Gesamtsummen von Suunto sind gerade nicht verfügbar, daher ist die neue Startdistanz unbekannt. Versuche es nach der nächsten Aktualisierung erneut."
     }
   }
 }

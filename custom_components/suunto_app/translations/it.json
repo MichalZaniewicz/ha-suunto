@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Manutenzione attrezzatura" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Percorso dell'ultimo allenamento" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Colori degli sport Suunto: alcune righe non corrispondono a nessuno sport",
       "description": "Queste righe in Configura > Impostazioni generali > Colori degli sport di **{account}** non corrispondono a nessuno sport: {lines}. Scrivi il nome dello sport come lo mostrano le schede, poi i due punti e un colore. Sport noti: {sports}. Questo avviso scompare quando ogni riga corrisponde."
+    },
+    "stream_failing": {
+      "title": "Dati Suunto non in arrivo: {stream}",
+      "description": "Suunto non fornisce **{stream}** per **{account}** dal {since} ({hours} ore). I sensori basati su questi dati mantengono gli ultimi valori (ultimo successo: {last_success}). Ultimo errore: `{error}`. Di solito è una breve interruzione di Suunto; questo avviso scompare da solo dopo il prossimo aggiornamento riuscito. Se resta per giorni, scarica la diagnostica dal menu dell'integrazione e apri una segnalazione su GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Solo questo account Suunto. Vuoto per tutti gli account."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Copia gli allenamenti in un calendario",
+      "description": "Copia i tuoi allenamenti in un altro calendario, come Google Calendar, e mantiene le copie allineate: un allenamento modificato o eliminato nell'app Suunto viene aggiornato o rimosso anche lì. Vengono modificate solo le copie create da questa azione; gli eventi aggiunti a mano restano.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Solo questo account Suunto. Vuoto per tutti gli account."
+        },
+        "calendar": {
+          "name": "Calendario",
+          "description": "Il calendario in cui copiare. Deve consentire l'aggiunta di eventi."
+        },
+        "days": {
+          "name": "Giorni",
+          "description": "Quanti giorni recenti mantenere allineati (30 predefinito, al massimo 90)."
+        },
+        "sports": {
+          "name": "Sport",
+          "description": "Solo questi sport, separati da virgole, come li mostrano le schede, per esempio \"Cycling, Running\". Vuoto copia tutti gli sport."
+        },
+        "prefix": {
+          "name": "Prefisso del titolo",
+          "description": "Messo davanti a ogni titolo copiato, per esempio un'emoji o un nome."
+        },
+        "dry_run": {
+          "name": "Simulazione",
+          "description": "Riporta solo cosa cambierebbe, senza modificare nulla."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Aggiornamento attività",
       "watch_last_synced": "Ultima sincronizzazione dell'orologio",
       "workouts_in_window": "Allenamenti (ultimi 90 giorni)",
-      "ai_configured": "IA configurata"
+      "ai_configured": "IA configurata",
+      "degraded_streams": "Flussi di dati con errori"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Nessun account Suunto con ID {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} non è un calendario."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} non consente di aggiungere eventi. Scegli un calendario a cui puoi aggiungere eventi, come un Google Calendar o un Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "I totali complessivi di Suunto non sono disponibili al momento, quindi la nuova distanza iniziale è sconosciuta. Riprova dopo il prossimo aggiornamento."
     }
   }
 }

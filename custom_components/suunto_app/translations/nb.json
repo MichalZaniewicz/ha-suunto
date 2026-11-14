@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Service av utstyr" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Rute for siste økt" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Suunto-sportsfarger: noen linjer passer ikke til noen sport",
       "description": "Disse linjene under Konfigurer > Generelle innstillinger > Sportsfarger for **{account}** passer ikke til noen sport: {lines}. Skriv navnet på sporten slik kortene viser det, deretter et kolon og en farge. Kjente sporter: {sports}. Dette varselet forsvinner når alle linjene passer."
+    },
+    "stream_failing": {
+      "title": "Suunto-data kommer ikke inn: {stream}",
+      "description": "Suunto har ikke levert **{stream}** for **{account}** siden {since} ({hours} timer). Sensorene som bygger på dem, beholder de siste verdiene sine ({last_success} var siste vellykkede). Siste feil: `{error}`. Som regel et kort brudd hos Suunto; dette varselet forsvinner av seg selv etter neste vellykkede oppdatering. Hvis det blir værende i flere dager, last ned diagnostikken fra integrasjonens meny og opprett en issue på GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Bare denne Suunto-kontoen. La stå tom for alle kontoer."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Kopier treningsøkter til en kalender",
+      "description": "Kopierer treningsøktene dine til en annen kalender, for eksempel Google Calendar, og holder kopiene oppdatert: en økt som endres eller slettes i Suunto-appen, blir oppdatert eller fjernet der også. Bare kopier laget av denne handlingen blir noen gang endret; hendelser lagt til for hånd blir stående.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Bare denne Suunto-kontoen. La stå tom for alle kontoer."
+        },
+        "calendar": {
+          "name": "Kalender",
+          "description": "Kalenderen det skal kopieres til. Den må tillate å legge til hendelser."
+        },
+        "days": {
+          "name": "Dager",
+          "description": "Hvor mange av de siste dagene som holdes oppdatert (standard 30, maks 90)."
+        },
+        "sports": {
+          "name": "Sporter",
+          "description": "Bare disse sportene, kommaseparert, slik kortene viser dem, f.eks. \"Cycling, Running\". Tomt kopierer alle sporter."
+        },
+        "prefix": {
+          "name": "Tittelprefiks",
+          "description": "Settes foran hver kopierte tittel, f.eks. en emoji eller et navn."
+        },
+        "dry_run": {
+          "name": "Prøvekjøring",
+          "description": "Rapporter bare hva som ville blitt endret, uten å endre noe."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Aktivitetsoppdatering",
       "watch_last_synced": "Klokken sist synkronisert",
       "workouts_in_window": "Økter (siste 90 dager)",
-      "ai_configured": "AI konfigurert"
+      "ai_configured": "AI konfigurert",
+      "degraded_streams": "Datastrømmer med feil"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Ingen Suunto-konto med ID-en {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} er ikke en kalender."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} tillater ikke å legge til hendelser. Velg en kalender du kan legge til hendelser i, for eksempel en Google Calendar eller en Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "Livstidstotalene fra Suunto er ikke tilgjengelige akkurat nå, så den nye startdistansen er ukjent. Prøv igjen etter neste oppdatering."
     }
   }
 }

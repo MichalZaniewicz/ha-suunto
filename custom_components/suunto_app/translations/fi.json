@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Varusteiden huolto" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Viimeisimmän harjoituksen reitti" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Suunnon lajivärit: osa riveistä ei vastaa mitään lajia",
       "description": "Nämä tilin **{account}** rivit kohdassa Määritä > Yleiset asetukset > Lajien värit eivät vastaa mitään lajia: {lines}. Kirjoita lajin nimi niin kuin kortit sen näyttävät, sitten kaksoispiste ja väri. Tunnetut lajit: {sports}. Tämä ilmoitus häviää, kun jokainen rivi vastaa lajia."
+    },
+    "stream_failing": {
+      "title": "Suunto-tietoja ei tule: {stream}",
+      "description": "Suunto ei ole toimittanut tietoja **{stream}** tilille **{account}** {since} lähtien ({hours} tuntia). Niistä lasketut anturit säilyttävät viimeiset arvonsa (viimeisin onnistuminen: {last_success}). Viimeisin virhe: `{error}`. Yleensä kyse on lyhyestä katkosta Suunto-palvelussa; tämä ilmoitus häviää itsestään seuraavan onnistuneen päivityksen jälkeen. Jos se pysyy päiviä, lataa diagnostiikka integraation valikosta ja tee ilmoitus (issue) GitHub-palvelussa."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Kopioi harjoitukset kalenteriin",
+      "description": "Kopioi harjoituksesi toiseen kalenteriin, kuten Google Calendar -kalenteriin, ja pitää kopiot ajan tasalla: Suunto-sovelluksessa muokattu tai poistettu harjoitus päivitetään tai poistetaan sieltäkin. Vain tämän toiminnon tekemiä kopioita muutetaan; käsin lisätyt tapahtumat säilyvät.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tili",
+          "description": "Vain tämä Suunto-tili. Jätä tyhjäksi, jos haluat kaikki tilit."
+        },
+        "calendar": {
+          "name": "Kalenteri",
+          "description": "Kalenteri, johon kopioidaan. Siihen on voitava lisätä tapahtumia."
+        },
+        "days": {
+          "name": "Päivät",
+          "description": "Montako viimeisintä päivää pidetään ajan tasalla (oletus 30, enintään 90)."
+        },
+        "sports": {
+          "name": "Lajit",
+          "description": "Vain nämä lajit pilkuilla eroteltuina, niin kuin kortit ne näyttävät, esim. \"Cycling, Running\". Tyhjä kopioi kaikki lajit."
+        },
+        "prefix": {
+          "name": "Otsikon etuliite",
+          "description": "Lisätään jokaisen kopioidun otsikon eteen, esim. emoji tai nimi."
+        },
+        "dry_run": {
+          "name": "Testiajo",
+          "description": "Kertoo vain, mitä muuttuisi, muuttamatta mitään."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Aktiivisuuden päivitys",
       "watch_last_synced": "Kellon viimeisin synkronointi",
       "workouts_in_window": "Harjoitukset (viimeiset 90 päivää)",
-      "ai_configured": "AI määritetty"
+      "ai_configured": "AI määritetty",
+      "degraded_streams": "Tietovirrat, joissa on virheitä"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Suunto-tiliä tunnuksella {entry_id} ei ole."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} ei ole kalenteri."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} ei salli tapahtumien lisäämistä. Valitse kalenteri, johon voi lisätä tapahtumia, kuten Google Calendar tai Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "Suunto-palvelun koko historian summat eivät ole juuri nyt saatavilla, joten uutta aloitusmatkaa ei tiedetä. Yritä uudelleen seuraavan päivityksen jälkeen."
     }
   }
 }

@@ -285,6 +285,12 @@
           }
         }
       }
+    },
+    "todo": {
+      "gear_service": { "name": "Materiaalonderhoud" }
+    },
+    "image": {
+      "last_workout_route": { "name": "Route van laatste training" }
     }
   },
   "issues": {
@@ -295,6 +301,10 @@
     "sport_colors_unmatched": {
       "title": "Suunto-sportkleuren: sommige regels passen bij geen enkele sport",
       "description": "Deze regels onder Configureren > Algemene instellingen > Sportkleuren van **{account}** passen bij geen enkele sport: {lines}. Schrijf de naam van de sport zoals de kaarten hem tonen, dan een dubbele punt en een kleur. Bekende sporten: {sports}. Deze melding verdwijnt zodra elke regel past."
+    },
+    "stream_failing": {
+      "title": "Suunto-gegevens komen niet binnen: {stream}",
+      "description": "Suunto heeft **{stream}** voor **{account}** sinds {since} ({hours} uur) niet geleverd. De sensoren die daarop gebaseerd zijn houden hun laatste waarden (laatste succes: {last_success}). Laatste fout: `{error}`. Meestal is het een korte storing bij Suunto; deze melding verdwijnt vanzelf na de volgende geslaagde update. Blijft ze dagenlang staan, download dan de diagnostische gegevens via het menu van de integratie en open een issue op GitHub."
     }
   },
   "selector": {
@@ -617,6 +627,36 @@
           "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
         }
       }
+    },
+    "sync_calendar": {
+      "name": "Trainingen naar een agenda kopiëren",
+      "description": "Kopieert je trainingen naar een andere agenda, zoals Google Calendar, en houdt de kopieën bij: een training die in de Suunto-app is bewerkt of verwijderd, wordt daar ook bijgewerkt of verwijderd. Alleen kopieën die door deze actie zijn gemaakt worden ooit gewijzigd; met de hand toegevoegde afspraken blijven staan.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Alleen dit Suunto-account. Leeg voor alle accounts."
+        },
+        "calendar": {
+          "name": "Agenda",
+          "description": "De agenda om naar te kopiëren. Die moet het toevoegen van afspraken toestaan."
+        },
+        "days": {
+          "name": "Dagen",
+          "description": "Hoeveel recente dagen bijhouden (standaard 30, maximaal 90)."
+        },
+        "sports": {
+          "name": "Sporten",
+          "description": "Alleen deze sporten, gescheiden door komma's, zoals de kaarten ze tonen, bijvoorbeeld \"Cycling, Running\". Leeg kopieert alle sporten."
+        },
+        "prefix": {
+          "name": "Titelvoorvoegsel",
+          "description": "Komt voor elke gekopieerde titel, bijvoorbeeld een emoji of een naam."
+        },
+        "dry_run": {
+          "name": "Proefrun",
+          "description": "Meldt alleen wat er zou veranderen, zonder iets te wijzigen."
+        }
+      }
     }
   },
   "system_health": {
@@ -629,7 +669,8 @@
       "activity_update": "Update activiteit",
       "watch_last_synced": "Laatste synchronisatie horloge",
       "workouts_in_window": "Trainingen (laatste 90 dagen)",
-      "ai_configured": "AI ingesteld"
+      "ai_configured": "AI ingesteld",
+      "degraded_streams": "Gegevensstromen met fouten"
     }
   },
   "exceptions": {
@@ -638,6 +679,15 @@
     },
     "unknown_entry": {
       "message": "Geen Suunto-account met ID {entry_id}."
+    },
+    "sync_bad_calendar": {
+      "message": "{entity_id} is geen agenda."
+    },
+    "sync_read_only_calendar": {
+      "message": "{entity_id} staat het toevoegen van afspraken niet toe. Kies een agenda waaraan je afspraken kunt toevoegen, zoals een Google Calendar of een Local Calendar."
+    },
+    "gear_totals_missing": {
+      "message": "De totaalstatistieken van Suunto zijn nu niet beschikbaar, dus de nieuwe startafstand is onbekend. Probeer het opnieuw na de volgende update."
     }
   }
 }

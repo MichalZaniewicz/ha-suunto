@@ -40,6 +40,7 @@ from .const import (
     PLATFORMS,
 )
 from .coordinator import SuuntoActivityCoordinator, SuuntoDailyCoordinator
+from .health import STREAMS, StreamHealth
 from .llm_api import async_setup_llm_api, async_unload_llm_api
 from .services import async_setup_services
 
@@ -110,6 +111,8 @@ async def async_setup_entry(
     daily = SuuntoDailyCoordinator(
         hass, entry, client, timedelta(minutes=daily_minutes)
     )
+    # One record of how every data stream is doing, for both (health.py).
+    fast.health = daily.health = StreamHealth()
     # Independent, so fetched side by side. Both are awaited to the end before
     # an error (auth, not ready) is passed on, so no refresh is left running
     # behind a failed setup.
@@ -213,6 +216,8 @@ async def async_remove_entry(
         await Store(hass, 1, key).async_remove()
     ir.async_delete_issue(hass, DOMAIN, f"watch_not_synced_{entry.entry_id}")
     ir.async_delete_issue(hass, DOMAIN, f"sport_colors_unmatched_{entry.entry_id}")
+    for stream in STREAMS:
+        ir.async_delete_issue(hass, DOMAIN, f"stream_failing_{entry.entry_id}_{stream}")
 
 
 async def _async_update_listener(
